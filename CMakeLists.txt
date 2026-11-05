@@ -1989,12 +1989,16 @@ set (SHARED_SOURCES
      librecad/src/ui/dock_widgets/ai_assistant/lc_aiapprovals.h
      librecad/src/ui/dock_widgets/ai_assistant/lc_aipermissions.cpp
      librecad/src/ui/dock_widgets/ai_assistant/lc_aipermissions.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aiplanmode.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aiplanmode.h
      librecad/src/ui/dock_widgets/ai_assistant/lc_aibrowser.cpp
      librecad/src/ui/dock_widgets/ai_assistant/lc_aibrowser.h
      librecad/src/ui/dock_widgets/ai_assistant/lc_aichattranscript.cpp
      librecad/src/ui/dock_widgets/ai_assistant/lc_aichattranscript.h
      librecad/src/ui/dock_widgets/ai_assistant/lc_aicredentials.cpp
      librecad/src/ui/dock_widgets/ai_assistant/lc_aicredentials.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aidebugger.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aidebugger.h
      librecad/src/ui/dock_widgets/ai_assistant/lc_aiinferencemanager.cpp
      librecad/src/ui/dock_widgets/ai_assistant/lc_aiinferencemanager.h
      librecad/src/ui/dock_widgets/ai_assistant/lc_aiprovider.cpp

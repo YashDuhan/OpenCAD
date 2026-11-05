@@ -81,6 +81,10 @@ public:
     bool isBusy() const { return m_running; }
 
     static QString systemPrompt();
+    /** Instructions after the system prompt for the runs from now on (plan mode, the debugger's pass); empty for none. */
+    void setPromptAddition(const QString& text) { m_promptAddition = text; }
+    /** The last run was stopped (Stop, New Chat) rather than ended by the model. */
+    bool wasCancelled() const { return m_cancelled; }
 
 signals:
     void delta(const QString& text);                         // assistant text as it streams
@@ -146,6 +150,9 @@ private:
     QMap<int, QJsonObject> m_blocks;     // Anthropic: content blocks by index
     QMap<int, QString> m_partialJson;    // Anthropic tool_use input / OpenAI tool arguments, by index
     QMap<int, LC_AIToolCall> m_openAICalls;
+
+    QString runSystemPrompt() const; // systemPrompt() and m_promptAddition
+    QString m_promptAddition;
 };
 
 #endif

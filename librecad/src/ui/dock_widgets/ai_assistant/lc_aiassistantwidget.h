@@ -23,6 +23,8 @@ class QLabel;
 class LC_AIChatTranscript;
 class LC_AIApprovalBox;
 class LC_AIApprovalModeButton;
+class LC_AIDebugger;
+class LC_AIPlanMode;
 class QPlainTextEdit;
 class QPushButton;
 class QToolButton;
@@ -86,6 +88,18 @@ private:
     LC_AIApprovalBox* m_approvals {nullptr};
     LC_AIApprovalModeButton* m_approvalMode {nullptr};
     QSet<QString> m_sessionAllows; // "Allow for this session" answers, until New Chat
+
+    // plan mode and the debugger (lc_aiplanmode, lc_aidebugger)
+    /** A request was added: plan mode's tools and prompt, and the Check & fix of the last answer goes. */
+    void prepareRun();
+    /** The debugger's pass over the last run: it checks the drawing against the request and fixes what is wrong. */
+    void startDebugger(const QString& reason);
+    /** A run ended: plan mode winds up, and the debugger checks the run or offers to. */
+    void afterRun(bool stopped, bool failed = false);
+    LC_AIPlanMode* m_plan {nullptr};
+    LC_AIDebugger* m_debugger {nullptr};
+    int m_runStart {-1};      // index in m_messages of the request the last run answered
+    bool m_debugging {false}; // the run is the debugger's pass
 };
 
 #endif

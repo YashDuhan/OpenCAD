@@ -174,6 +174,15 @@ public:
     void finishRun();
     void clear();
 
+    // other parts of the chat in the conversation (plan mode, the debugger)
+    /** A card for a tool call instead of its tool row (plan mode's plan card); the factory returns nullptr for a row. */
+    void setCardFactory(std::function<QWidget*(const LC_AIToolCall&)> factory) { m_cardFor = std::move(factory); }
+    /** Adds a widget at the end of the conversation (e.g. Check & fix under the AI's answer). */
+    void addWidget(QWidget* widget) { add(widget); }
+    /** Adds `section`; until closeSection(), what the AI writes and runs goes into `body` (the Debugger's section). */
+    void openSection(QWidget* section, QWidget* body);
+    void closeSection();
+
 private:
     void add(QWidget* widget);
     QLabel* textBlock(const QString& markdown);
@@ -207,6 +216,8 @@ private:
     LC_AIToolGroup* m_group {nullptr};            // the block new tool calls join, until the AI writes text
     QList<LC_AIClarificationCard*> m_cards;       // questions of the current run, in order
     std::function<QString(const QString&)> m_labelFor;
+    std::function<QWidget*(const LC_AIToolCall&)> m_cardFor; // plan mode's cards
+    QWidget* m_sectionBody {nullptr};                          // an open section collects the output
 };
 
 #endif

@@ -40,6 +40,7 @@ LUCIDE_ICONS = ["key-round", "trash-2", "search", "check", "refresh-cw", "cpu", 
                 "lock", "lock-open", "sparkles", "hourglass", "shield-alert", "shield-check",
                 "globe", "arrow-left", "arrow-right", "rotate-cw", "grip-horizontal", "minimize-2",
                 "circle-help", "chevron-up"]
+LUCIDE_ICONS += ["list-checks", "bug", "circle", "circle-check", "circle-slash"]  # plan mode and the debugger
 CATALOG_PROVIDERS = ["anthropic", "openai", "google", "openrouter", "xai", "deepseek", "mistral", "groq",
                      "cerebras", "together", "fireworks", "nvidia", "huggingface", "moonshotai", "zai", "minimax",
                      "vercel-ai-gateway"]

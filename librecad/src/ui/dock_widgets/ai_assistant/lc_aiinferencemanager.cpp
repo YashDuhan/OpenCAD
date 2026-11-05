@@ -270,6 +270,10 @@ QString LC_AIInferenceManager::systemPrompt() {
         "them, and say what you changed. Keep answers concise and use Markdown. Never use LaTeX or math markup ($...$, \\text, \\times): the chat cannot render it. Write values as plain text with Unicode symbols, for example 7,000 to 10,000 kVA, ⌀750 mm, 11 kV ± 5%, 75 °C, 2 × 10⁶.");
 }
 
+QString LC_AIInferenceManager::runSystemPrompt() const {
+    return m_promptAddition.isEmpty() ? systemPrompt() : systemPrompt() + QStringLiteral("\n\n") + m_promptAddition;
+}
+
 bool LC_AIInferenceManager::resolveTarget(Target& target) {
     LC_AICredentials& creds = LC_AICredentials::instance();
     const QString providerId = creds.selectedProvider();
@@ -332,7 +336,7 @@ void LC_AIInferenceManager::cancel() {
 
 QJsonObject LC_AIInferenceManager::buildOpenAI() const {
     QJsonArray messages;
-    messages.append(QJsonObject{{"role", "system"}, {"content", systemPrompt()}});
+    messages.append(QJsonObject{{"role", "system"}, {"content", runSystemPrompt()}});
     QJsonArray pendingImages; // OpenAI chat tool messages are text only: images follow in a user message
     const auto flushImages = [&messages, &pendingImages] {
         if (pendingImages.isEmpty()) {
@@ -456,7 +460,7 @@ QJsonObject LC_AIInferenceManager::buildAnthropic() const {
     flushResults();
 
     QJsonObject body{{"model", m_target.model}, {"max_tokens", m_target.provider->maxTokens},
-                     {"system", systemPrompt()}, {"messages", messages}, {"stream", true}};
+                     {"system", runSystemPrompt()}, {"messages", messages}, {"stream", true}};
     if (!m_tools.isEmpty()) {
         const bool firstParty = m_target.provider->id == "anthropic"; // gateways may reject the field
         QJsonArray tools;
@@ -554,7 +558,7 @@ QJsonObject LC_AIInferenceManager::buildGoogle() const {
     }
     flush();
 
-    QJsonObject body{{"systemInstruction", QJsonObject{{"parts", QJsonArray{QJsonObject{{"text", systemPrompt()}}}}}},
+    QJsonObject body{{"systemInstruction", QJsonObject{{"parts", QJsonArray{QJsonObject{{"text", runSystemPrompt()}}}}}},
                      {"contents", contents}};
     if (!m_tools.isEmpty()) {
         QJsonArray declarations;
