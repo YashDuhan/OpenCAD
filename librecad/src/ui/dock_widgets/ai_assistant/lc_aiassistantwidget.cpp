@@ -323,26 +323,46 @@ void LC_AIAssistantWidget::openWithTask(QWidget* window, const QString& prompt, 
 }
 
 void LC_AIAssistantWidget::fitModelButton() {
-    // a narrow panel shows the approval mode and Plan first as icons only (their names stay in the tooltips), so the
-    // model's name keeps some room
+    // a narrow panel shows the approval mode and Plan first as icons only (their names stay in the tooltips), leaves out
+    // the @ button (typing @ does the same) and packs the row closer, so the model's name keeps its room
     constexpr int COMPACT_BELOW = 460;
     const bool compact = m_composer->width() < COMPACT_BELOW;
+    QHBoxLayout* row = nullptr;
+    for (QHBoxLayout* l : m_composer->findChildren<QHBoxLayout*>()) {
+        if (l->indexOf(m_modelSelect) >= 0) {
+            row = l;
+        }
+    }
     if (m_approvalMode->property("compact").toBool() != compact) {
         m_approvalMode->setProperty("compact", compact);
         m_approvalMode->refresh();
         if (m_plan != nullptr) {
             m_plan->toggle()->setText(compact ? QString() : tr("Plan"));
         }
+        if (m_extras != nullptr) {
+            if (QWidget* mention = m_extras->buttons()->findChild<QWidget*>("mentionBtn")) {
+                mention->setVisible(!compact);
+            }
+        }
+        if (row != nullptr) {
+            row->setSpacing(compact ? 3 : 8);
+        }
+        m_modelIcon->setVisible(!compact); // the name matters more than the provider's logo
     }
     // a push button sizes itself by its own text, not by the labels laid out inside it: give it their width,
-    // as far as the row has room next to the approval mode and send buttons (the name is shortened then)
+    // as far as the row has room next to the other buttons (the name is shortened then)
     const int wanted = m_modelSelect->layout()->sizeHint().width();
     const QMargins margins = m_composer->layout()->contentsMargins();
-    const int room = m_composer->width() - margins.left() - margins.right() - m_approvalMode->sizeHint().width()
-                     - m_sendButton->sizeHint().width() - 3 * 8
-                     - (m_voice->isHidden() ? 0 : m_voice->sizeHint().width() + 8)
-                     - (m_extras != nullptr ? m_extras->buttons()->sizeHint().width() + 8 : 0)
-                     - (m_plan != nullptr ? m_plan->toggle()->sizeHint().width() + 8 : 0); // "Plan first"
+    int used = 0;
+    int shown = 0;
+    for (int i = 0; row != nullptr && i < row->count(); ++i) {
+        QWidget* w = row->itemAt(i)->widget();
+        if (w != nullptr && w != m_modelSelect && !w->isHidden()) {
+            used += w->sizeHint().width();
+            ++shown;
+        }
+    }
+    const int room = m_composer->width() - margins.left() - margins.right() - used - (row != nullptr ? row->spacing() : 8) * shown;
     m_modelSelect->setFixedWidth(qBound(80, qMin(wanted, room > 0 ? room : wanted), 260));
 }
 
