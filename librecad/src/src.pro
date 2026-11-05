@@ -778,6 +778,9 @@ HEADERS += \
     ui/dock_widgets/ai_assistant/lc_aichattranscript.h \
     ui/dock_widgets/ai_assistant/lc_aicheckpoints.h \
     ui/dock_widgets/ai_assistant/lc_aicredentials.h \
+    ui/dock_widgets/ai_assistant/lc_aichatstore.h \
+    ui/dock_widgets/ai_assistant/lc_aichatsession.h \
+    ui/dock_widgets/ai_assistant/lc_aichathistorypopup.h \
     ui/dock_widgets/ai_assistant/lc_aiinferencemanager.h \
     ui/dock_widgets/ai_assistant/lc_aiprovider.h \
     ui/dock_widgets/ai_assistant/lc_aigenerated.h \
@@ -1348,6 +1351,9 @@ SOURCES += \
     ui/dock_widgets/ai_assistant/lc_aichattranscript.cpp \
     ui/dock_widgets/ai_assistant/lc_aicheckpoints.cpp \
     ui/dock_widgets/ai_assistant/lc_aicredentials.cpp \
+    ui/dock_widgets/ai_assistant/lc_aichatstore.cpp \
+    ui/dock_widgets/ai_assistant/lc_aichatsession.cpp \
+    ui/dock_widgets/ai_assistant/lc_aichathistorypopup.cpp \
     ui/dock_widgets/ai_assistant/lc_aiinferencemanager.cpp \
     ui/dock_widgets/ai_assistant/lc_aiprovider.cpp \
     ui/dock_widgets/ai_assistant/lc_aigenerated.cpp \

@@ -124,6 +124,8 @@ public:
     bool isAnswered() const { return !m_answer.isEmpty(); }
     void setStopped();
     void focusInput();
+    /** A chat restored from the history: the card shows the answer it got, locked as when it was given. */
+    void showAnswer(const QString& answer) { choose(answer); }
 
 private:
     void choose(const QString& answer);

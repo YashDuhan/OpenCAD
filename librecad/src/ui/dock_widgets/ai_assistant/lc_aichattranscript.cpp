@@ -506,6 +506,7 @@ void LC_AIToolCallWidget::setResult(const LC_AIToolResult& result) {
     m_failed = result.isError;
     const qint64 ms = m_timer.isValid() ? m_timer.elapsed() : 0;
     const QString time = ms < 1000 ? QStringLiteral("%1ms").arg(ms) : QStringLiteral("%1s").arg(ms / 1000.0, 0, 'f', 1);
+    const QString shownTime = m_timer.isValid() ? time : QString(); // a call restored from the chat history was not timed
     static const QRegularExpression blocked(QStringLiteral("user denied this tool call|denied by the user's tool permissions"));
     if (result.isError && blocked.match(result.joinedText()).hasMatch()) {
         setStatus("shield-alert", tr("Blocked"), STATUS_ERROR); // Cypher marks denied calls as Blocked
@@ -514,7 +515,7 @@ void LC_AIToolCallWidget::setResult(const LC_AIToolResult& result) {
         setStatus("circle-alert", tr("Error"), STATUS_ERROR);
     }
     else {
-        setStatus("check", time, STATUS_DONE);
+        setStatus("check", shownTime, STATUS_DONE);
     }
     // screenshots: a tiny thumbnail on the row says there is one; a click on it shows them under the row
     auto* images = static_cast<QHBoxLayout*>(m_images->layout());

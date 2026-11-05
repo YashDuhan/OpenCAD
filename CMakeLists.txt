@@ -1997,6 +1997,12 @@ set (SHARED_SOURCES
      librecad/src/ui/dock_widgets/ai_assistant/lc_aicheckpoints.h
      librecad/src/ui/dock_widgets/ai_assistant/lc_aicredentials.cpp
      librecad/src/ui/dock_widgets/ai_assistant/lc_aicredentials.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aichatstore.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aichatstore.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aichatsession.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aichatsession.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aichathistorypopup.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aichathistorypopup.h
      librecad/src/ui/dock_widgets/ai_assistant/lc_aiinferencemanager.cpp
      librecad/src/ui/dock_widgets/ai_assistant/lc_aiinferencemanager.h
      librecad/src/ui/dock_widgets/ai_assistant/lc_aiprovider.cpp

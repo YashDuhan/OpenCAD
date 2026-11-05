@@ -42,6 +42,7 @@
 #include "lc_aitoolbar.h"
 #include "lc_aicontrol.h"
 #include "lc_aichattranscript.h"
+#include "lc_aichatsession.h"
 #include "lc_aicredentials.h"
 #include "lc_aiicons.h"
 #include "lc_aimcpdialog.h"
@@ -112,7 +113,7 @@ LC_AIAssistantWidget::LC_AIAssistantWidget(QWidget* parent)
     providers->setAutoRaise(true);
     auto* newChat = new QToolButton(this);
     newChat->setText(tr("New Chat"));
-    newChat->setToolTip(tr("Clear the conversation"));
+    newChat->setToolTip(tr("Start a new chat for this drawing (the current one stays in the history)"));
     newChat->setAutoRaise(true);
     header->addWidget(title);
     header->addStretch(1);
@@ -131,6 +132,10 @@ LC_AIAssistantWidget::LC_AIAssistantWidget(QWidget* parent)
     }
     header->addWidget(mcp);
     header->addWidget(providers);
+    // chat history per drawing: the chat is saved, follows the active drawing, and the history button lists it
+    m_chats = new LC_AIChatSession(this, m_theme);
+    connect(m_chats, &LC_AIChatSession::showMessages, this, &LC_AIAssistantWidget::showChat);
+    header->addWidget(m_chats->historyButton());
     header->addWidget(newChat);
     layout->addLayout(header);
 
@@ -471,6 +476,7 @@ void LC_AIAssistantWidget::onSend() {
     // when the request cannot start, onFailed has already taken the question back out of the history
     // and the text stays in the box, so it can be re-sent after fixing the settings
     if (m_inference->send(m_messages)) {
+        m_chats->save(m_messages);
         m_input->clear();
         setBusy(true);
         m_transcript->setThinking(true);
@@ -485,6 +491,7 @@ void LC_AIAssistantWidget::onStop() {
 
 void LC_AIAssistantWidget::onNewChat() {
     m_inference->cancel();
+    m_chats->startNew(); // the chat stays in the history; the next question starts a new one
     m_messages.clear();
     m_transcript->clear();
     m_approvals->clear();
@@ -499,6 +506,7 @@ void LC_AIAssistantWidget::onDelta(const QString& text) {
 
 void LC_AIAssistantWidget::onMessageAdded(const LC_AIChatMessage& message) {
     m_messages.append(message);
+    m_chats->save(m_messages);
     if (message.role == LC_AIChatMessage::Role::Assistant) {
         m_transcript->addAssistant(message);
     }
@@ -517,6 +525,7 @@ void LC_AIAssistantWidget::onFinished() {
     if (!m_messages.isEmpty() && m_messages.last().role == LC_AIChatMessage::Role::User) {
         m_messages.removeLast(); // stopped before any reply: drop the unanswered question from the history
     }
+    m_chats->save(m_messages);
     m_transcript->finishRun();
     setBusy(false);
     LC_AIControl::instance().end();
@@ -539,6 +548,7 @@ void LC_AIAssistantWidget::onFailed(const QString& error) {
             m_input->setPlainText(question);
         }
     }
+    m_chats->save(m_messages);
     m_approvals->clear();
     m_transcript->finishRun();
     m_transcript->addError(error);
@@ -550,5 +560,14 @@ void LC_AIAssistantWidget::onFailed(const QString& error) {
 void LC_AIAssistantWidget::setBusy(const bool busy) {
     m_busy = busy;
     m_modelSelect->setEnabled(!busy);
+    m_chats->setRunning(busy);
     updateSendButton();
+}
+
+void LC_AIAssistantWidget::showChat(const QList<LC_AIChatMessage>& messages) {
+    m_messages = messages;
+    m_approvals->clear();
+    m_sessionAllows.clear(); // "Allow for this session" answers belong to the chat they were given in
+    m_transcript->clear();
+    LC_AIChatSession::replay(m_transcript, messages);
 }

@@ -46,6 +46,9 @@ CATALOG_PROVIDERS = ["anthropic", "openai", "google", "openrouter", "xai", "deep
 # "Revert AI changes" under an answer, and its Restore (lc_airevertbar)
 LUCIDE_ICONS += ["undo-2", "redo-2"]
 
+# the chat history list of the AI sidebar (lc_aichathistorypopup.cpp)
+LUCIDE_ICONS += ["history", "file", "message-square"]
+
 
 def svg_from_react_icon(pack: str, name: str) -> str:
     source = (CYPHER / "node_modules/react-icons" / pack / "index.js").read_text()
