@@ -770,6 +770,7 @@ HEADERS += \
     ui/dock_widgets/ai_assistant/lc_aiassistantwidget.h \
     ui/dock_widgets/ai_assistant/lc_aiapprovals.h \
     ui/dock_widgets/ai_assistant/lc_aitoolbar.h \
+    ui/dock_widgets/ai_assistant/lc_aiproperties.h \
     ui/dock_widgets/ai_assistant/lc_aiagentprogress.h \
     ui/dock_widgets/ai_assistant/lc_aicontrol.h \
     ui/dock_widgets/ai_assistant/lc_aipermissions.h \
@@ -1355,6 +1356,7 @@ SOURCES += \
     ui/dock_widgets/ai_assistant/lc_aiprovidersdialog.cpp \
     ui/dock_widgets/ai_assistant/lc_aitools.cpp \
     ui/dock_widgets/ai_assistant/lc_aitoolbar.cpp \
+    ui/dock_widgets/ai_assistant/lc_aiproperties.cpp \
     ui/dock_widgets/ai_assistant/lc_aiagentprogress.cpp \
     ui/dock_widgets/ai_assistant/lc_aicontrol.cpp \
     ui/dock_widgets/ai_assistant/lc_aisidebar.cpp \

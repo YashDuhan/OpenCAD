@@ -28,7 +28,16 @@ namespace {
                                      "handle_dialog", "select_entities"};
     // tools that change the drawing: asked by default, approved by "Auto-accept edits"
     const QSet<QString> EDIT_TOOLS = {"run_command", "add_text", "press_toolbar_button", "click_drawing", "set_toolbar_value",
-                                      "tool_options"};
+                                      "tool_options", "use_properties"};
+
+    /** Calls of an edit tool that only look: reading the Properties panel, folding it, choosing which type it shows. */
+    bool onlyLooks(const QString& toolName, const QJsonObject& arguments) {
+        if (toolName != "use_properties") {
+            return false;
+        }
+        const QString action = arguments.value("action").toString("read").trimmed().toLower();
+        return action.isEmpty() || action == "read" || action == "collapse" || action == "expand" || action == "choose_type";
+    }
 
     QString permissionText(const LC_AIPermissions::Permission p) {
         switch (p) {
@@ -202,6 +211,9 @@ LC_AIPermissions::Decision LC_AIPermissions::decide(const QString& toolName, con
         return d;
     }
     const QString rule = m == Mode::Full ? QString() : safetyRule(toolName, arguments); // Full access asks for nothing
+    if (p == Permission::Ask && !hasSavedPermission(toolName) && onlyLooks(toolName, arguments)) {
+        p = Permission::Allow; // a look at the panel is not an edit (unless the user asked to be asked)
+    }
     // the approval mode can only loosen "ask"
     if (p == Permission::Ask && (m == Mode::Auto || m == Mode::Full || (m == Mode::Edits && isEditTool(toolName)))) {
         p = Permission::Allow;
