@@ -41,6 +41,9 @@ LUCIDE_ICONS = ["key-round", "trash-2", "search", "check", "refresh-cw", "cpu", 
                 "globe", "arrow-left", "arrow-right", "rotate-cw", "grip-horizontal", "minimize-2",
                 "circle-help", "chevron-up"]
 LUCIDE_ICONS += ["mic", "mic-off", "loader-circle"]  # voice input in the composer (lc_aivoiceinput.cpp)
+# the composer's attachments and @-mentions (selection, view, drawing, layer, block, entity) and "Ask AI about this"
+LUCIDE_ICONS += ["paperclip", "file-text", "at-sign", "mouse-pointer-2", "scan", "drafting-compass", "layers", "box",
+                 "hash"]
 CATALOG_PROVIDERS = ["anthropic", "openai", "google", "openrouter", "xai", "deepseek", "mistral", "groq",
                      "cerebras", "together", "fireworks", "nvidia", "huggingface", "moonshotai", "zai", "minimax",
                      "vercel-ai-gateway"]

@@ -16,6 +16,7 @@
 #include <QObject>
 #include <QPointer>
 
+#include "lc_aiattachments.h"
 #include "lc_aiprovider.h"
 #include "lc_aitool.h"
 
@@ -40,6 +41,10 @@ struct LC_AIChatMessage {
     enum class Role { User, Assistant, ToolResult };
     Role role {Role::User};
     QString text;
+
+    // User: files sent with the text, and the drawing context its @-mentions stood for when it was sent
+    QList<LC_AIAttachment> attachments;
+    QString context;
 
     // Assistant
     QList<LC_AIToolCall> toolCalls;

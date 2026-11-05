@@ -43,6 +43,7 @@
 #include "lc_aicontrol.h"
 #include "lc_aichattranscript.h"
 #include "lc_aichatsession.h"
+#include "lc_aicomposerextras.h"
 #include "lc_aicredentials.h"
 #include "lc_aiicons.h"
 #include "lc_aimcpdialog.h"
@@ -182,7 +183,7 @@ LC_AIAssistantWidget::LC_AIAssistantWidget(QWidget* parent)
     composerLayout->setContentsMargins(10, 10, 10, 10);
     composerLayout->setSpacing(8);
 
-    m_input = new QPlainTextEdit(m_composer);
+    m_input = new LC_AIComposerInput(m_composer); // takes dropped and pasted files, shows @-mentions as pills
     m_input->setPlaceholderText(tr("Ask anything (Enter to send, Shift+Enter for new line)"));
     QPalette inputPalette = m_input->palette();
     inputPalette.setColor(QPalette::PlaceholderText, t.textPlaceholder);
@@ -192,10 +193,15 @@ LC_AIAssistantWidget::LC_AIAssistantWidget(QWidget* parent)
     m_input->installEventFilter(this);
     connect(m_input, &QPlainTextEdit::textChanged, this, &LC_AIAssistantWidget::updateSendButton);
     connect(m_input, &QPlainTextEdit::textChanged, this, &LC_AIAssistantWidget::fitInputHeight);
+    // attachments above the text, paperclip and @ in the actions row, the @ popup over the conversation
+    m_extras = new LC_AIComposerExtras(static_cast<LC_AIComposerInput*>(m_input), m_composer, m_theme, this);
+    connect(m_extras, &LC_AIComposerExtras::changed, this, &LC_AIAssistantWidget::updateSendButton);
+    composerLayout->addWidget(m_extras->strip());
     composerLayout->addWidget(m_input);
 
     auto* actions = new QHBoxLayout();
     actions->setSpacing(8);
+    actions->addWidget(m_extras->buttons());
     m_approvalMode = new LC_AIApprovalModeButton(m_theme, m_composer);
     connect(m_approvalMode, &LC_AIApprovalModeButton::permissionsRequested, this, &LC_AIAssistantWidget::openToolPermissions,
             Qt::QueuedConnection);
@@ -302,7 +308,8 @@ void LC_AIAssistantWidget::fitModelButton() {
     const QMargins margins = m_composer->layout()->contentsMargins();
     const int room = m_composer->width() - margins.left() - margins.right() - m_approvalMode->sizeHint().width()
                      - m_sendButton->sizeHint().width() - 3 * 8
-                     - (m_voice->isHidden() ? 0 : m_voice->sizeHint().width() + 8);
+                     - (m_voice->isHidden() ? 0 : m_voice->sizeHint().width() + 8)
+                     - (m_extras != nullptr ? m_extras->buttons()->sizeHint().width() + 8 : 0);
     m_modelSelect->setFixedWidth(qBound(80, qMin(wanted, room > 0 ? room : wanted), 260));
 }
 
@@ -355,7 +362,7 @@ void LC_AIAssistantWidget::openModelPicker() {
 
 void LC_AIAssistantWidget::updateSendButton() {
     // Cypher's .send-btn: faint when empty, solid when there is text, Stop while a reply streams
-    const bool valid = !m_input->toPlainText().trimmed().isEmpty();
+    const bool valid = !m_input->toPlainText().trimmed().isEmpty() || (m_extras != nullptr && m_extras->hasAttachments());
     const QString state = m_busy ? "stop" : valid ? "valid" : "idle";
     if (m_sendButton->property("state").toString() != state) {
         m_sendButton->setProperty("state", state);
@@ -476,21 +483,23 @@ bool LC_AIAssistantWidget::eventFilter(QObject* watched, QEvent* event) {
 
 void LC_AIAssistantWidget::onSend() {
     const QString text = m_input->toPlainText().trimmed();
-    if (text.isEmpty() || m_busy) {
+    if ((text.isEmpty() && !m_extras->hasAttachments()) || m_busy) {
         return;
     }
     LC_AIChatMessage question;
     question.role = LC_AIChatMessage::Role::User;
     question.text = text;
+    m_extras->fill(question); // the attached files, and the drawing context the @-mentions stand for
     m_messages.append(question);
     m_runTools = LC_AIControl::withControl(m_tools + LC_MCPManager::instance().aiTools());
     m_inference->setTools(m_runTools);
-    m_transcript->addUser(text);
+    m_transcript->addUser(text, question.attachments);
     // when the request cannot start, onFailed has already taken the question back out of the history
     // and the text stays in the box, so it can be re-sent after fixing the settings
     if (m_inference->send(m_messages)) {
         m_chats->save(m_messages);
         m_input->clear();
+        m_extras->clear();
         setBusy(true);
         m_transcript->setThinking(true);
         // the AI drives the drawing now; the user can look around, take over or stop
@@ -510,6 +519,7 @@ void LC_AIAssistantWidget::onNewChat() {
     m_approvals->clear();
     m_sessionAllows.clear(); // "Allow for this session" lasts until a new chat
     m_input->clear();
+    m_extras->clear();
     focusInput();
 }
 
@@ -556,9 +566,11 @@ QString LC_AIAssistantWidget::toolLabel(const QString& name) const {
 void LC_AIAssistantWidget::onFailed(const QString& error) {
     // the question stays visible, but is not sent again as an unanswered turn
     if (!m_messages.isEmpty() && m_messages.last().role == LC_AIChatMessage::Role::User) {
-        const QString question = m_messages.takeLast().text;
-        if (m_input->toPlainText().trimmed().isEmpty()) {
+        const LC_AIChatMessage failed = m_messages.takeLast();
+        const QString question = failed.text;
+        if (m_input->toPlainText().trimmed().isEmpty() && !m_extras->hasAttachments()) {
             m_input->setPlainText(question);
+            m_extras->restore(failed.attachments); // the files go back with the text
         }
     }
     m_chats->save(m_messages);

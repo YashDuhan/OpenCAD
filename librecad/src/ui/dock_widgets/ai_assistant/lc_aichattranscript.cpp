@@ -25,6 +25,8 @@
 #include <QVBoxLayout>
 
 #include "lc_aiicons.h"
+#include "lc_aicomposerextras.h"
+#include "lc_aimentions.h"
 
 namespace {
     constexpr int MAX_PRE_CHARS = 6000;
@@ -1102,15 +1104,26 @@ QLabel* LC_AIChatTranscript::textBlock(const QString& markdown) {
     return label;
 }
 
-void LC_AIChatTranscript::addUser(const QString& text) {
+void LC_AIChatTranscript::addUser(const QString& text, const QList<LC_AIAttachment>& attachments) {
+    if (!attachments.isEmpty()) { // the files sent with it, above the bubble on the right
+        m_follow = true;
+        add(LC_AIComposerExtras::messageRow(attachments, m_theme, m_content));
+        if (text.isEmpty()) {
+            return;
+        }
+    }
     // Cypher's .msg-user: a bubble on the right, at most 80% wide
     auto* row = new QWidget(m_content);
     auto* layout = new QHBoxLayout(row);
-    layout->setContentsMargins(0, 10, 0, 4);
+    layout->setContentsMargins(0, attachments.isEmpty() ? 10 : 6, 0, 4);
     layout->addStretch(1);
     auto* bubble = new QLabel(text, row);
     bubble->setObjectName("userBubble");
     bubble->setTextFormat(Qt::PlainText);
+    if (const QString html = LC_AIMentions::toHtml(text, m_theme); !html.isEmpty()) { // @-mentions as pills
+        bubble->setTextFormat(Qt::RichText);
+        bubble->setText(html);
+    }
     bubble->setWordWrap(true);
     bubble->setTextInteractionFlags(Qt::TextSelectableByMouse);
     layout->addWidget(bubble);

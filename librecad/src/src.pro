@@ -39,6 +39,11 @@ qtHaveModule(multimedia) {
     QT += multimedia
     DEFINES += LC_AI_VOICE
 }
+# PDFs attached to the AI chat: previews, and page images for providers that cannot read PDFs
+qtHaveModule(pdf) {
+    QT += pdf
+    DEFINES += LC_AI_PDF
+}
 CONFIG += c++17
 
 # Native OpenType shaping is available only through an explicit, versioned font
@@ -801,6 +806,9 @@ HEADERS += \
     ui/dock_widgets/ai_assistant/lc_aivoice.h \
     ui/dock_widgets/ai_assistant/lc_aivoiceinput.h \
     ui/dock_widgets/ai_assistant/lc_aivoicerecorder.h \
+    ui/dock_widgets/ai_assistant/lc_aiattachments.h \
+    ui/dock_widgets/ai_assistant/lc_aimentions.h \
+    ui/dock_widgets/ai_assistant/lc_aicomposerextras.h \
     ui/dock_widgets/views_list/lc_dlgnamedviewslistoptions.h \
     ui/dock_widgets/views_list/lc_namedviewsbutton.h \
     ui/dock_widgets/views_list/lc_namedviewslistoptions.h \
@@ -1382,6 +1390,9 @@ SOURCES += \
     ui/dock_widgets/ai_assistant/lc_aivoice.cpp \
     ui/dock_widgets/ai_assistant/lc_aivoiceinput.cpp \
     ui/dock_widgets/ai_assistant/lc_aivoicerecorder.cpp \
+    ui/dock_widgets/ai_assistant/lc_aiattachments.cpp \
+    ui/dock_widgets/ai_assistant/lc_aimentions.cpp \
+    ui/dock_widgets/ai_assistant/lc_aicomposerextras.cpp \
     ui/dock_widgets/views_list/lc_dlgnamedviewslistoptions.cpp \
     ui/dock_widgets/views_list/lc_namedviewsbutton.cpp \
     ui/dock_widgets/views_list/lc_namedviewslistoptions.cpp \

@@ -30,6 +30,7 @@
 #include "lc_actioncontext.h"
 #include "lc_actiongroup.h"
 #include "lc_actiongroupmanager.h"
+#include "lc_aimentions.h"
 #include "lc_menufactory.h"
 #include "qc_applicationwindow.h"
 #include "qg_graphicview.h"
@@ -90,6 +91,8 @@ QMenu* LC_MenuFactoryGraphicView::createGraphicViewDefaultPopupMenu(QG_GraphicVi
     const bool hasSelection = actionContext->hasSelection();
 
     createGVMenuRecent(graphicView, ctxMenu, actionContext, contextEntity, contextPosition, hasEntity);
+    // "Ask AI about this": the entity (or the view) as an @-mention in the AI chat
+    LC_AIMentions::addAskAI(ctxMenu, graphicView, contextEntity);
 
     if (hasSelection) {
         addAction(ctxMenu, "EditKillAllActions");

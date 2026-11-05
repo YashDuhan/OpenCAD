@@ -25,6 +25,7 @@ class LC_AIApprovalBox;
 class LC_AIApprovalModeButton;
 class LC_AIChatSession;
 class LC_AIVoiceInput;
+class LC_AIComposerExtras;
 class QPlainTextEdit;
 class QPushButton;
 class QToolButton;
@@ -81,6 +82,7 @@ private:
     LC_AIChatTranscript* m_transcript {nullptr};
     QFrame* m_composer {nullptr};       // Cypher's .composer: the input over the actions row
     QPlainTextEdit* m_input {nullptr};
+    LC_AIComposerExtras* m_extras {nullptr}; // attached files and @-mentions of the message box
     QPushButton* m_modelSelect {nullptr}; // Cypher's .model-select: logo, model name, chevron
     QLabel* m_modelIcon {nullptr};
     QLabel* m_modelName {nullptr};
