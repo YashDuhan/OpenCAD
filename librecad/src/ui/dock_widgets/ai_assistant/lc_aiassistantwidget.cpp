@@ -48,6 +48,7 @@
 #include "lc_aimodelpicker.h"
 #include "lc_mcpmanager.h"
 #include "lc_aiprovidersdialog.h"
+#include "lc_aivoiceinput.h"
 
 namespace {
     constexpr int MIN_INPUT_HEIGHT = 64; // about two lines
@@ -192,6 +193,16 @@ LC_AIAssistantWidget::LC_AIAssistantWidget(QWidget* parent)
             Qt::QueuedConnection);
     actions->addWidget(m_approvalMode);
     actions->addStretch(1);
+    // voice input: the transcript lands in the message box, and is sent at once when the user turned that on
+    m_voice = new LC_AIVoiceInput(m_theme, m_input, this, m_composer);
+    connect(m_voice, &LC_AIVoiceInput::sendRequested, this, [this] {
+        if (!m_busy) {
+            onSend();
+        }
+    });
+    connect(m_voice, &LC_AIVoiceInput::failed, this, [this](const QString& error) { m_transcript->addError(error); });
+    connect(m_voice, &LC_AIVoiceInput::providersRequested, this, &LC_AIAssistantWidget::openSettings, Qt::QueuedConnection);
+    actions->addWidget(m_voice);
     m_modelSelect = new QPushButton(m_composer);
     m_modelSelect->setObjectName("modelSelect");
     m_modelSelect->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed); // as wide as the model's name (fitModelButton)
@@ -219,6 +230,7 @@ LC_AIAssistantWidget::LC_AIAssistantWidget(QWidget* parent)
     m_sendButton->setCursor(Qt::PointingHandCursor);
     actions->addWidget(m_sendButton);
     composerLayout->addLayout(actions);
+    composerLayout->addWidget(m_voice->levelStrip()); // the live level while recording, as in Cypher
     layout->addWidget(m_composer);
 
     connect(m_sendButton, &QToolButton::clicked, this, [this] { m_busy ? onStop() : onSend(); });
@@ -281,7 +293,8 @@ void LC_AIAssistantWidget::fitModelButton() {
     const int wanted = m_modelSelect->layout()->sizeHint().width();
     const QMargins margins = m_composer->layout()->contentsMargins();
     const int room = m_composer->width() - margins.left() - margins.right() - m_approvalMode->sizeHint().width()
-                     - m_sendButton->sizeHint().width() - 3 * 8;
+                     - m_sendButton->sizeHint().width() - 3 * 8
+                     - (m_voice->isHidden() ? 0 : m_voice->sizeHint().width() + 8);
     m_modelSelect->setFixedWidth(qBound(80, qMin(wanted, room > 0 ? room : wanted), 260));
 }
 

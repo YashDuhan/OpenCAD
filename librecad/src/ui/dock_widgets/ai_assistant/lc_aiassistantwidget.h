@@ -23,6 +23,7 @@ class QLabel;
 class LC_AIChatTranscript;
 class LC_AIApprovalBox;
 class LC_AIApprovalModeButton;
+class LC_AIVoiceInput;
 class QPlainTextEdit;
 class QPushButton;
 class QToolButton;
@@ -86,6 +87,7 @@ private:
     LC_AIApprovalBox* m_approvals {nullptr};
     LC_AIApprovalModeButton* m_approvalMode {nullptr};
     QSet<QString> m_sessionAllows; // "Allow for this session" answers, until New Chat
+    LC_AIVoiceInput* m_voice {nullptr}; // the mic button and push-to-talk (hidden without Qt Multimedia)
 };
 
 #endif
