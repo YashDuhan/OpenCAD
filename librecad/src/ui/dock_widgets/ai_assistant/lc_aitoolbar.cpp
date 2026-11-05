@@ -43,6 +43,7 @@
 #include <QPushButton>
 #include <QRadioButton>
 #include <QRegularExpression>
+#include <QScopeGuard>
 #include <QSet>
 #include <QSpinBox>
 #include <QStandardPaths>
@@ -1682,6 +1683,7 @@ namespace {
         QStringList skipped;
         bool wasChecked {false};
         bool failed {false};
+        bool performing {false}; // a step is under way (a drag lets events through between its moves)
         QString header;
         Done done;
 
@@ -1692,6 +1694,11 @@ namespace {
 
         void step() {
             auto self = shared_from_this();
+            if (performing) {
+                // the next step waits for this one: on a slow machine the timer can fire in the middle of a drag
+                QTimer::singleShot(20, qApp, [self] { self->step(); });
+                return;
+            }
             if (auto* popup = qobject_cast<QMenu*>(QApplication::activePopupWidget())) {
                 // a right click without a tool opens the drawing's context menu: say what it offered, close it
                 QStringList items;
@@ -1723,6 +1730,9 @@ namespace {
         }
 
         void perform(const QJsonObject& s) {
+            performing = true;
+            const std::shared_ptr<Run> keep = shared_from_this();
+            const auto idle = qScopeGuard([this] { performing = false; });
             const QString type = s.value("type").toString().toLower();
             RS_GraphicView* view = LC_AITools::view();
             QString error;
