@@ -229,7 +229,9 @@ QProgressBar::chunk { background: %8; border-radius: 4px; }
     };
     m_buttons = makeTree({tr("Button"), tr("Id"), tr("Kind"), tr("Agentic"), tr("Tested"), tr("Last result")});
     m_tools = makeTree({tr("Tool"), tr("Name"), tr("Permission"), tr("Agentic"), tr("Tested"), tr("Last result")});
+    m_parts = makeTree({tr("Entry"), tr("Id"), tr("Kind"), tr("Agentic"), tr("Tested"), tr("Last result")});
     m_tabs->addTab(m_buttons, tr("Toolbar buttons"));
+    m_tabs->addTab(m_parts, tr("Menus, panels and more"));
     m_tabs->addTab(m_tools, tr("AI tools"));
     layout->addWidget(m_tabs, 1);
     connect(m_tabs, &QTabWidget::currentChanged, this, [this] { emit m_buttons->itemSelectionChanged(); });
@@ -259,10 +261,7 @@ QProgressBar::chunk { background: %8; border-radius: 4px; }
     bar->addWidget(close);
     layout->addLayout(bar);
 
-    connect(m_ask, &QPushButton::clicked, this, [this] {
-        QTreeWidget* tree = m_tabs->currentIndex() == 0 ? m_buttons : m_tools;
-        askAI(tree->currentItem());
-    });
+    connect(m_ask, &QPushButton::clicked, this, [this] { askAI(currentTree()->currentItem()); });
     connect(m_testSelected, &QPushButton::clicked, this, [this] { LC_AIAgentProgress::startTests(this, selectedIds()); });
     connect(m_testShown, &QPushButton::clicked, this, [this] { LC_AIAgentProgress::startTests(this, visibleIds()); });
     connect(m_stop, &QPushButton::clicked, this, [] { LC_AIToolbar::stopTests(); });
@@ -297,6 +296,7 @@ void LC_AIAgentProgressDialog::rebuild() {
     m_items.clear();
     m_buttons->clear();
     m_tools->clear();
+    m_parts->clear();
     const LC_AITheme t = LC_AITheme::current();
     QWidget* top = parentWidget() != nullptr ? parentWidget()->window() : nullptr;
 
@@ -337,6 +337,43 @@ void LC_AIAgentProgressDialog::rebuild() {
         group->setExpanded(true);
     }
 
+    // the rest of the window, grouped like the toolbars
+    QHash<QString, QTreeWidgetItem*> partGroups;
+    for (const QJsonValue& v : LC_AIToolbar::surfaces()) {
+        const QJsonObject part = v.toObject();
+        const QString groupName = part.value("group").toString();
+        QTreeWidgetItem* group = partGroups.value(groupName);
+        if (group == nullptr) {
+            group = new QTreeWidgetItem(m_parts, {groupName});
+            QFont f = group->font(ColName);
+            f.setBold(true);
+            group->setFont(ColName, f);
+            partGroups.insert(groupName, group);
+        }
+        const QString id = part.value("id").toString();
+        auto* item = new QTreeWidgetItem(group);
+        item->setText(ColName, part.value("label").toString());
+        item->setText(ColId, id);
+        item->setText(ColKind, part.value("kind").toString());
+        item->setToolTip(ColName, part.value("how").toString()
+                                      + (part.value("note").toString().isEmpty() ? QString() : "\n" + part.value("note").toString()));
+        item->setData(ColName, Qt::UserRole, id);
+        item->setData(ColName, Qt::UserRole + 3, part.value("task").toString());
+        const QString why = part.value("why").toString();
+        item->setData(ColName, Qt::UserRole + 4, why);
+        item->setText(ColAgentic, why.isEmpty() ? QString::fromUtf8("✓ yes") : QString::fromUtf8("– no"));
+        item->setForeground(ColAgentic, why.isEmpty() ? t.accentGreen : t.textMuted);
+        if (!why.isEmpty()) {
+            item->setText(ColNote, why);
+        }
+        if (!m_items.contains(id)) {
+            m_items.insert(id, item);
+        }
+    }
+    for (QTreeWidgetItem* group : std::as_const(partGroups)) {
+        group->setExpanded(false); // hundreds of entries: open a group to see them
+    }
+
     for (const LC_AITool& tool : aiTools(this)) {
         auto* item = new QTreeWidgetItem(m_tools);
         item->setText(ColName, tool.label);
@@ -360,7 +397,7 @@ void LC_AIAgentProgressDialog::rebuild() {
             item->setForeground(ColTested, t.textMuted);
         }
     }
-    for (QTreeWidget* tree : {m_buttons, m_tools}) {
+    for (QTreeWidget* tree : {m_buttons, m_tools, m_parts}) {
         tree->header()->resizeSection(ColName, 250);
         tree->header()->resizeSection(ColId, 190);
         tree->header()->resizeSection(ColKind, 80);
@@ -390,20 +427,25 @@ void LC_AIAgentProgressDialog::setResult(const LC_AIButtonTest& result) {
 
 void LC_AIAgentProgressDialog::applyFilter() {
     const QString needle = m_search->text().trimmed().toLower();
-    for (int g = 0; g < m_buttons->topLevelItemCount(); ++g) {
-        QTreeWidgetItem* group = m_buttons->topLevelItem(g);
-        int shown = 0;
-        int passed = 0;
-        for (int i = 0; i < group->childCount(); ++i) {
-            QTreeWidgetItem* item = group->child(i);
-            const bool match = needle.isEmpty() || item->text(ColName).toLower().contains(needle)
-                               || item->text(ColId).toLower().contains(needle) || group->text(ColName).toLower().contains(needle);
-            item->setHidden(!match);
-            shown += match ? 1 : 0;
-            passed += m_results.value(item->text(ColId)).status == "passed" ? 1 : 0;
+    for (QTreeWidget* tree : {m_buttons, m_parts}) { // the trees grouped by toolbar or kind
+        for (int g = 0; g < tree->topLevelItemCount(); ++g) {
+            QTreeWidgetItem* group = tree->topLevelItem(g);
+            int shown = 0;
+            int passed = 0;
+            for (int i = 0; i < group->childCount(); ++i) {
+                QTreeWidgetItem* item = group->child(i);
+                const bool match = needle.isEmpty() || item->text(ColName).toLower().contains(needle)
+                                   || item->text(ColId).toLower().contains(needle) || group->text(ColName).toLower().contains(needle);
+                item->setHidden(!match);
+                shown += match ? 1 : 0;
+                passed += m_results.value(item->text(ColId)).status == "passed" ? 1 : 0;
+            }
+            group->setHidden(shown == 0);
+            group->setText(ColTested, QStringLiteral("%1/%2").arg(passed).arg(group->childCount()));
+            if (tree == m_parts && !needle.isEmpty() && shown > 0) {
+                group->setExpanded(true); // show what the search found
+            }
         }
-        group->setHidden(shown == 0);
-        group->setText(ColTested, QStringLiteral("%1/%2").arg(passed).arg(group->childCount()));
     }
     for (int i = 0; i < m_tools->topLevelItemCount(); ++i) {
         QTreeWidgetItem* item = m_tools->topLevelItem(i);
@@ -424,20 +466,35 @@ void LC_AIAgentProgressDialog::updateSummary() {
             failed += m_results.value(id).status == "failed" ? 1 : 0;
         }
     }
+    int parts = 0, partsAgentic = 0, partsPassed = 0;
+    for (int g = 0; g < m_parts->topLevelItemCount(); ++g) {
+        QTreeWidgetItem* group = m_parts->topLevelItem(g);
+        for (int i = 0; i < group->childCount(); ++i) {
+            const QString id = group->child(i)->text(ColId);
+            ++parts;
+            partsAgentic += group->child(i)->data(ColName, Qt::UserRole + 4).toString().isEmpty() ? 1 : 0;
+            partsPassed += m_results.value(id).status == "passed" ? 1 : 0;
+        }
+    }
     int tools = m_tools->topLevelItemCount();
     int toolsPassed = 0;
     for (int i = 0; i < tools; ++i) {
         toolsPassed += m_results.value("tool:" + m_tools->topLevelItem(i)->text(ColId)).status == "passed" ? 1 : 0;
     }
     m_summary->setText(tr("%1 toolbar buttons in %2 toolbars: %3 agentic, %4 passed their test, %5 failed, %6 not tested.   "
+                          "%9 menu entries, panels and other parts of the window: %10 agentic, %11 passed.   "
                           "%7 AI tools: %8 passed.")
                            .arg(buttons).arg(m_buttons->topLevelItemCount()).arg(agentic).arg(passed).arg(failed)
-                           .arg(buttons - passed - failed).arg(tools).arg(toolsPassed));
+                           .arg(buttons - passed - failed).arg(tools).arg(toolsPassed).arg(parts).arg(partsAgentic).arg(partsPassed));
+}
+
+QTreeWidget* LC_AIAgentProgressDialog::currentTree() const {
+    return qobject_cast<QTreeWidget*>(m_tabs->currentWidget());
 }
 
 QStringList LC_AIAgentProgressDialog::selectedIds() const {
     QStringList ids;
-    QTreeWidget* tree = m_tabs->currentIndex() == 0 ? m_buttons : m_tools;
+    QTreeWidget* tree = currentTree();
     for (QTreeWidgetItem* item : tree->selectedItems()) {
         if (item->childCount() > 0) {
             for (int i = 0; i < item->childCount(); ++i) {
@@ -454,9 +511,9 @@ QStringList LC_AIAgentProgressDialog::selectedIds() const {
 
 QStringList LC_AIAgentProgressDialog::visibleIds() const {
     QStringList ids;
-    if (m_tabs->currentIndex() == 0) {
-        for (int g = 0; g < m_buttons->topLevelItemCount(); ++g) {
-            QTreeWidgetItem* group = m_buttons->topLevelItem(g);
+    if (QTreeWidget* tree = currentTree(); tree != m_tools) {
+        for (int g = 0; g < tree->topLevelItemCount(); ++g) {
+            QTreeWidgetItem* group = tree->topLevelItem(g);
             for (int i = 0; i < group->childCount(); ++i) {
                 if (!group->child(i)->isHidden()) {
                     ids << group->child(i)->data(ColName, Qt::UserRole).toString();
@@ -479,11 +536,14 @@ void LC_AIAgentProgressDialog::askAI(QTreeWidgetItem* item) {
         return;
     }
     const QString id = item->data(ColName, Qt::UserRole).toString();
-    if (id.isEmpty() || !LC_AIToolbar::notAgenticReason(id).isEmpty()) {
+    if (id.isEmpty() || !LC_AIToolbar::notAgenticReason(id).isEmpty() || !item->data(ColName, Qt::UserRole + 4).toString().isEmpty()) {
         return;
     }
     QString prompt;
-    if (id.startsWith("tool:")) {
+    if (const QString task = item->data(ColName, Qt::UserRole + 3).toString(); !task.isEmpty()) {
+        prompt = task; // a menu entry, panel or other part of the window
+    }
+    else if (id.startsWith("tool:")) {
         LC_AITool tool;
         tool.name = id.mid(5);
         tool.label = item->data(ColName, Qt::UserRole + 2).toString();
@@ -551,6 +611,15 @@ namespace {
                 std::_Exit(2);
             }
             LC_AIAgentProgressDialog::showFor(window);
+            // OPENCAD_AI_AGENT_PROGRESS_TAB=<n> shows that tab, with its first group open
+            if (auto* dialog = window->findChild<LC_AIAgentProgressDialog*>()) {
+                if (auto* tabs = dialog->findChild<QTabWidget*>()) {
+                    tabs->setCurrentIndex(qEnvironmentVariableIntValue("OPENCAD_AI_AGENT_PROGRESS_TAB"));
+                    if (auto* tree = qobject_cast<QTreeWidget*>(tabs->currentWidget()); tree != nullptr && tree->topLevelItemCount() > 0) {
+                        tree->topLevelItem(0)->setExpanded(true);
+                    }
+                }
+            }
             QTimer::singleShot(800, qApp, [window, path] {
                 if (auto* dialog = window->findChild<LC_AIAgentProgressDialog*>()) {
                     dialog->grab().save(path);

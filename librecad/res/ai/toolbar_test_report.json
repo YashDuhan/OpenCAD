@@ -1,5 +1,5 @@
 {
- "when": "2026-11-06T01:24",
+ "when": "2026-11-06T03:37",
  "results": [
   {
    "id": "DrawLine",
@@ -1039,12 +1039,12 @@
   {
    "id": "SnapVisualDynDistance",
    "status": "passed",
-   "detail": "+16 entities, -13 entities"
+   "detail": "-13 entities"
   },
   {
    "id": "SnapVisualDistanceTan",
    "status": "passed",
-   "detail": "+16 entities, -13 entities"
+   "detail": "-13 entities"
   },
   {
    "id": "SnapVisualShowFarGuides",
@@ -1440,6 +1440,3356 @@
    "id": "tool:browser_screenshot",
    "status": "skipped",
    "detail": "needs a page opened from the internet; try it from the chat"
+  },
+  {
+   "id": "properties:read_no_selection",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "properties:read_line",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "properties:read_circle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "properties:read_text",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "properties:set_double",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "properties:set_point",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "properties:set_point_x",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "properties:set_angle",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "properties:set_varies",
+   "status": "passed",
+   "detail": "+2 entities, -2 entities"
+  },
+  {
+   "id": "properties:set_layer",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "properties:set_color",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "properties:set_linetype",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "properties:set_linewidth",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "properties:set_enum",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "properties:set_bool",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "properties:set_bool_toggle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "properties:set_bool_visible_layer",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "properties:set_text",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "properties:readonly_refused",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "properties:undo",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "properties:undo_two",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "properties:link_dialog",
+   "status": "passed",
+   "detail": "dialog Add Layer"
+  },
+  {
+   "id": "properties:choose_type",
+   "status": "passed",
+   "detail": "+2 entities, -2 entities"
+  },
+  {
+   "id": "properties:collapse_expand",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "properties:settings",
+   "status": "passed",
+   "detail": "dialog Property Sheet Properties"
+  },
+  {
+   "id": "properties:tool_options",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "properties:pick",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "context:empty_space",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "context:line",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "context:circle",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "context:arc",
+   "status": "passed",
+   "detail": "-1 entities"
+  },
+  {
+   "id": "context:ellipse",
+   "status": "passed",
+   "detail": "+4 entities"
+  },
+  {
+   "id": "context:polyline",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "context:point",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "context:block_insert",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "context:text",
+   "status": "passed",
+   "detail": "+5 entities, -1 entities"
+  },
+  {
+   "id": "context:entity_layer",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "context:selection",
+   "status": "passed",
+   "detail": "-2 entities"
+  },
+  {
+   "id": "context:opens_dialog",
+   "status": "passed",
+   "detail": "dialog Drawing Preferences"
+  },
+  {
+   "id": "context:layers_panel",
+   "status": "passed",
+   "detail": "dialog Layer Settings"
+  },
+  {
+   "id": "context:layers_tree_panel",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "context:blocks_panel",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "prefs:paper_size",
+   "status": "passed",
+   "detail": "dialog Drawing Preferences, Drawing Preferences"
+  },
+  {
+   "id": "prefs:custom_paper",
+   "status": "passed",
+   "detail": "dialog Drawing Preferences, Drawing Preferences"
+  },
+  {
+   "id": "prefs:margins",
+   "status": "passed",
+   "detail": "dialog Drawing Preferences, Drawing Preferences"
+  },
+  {
+   "id": "prefs:units",
+   "status": "passed",
+   "detail": "dialog Drawing Preferences"
+  },
+  {
+   "id": "prefs:angle_units",
+   "status": "passed",
+   "detail": "dialog Drawing Preferences, Drawing Preferences"
+  },
+  {
+   "id": "prefs:grid",
+   "status": "passed",
+   "detail": "dialog Drawing Preferences, Drawing Preferences"
+  },
+  {
+   "id": "prefs:point_style",
+   "status": "passed",
+   "detail": "dialog Drawing Preferences, Drawing Preferences"
+  },
+  {
+   "id": "prefs:metadata",
+   "status": "passed",
+   "detail": "dialog Drawing Preferences, Drawing Preferences"
+  },
+  {
+   "id": "menu:File > Save",
+   "status": "passed",
+   "detail": "dialog Save Drawing as"
+  },
+  {
+   "id": "menu:Edit > Redo",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "menu:View > Views Restore > Restore View 1",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:View > Views Restore > Restore View 2",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:View > Views Restore > Restore View 3",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:View > Views Restore > Restore View 4",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:View > Views Restore > Restore View 5",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:View > To WCS",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "panel:pen_palette_dockwidget > Save",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:ucs_dockwidget > Restores selected user coordinates system.",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "panel:ucs_dockwidget > Edit selected user coordinates name. No-name UCS are tempora",
+   "status": "passed",
+   "detail": "dialog Rename UCS, Rename UCS"
+  },
+  {
+   "id": "panel:ucs_dockwidget > Preview of coordinate system origin and angle.",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:ucs_dockwidget > Removes selected user coordinates system.",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:view_dockwidget > Update selected view by current zoom/position",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:view_dockwidget > Removes selected view",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:view_dockwidget > Edit selected view name",
+   "status": "passed",
+   "detail": "dialog Rename View, Rename View"
+  },
+  {
+   "id": "panel:view_dockwidget > Restores selected view",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:quick_entity_info > Select current entity in drawing",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:quick_entity_info > Properties Edit",
+   "status": "passed",
+   "detail": "dialog Text"
+  },
+  {
+   "id": "panel:quick_entity_info > Copy to Clipboard",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:quick_entity_info > Clear",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:File > New",
+   "status": "passed",
+   "detail": "-13 entities"
+  },
+  {
+   "id": "menu:File > New From Template",
+   "status": "passed",
+   "detail": "dialog Open Drawing"
+  },
+  {
+   "id": "menu:File > Open...",
+   "status": "passed",
+   "detail": "dialog Open Drawing"
+  },
+  {
+   "id": "menu:File > Open Legacy LibreCAD DXF (UTF-8)...",
+   "status": "passed",
+   "detail": "dialog Legacy LibreCAD DXF recovery"
+  },
+  {
+   "id": "menu:File > Save as...",
+   "status": "passed",
+   "detail": "dialog Save Drawing as"
+  },
+  {
+   "id": "menu:File > Save All...",
+   "status": "skipped",
+   "detail": "not run by the test: it would save all your own drawings or window"
+  },
+  {
+   "id": "menu:File > Import > Insert Image",
+   "status": "passed",
+   "detail": "dialog Open Image"
+  },
+  {
+   "id": "menu:File > Import > Block",
+   "status": "passed",
+   "detail": "dialog Open Drawing"
+  },
+  {
+   "id": "menu:File > Export > Export as CAM/plain SVG...",
+   "status": "passed",
+   "detail": "dialog Export as CAM/plain SVG"
+  },
+  {
+   "id": "menu:File > Export > Export as PDF",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:File > Export > Export as image",
+   "status": "passed",
+   "detail": "dialog Image Export Options"
+  },
+  {
+   "id": "menu:File > Print...",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:File > Print Preview",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:File > Close",
+   "status": "skipped",
+   "detail": "not run by the test: it would close your own drawings or window"
+  },
+  {
+   "id": "menu:File > Close All",
+   "status": "skipped",
+   "detail": "not run by the test: it would close your own drawings or window"
+  },
+  {
+   "id": "menu:Options > Application Preferences",
+   "status": "passed",
+   "detail": "dialog Application Preferences"
+  },
+  {
+   "id": "menu:Options > Keyboard Shortcuts",
+   "status": "passed",
+   "detail": "dialog Action Shortcuts Mappings"
+  },
+  {
+   "id": "menu:Options > Widget Options",
+   "status": "passed",
+   "detail": "dialog Widget Options"
+  },
+  {
+   "id": "menu:Options > Device Options",
+   "status": "passed",
+   "detail": "dialog Device Options"
+  },
+  {
+   "id": "menu:Options > Reload Style Sheet",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Options > Current Drawing Preferences",
+   "status": "passed",
+   "detail": "dialog Drawing Preferences"
+  },
+  {
+   "id": "menu:Edit > Selection Pointer",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Edit > Undo",
+   "status": "passed",
+   "detail": "-1 entities"
+  },
+  {
+   "id": "menu:Edit > Cut",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Edit > Copy",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Edit > Paste",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Edit > Paste Transform",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Edit > Paste to Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Edit > Cut Quick",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Edit > Copy Quick",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Edit > Delete Selected",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:View > Grid",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:View > Draft",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:View > Draft Lines",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:View > Antialiasing",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:View > Orthogonal Grid",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:View > Isometric Left Grid",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:View > Isometric Top Grid",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:View > Isometric Right Grid",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:View > Redraw",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:View > Zoom In",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:View > Zoom Out",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:View > Auto Zoom",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:View > Previous View",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:View > Window Zoom",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:View > Zoom Panning",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:View > Save View",
+   "status": "passed",
+   "detail": "dialog New View"
+  },
+  {
+   "id": "menu:View > Named Views",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:View > Create UCS",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:View > Set UCS By Ordinate Dimension",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:View > User Coordinate Systems",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Line > 2 Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Line > Angle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Line > Horizontal",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Line > Vertical",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Line > Parallel through point",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Line > Parallel",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Line > Bisector",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Line > Tangent (P,C)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Line > Tangent (C,C)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Line > Tangent Orthogonal",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Line > Orthogonal",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Line > Relative angle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Line > Snake",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Line > Snake (X)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Line > Snake (Y)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Line > Draw Fast",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Line > Angle From Line",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Line > Orthogonal From Line",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Line > From Point To Line",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Line > Slice/Divide Line",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Line > Slice/Divide Circle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Line > Center Mark",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Line > Centerline",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Line > Radiant Line",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Point > Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Point > Line of Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Point > Middle Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Point > Lattice of Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Point > Select Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Point > Paste to Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Circle > Center, Point",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Circle > 2 Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Circle > 2 Points, Radius",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Circle > 3 Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Circle > Center, Radius",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Circle > Tangential 2 Entities, 1 Point",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Circle > Tangential, 2 Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Circle > Tangential 2 Entities, Radius",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Circle > Tangential 3 Entities",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Circle > Circle Inscribed",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Circle > Concentric",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Circle > By Arc",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Arc > Center, Point, Angles",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Arc > Center, Point, Chord",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Arc > Center, Point, Arc Angle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Arc > 3 Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Arc > 2 Points, Angle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Arc > 2 Points, Radius",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Arc > 2 Points, Length",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Arc > 2 Points, Height",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Arc > Arc Tangential",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Arc > Ellipse Arc (Axis)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Arc > Ellipse Arc (1 Point)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Polygon > Rectangle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Polygon > Rectangle (1 Point)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Polygon > Rectangle (2 Points)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Polygon > Rectangle (3 Points)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Polygon > Polygon (Cen,Cor)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Polygon > Polygon (Cen,Tan)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Polygon > Polygon (Cor,Cor)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Polygon > Polygon (Tan,Tan)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Polygon > Star",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Spline > Spline",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Spline > Spline through points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Spline > Spline from polyline",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Spline > Append spline point",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Spline > Insert spline points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Spline > Remove spline points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Spline > Remove between two points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Spline > Explode spline to lines",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Spline > Freehand Line",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Spline > Parabola 4 points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Spline > Parabola Focus Directrix",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Spline > Hyperbola Foci Point",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Ellipse > Ellipse (1 Point)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Ellipse > Ellipse (Axis)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Ellipse > Ellipse Foci Point",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Ellipse > Ellipse 4 Point",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Ellipse > Ellipse Center and 3 Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Ellipse > Ellipse Inscribed",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Polyline > Polyline",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Polyline > Add node",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Polyline > Append node",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Polyline > Delete node",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Polyline > Delete between two nodes",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Polyline > Trim segments",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Polyline > Create Equidistant Polylines",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Polyline > Polyline from Existing Segments",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Polyline > Polyline Arcs to Chords",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Polyline > Polyline Change Segment Type",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Select > Deselect all",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Select > Select All",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Select > Select Entity",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Select > (De-)Select Contour",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Select > Select Window",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Select > Deselect Window",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Select > Select Intersected Entities",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Select > Deselect Intersected Entities",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Select > (De-)Select Layer",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Select > Select Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Select > Invert Selection",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Select > Select Quick",
+   "status": "passed",
+   "detail": "dialog Quick Select"
+  },
+  {
+   "id": "menu:Tools > Select > Additive/Exclusive Selection",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Dimension > Aligned",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Dimension > Linear",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Dimension > Horizontal",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Dimension > Vertical",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Dimension > Baseline",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Dimension > Continue",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Dimension > Radial",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Dimension > Diametric",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Dimension > Angular",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Dimension > Arc",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Dimension > Leader",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Dimension > Ordinate",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Dimension > Select Ordinates by base",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Dimension > Ordinates Re-base",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Dimension > Copy Style",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Dimension > Regenerate Dimensions",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Dimension > Dimension Styles",
+   "status": "passed",
+   "detail": "dialog Drawing Preferences"
+  },
+  {
+   "id": "menu:Tools > Other > Text",
+   "status": "passed",
+   "detail": "dialog Text"
+  },
+  {
+   "id": "menu:Tools > Other > MText",
+   "status": "passed",
+   "detail": "dialog MText"
+  },
+  {
+   "id": "menu:Tools > Other > Hatch",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Other > Insert Image",
+   "status": "passed",
+   "detail": "dialog Open Image"
+  },
+  {
+   "id": "menu:Tools > Other > Bounding Box",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Modify > Move / Copy",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Modify > Duplicate",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Modify > Align",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Modify > Align One",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Modify > Align Reference Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Modify > Rotate",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Modify > Scale",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Modify > Mirror",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Modify > Move and Rotate",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Modify > Rotate Two",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Modify > Revert direction",
+   "status": "skipped",
+   "detail": "not run by the test: it would revert your own drawings or window"
+  },
+  {
+   "id": "menu:Tools > Modify > Trim",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Modify > Trim Two",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Modify > Lengthen",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Modify > Line Join",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Modify > Divide",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Modify > Break/Divide",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Modify > Line Gap",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Modify > Offset",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Modify > Bevel",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Modify > Fillet",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Modify > Stretch",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Modify > Properties",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Modify > Attributes",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Modify > Explode Text into Letters",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Modify > Explode",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Modify > Delete",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Info > Point Coordinates",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Info > Distance Point to Point",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Info > Distance Entity to Point",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Info > Distance Point to Entity",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Info > Angle between two lines",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Info > Angle between 3 points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Info > Total length of selected entities",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Info > Polygonal Area",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Info > Entity Properties",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Order > Move to Top",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Order > Move to Bottom",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Order > Raise Over Entity",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Tools > Order > Lower After Entity",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Fullscreen",
+   "status": "skipped",
+   "detail": "not run by the test: it would resize your own drawings or window"
+  },
+  {
+   "id": "menu:Workspace > Statusbar",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Widgets > Blocks",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Widgets > Command Line",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Widgets > Entity Info",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Widgets > Layers",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Widgets > Layers Tree",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Widgets > Library Browser",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Widgets > Named Views",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Widgets > Pen Wizard",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Widgets > Pens Palette",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Widgets > Properties",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Widgets > User Coordinate Systems",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbars > Categories",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbars > Creators",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbars > Dock Areas",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbars > Edit",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbars > Entity's Layer",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbars > File",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbars > Info Cursor",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbars > Named Views",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbars > Order",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbars > Pen",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbars > Preferences",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbars > Tool Options",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbars > UCS",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbars > View",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbars > Workspaces",
+   "status": "skipped",
+   "detail": "not run by the test: it rearranges your window (workspaces are tested with list:workspaces)"
+  },
+  {
+   "id": "menu:Workspace > Toolbars > Active Layer",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbars > Angles Basis",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbars > Coordinates",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbars > Grid Status",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbars > Mouse",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbars > Relative Zero",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbars > Selection Info",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbars > Snap Selection",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbars > UCS Status",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Widgets > Arc",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Widgets > Circle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Widgets > Dimension",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Widgets > Ellipse",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Widgets > Info",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Widgets > Line",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Widgets > Modify",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Widgets > Order",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Widgets > Other",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Widgets > Point",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Widgets > Polygon",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Widgets > Polyline",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Widgets > Select",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Widgets > Spline",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Toolbars > Arc",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Toolbars > Circle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Toolbars > Dimension",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Toolbars > Ellipse",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Toolbars > Info",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Toolbars > Line",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Toolbars > Modify",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Toolbars > Other",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Toolbars > Point",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Toolbars > Polygon",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Toolbars > Polyline",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Toolbars > Select",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > CAD Toolbars > Spline",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbar Areas > Left Toolbar Area",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbar Areas > Right Toolbar Area",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbar Areas > Top Toolbar Area",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Toolbar Areas > Bottom Toolbar Area",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Dock Areas > Left Dock Area",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Dock Areas > Right Dock Area",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Dock Areas > Top Dock Area",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Dock Areas > Bottom Dock Area",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Dock Areas > Floating Widgets",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Workspace > Re-dock Widgets",
+   "status": "skipped",
+   "detail": "not run by the test: it rearranges your panels or drawing windows"
+  },
+  {
+   "id": "menu:Workspace > Save Workspace",
+   "status": "skipped",
+   "detail": "not run by the test: it rearranges your window (workspaces are tested with list:workspaces)"
+  },
+  {
+   "id": "menu:Workspace > Custom Menu Creator",
+   "status": "passed",
+   "detail": "dialog Custom Menu Creator"
+  },
+  {
+   "id": "menu:Workspace > Custom Toolbar Creator",
+   "status": "passed",
+   "detail": "dialog Custom Toolbar Creator"
+  },
+  {
+   "id": "menu:Workspace > Drawings > Tab mode",
+   "status": "skipped",
+   "detail": "not run by the test: it rearranges your panels or drawing windows"
+  },
+  {
+   "id": "menu:Workspace > Drawings > Window mode",
+   "status": "skipped",
+   "detail": "not run by the test: it rearranges your panels or drawing windows"
+  },
+  {
+   "id": "menu:Agent Progress > Open Agent Progress...",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Help > About",
+   "status": "passed",
+   "detail": "dialog About LibreCAD"
+  },
+  {
+   "id": "menu:Help > License",
+   "status": "passed",
+   "detail": "dialog License"
+  },
+  {
+   "id": "shortcut:BlocksAdd",
+   "status": "passed",
+   "detail": "dialog Add Block"
+  },
+  {
+   "id": "shortcut:BlocksAttributes",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:BlocksCreate",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:BlocksDefreezeAll",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:BlocksEdit",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:BlocksFreezeAll",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:BlocksInsert",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:BlocksRemove",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:BlocksSave",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:BlocksToggleView",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:DimModify",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:DrawArcParallel",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:DrawDualCurve",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:FocusCommand",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:GTDFeatureFrame",
+   "status": "passed",
+   "detail": "dialog Feature Control Frame"
+  },
+  {
+   "id": "shortcut:LayersAdd",
+   "status": "passed",
+   "detail": "dialog Layer Settings"
+  },
+  {
+   "id": "shortcut:LayersEdit",
+   "status": "passed",
+   "detail": "dialog Layer Settings"
+  },
+  {
+   "id": "shortcut:LayersExportSelected",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:LayersExportVisible",
+   "status": "passed",
+   "detail": "dialog Export Layers"
+  },
+  {
+   "id": "shortcut:LayersFreezeAll",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:LayersLockAll",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:LayersRemove",
+   "status": "passed",
+   "detail": "dialog Remove Layer"
+  },
+  {
+   "id": "shortcut:LayersToggleConstruction",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:LayersToggleLock",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:LayersTogglePrint",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:LayersToggleView",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:LayersUnlockAll",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:PickAngle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:PickCoordinates",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:PickDistance",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:PickPoint",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:PickPointX",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:PickPointY",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:RelativeAddCircle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:RelativeAddLine",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:RelativeAddPoint",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:RelativeInputAngle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:RelativeInputDX",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:RelativeInputDY",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:RelativeInputLengh",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "shortcut:SelectionGeneric",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:pen_palette_dockwidget",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:pen_palette_dockwidget > Fill Pen Editor by Entity Drawing Pen",
+   "status": "passed",
+   "detail": "dialog Set pen by entity"
+  },
+  {
+   "id": "panel:pen_palette_dockwidget > Fill Pen Editor by Entity Attributes",
+   "status": "passed",
+   "detail": "dialog Set pen by entity"
+  },
+  {
+   "id": "panel:pen_palette_dockwidget > Select Entities By Drawing Pen",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:pen_palette_dockwidget > Select Entities By Pen Attributes",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:pen_palette_dockwidget > Apply Pen To Selection",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:pen_palette_dockwidget > Fill Editor Pen by Current Pen",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:pen_palette_dockwidget > to current",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:pen_palette_dockwidget > Update Current Pen by Active Layer' Pen",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:pen_palette_dockwidget > Pick from Active Layer",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:pen_palette_dockwidget > Apply To Layer",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:pen_palette_dockwidget > Delete Pen",
+   "status": "skipped",
+   "detail": "\"Delete Pen\" is greyed out on the test drawing; it needs a written recipe that sets up a drawing where it applies"
+  },
+  {
+   "id": "panel:pen_palette_dockwidget > Settings",
+   "status": "passed",
+   "detail": "dialog Pen Palette Settings"
+  },
+  {
+   "id": "panel:dock_point",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_point > Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_point > Line of Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_point > Middle Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_point > Lattice of Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_point > Select Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_point > Paste to Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_polygon",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_polygon > Rectangle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_polygon > Rectangle (1 Point)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_polygon > Rectangle (2 Points)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_polygon > Rectangle (3 Points)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_polygon > Polygon (Cen,Cor)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_polygon > Polygon (Cen,Tan)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_polygon > Polygon (Cor,Cor)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_polygon > Polygon (Tan,Tan)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_polygon > Star",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_curve",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_curve > Center, Point, Angles",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_curve > Center, Point, Chord",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_curve > Center, Point, Arc Angle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_curve > 3 Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_curve > 2 Points, Angle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_curve > 2 Points, Radius",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_curve > 2 Points, Length",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_curve > 2 Points, Height",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_curve > Arc Tangential",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_curve > Ellipse Arc (Axis)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_curve > Ellipse Arc (1 Point)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_spline",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_spline > Spline",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_spline > Spline through points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_spline > Spline from polyline",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_spline > Append spline point",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_spline > Insert spline points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_spline > Remove spline points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_spline > Remove between two points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_spline > Explode spline to lines",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_spline > Freehand Line",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_spline > Parabola 4 points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_spline > Parabola Focus Directrix",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_spline > Hyperbola Foci Point",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_ellipse",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_ellipse > Ellipse (1 Point)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_ellipse > Ellipse (Axis)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_ellipse > Ellipse Foci Point",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_ellipse > Ellipse 4 Point",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_ellipse > Ellipse Center and 3 Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_ellipse > Ellipse Inscribed",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_polyline",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_polyline > Polyline",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_polyline > Add node",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_polyline > Append node",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_polyline > Delete node",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_polyline > Delete between two nodes",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_polyline > Trim segments",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_polyline > Create Equidistant Polylines",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_polyline > Polyline from Existing Segments",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_polyline > Polyline Arcs to Chords",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_polyline > Polyline Change Segment Type",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_select",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_select > Deselect all",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_select > Select All",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_select > Select Entity",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_select > (De-)Select Contour",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_select > Select Window",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_select > Deselect Window",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_select > Select Intersected Entities",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_select > Deselect Intersected Entities",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_select > (De-)Select Layer",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_select > Select Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_select > Invert Selection",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_select > Select Quick",
+   "status": "passed",
+   "detail": "dialog Quick Select"
+  },
+  {
+   "id": "panel:dock_other",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_other > Text",
+   "status": "passed",
+   "detail": "dialog Text"
+  },
+  {
+   "id": "panel:dock_other > MText",
+   "status": "passed",
+   "detail": "dialog MText"
+  },
+  {
+   "id": "panel:dock_other > Hatch",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_other > Insert Image",
+   "status": "passed",
+   "detail": "dialog Open Image"
+  },
+  {
+   "id": "panel:dock_other > Bounding Box",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify > Move / Copy",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify > Duplicate",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify > Align",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify > Align One",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify > Align Reference Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify > Rotate",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify > Scale",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify > Mirror",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify > Move and Rotate",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify > Rotate Two",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify > Revert direction",
+   "status": "skipped",
+   "detail": "not run by the test: it would revert your own drawings or window"
+  },
+  {
+   "id": "panel:dock_modify > Trim",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify > Trim Two",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify > Lengthen",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify > Line Join",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify > Divide",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify > Break/Divide",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify > Line Gap",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify > Offset",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify > Bevel",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify > Fillet",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify > Stretch",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify > Properties",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify > Attributes",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify > Explode Text into Letters",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify > Explode",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_modify > Delete",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_info",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_info > Point Coordinates",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_info > Distance Point to Point",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_info > Distance Entity to Point",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_info > Distance Point to Entity",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_info > Angle between two lines",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_info > Angle between 3 points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_info > Total length of selected entities",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_info > Polygonal Area",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_info > Entity Properties",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_order",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_order > Move to Top",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_order > Move to Bottom",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_order > Raise Over Entity",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_order > Lower After Entity",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_line",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_line > 2 Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_line > Angle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_line > Horizontal",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_line > Vertical",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_line > Parallel through point",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_line > Parallel",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_line > Bisector",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_line > Tangent (P,C)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_line > Tangent (C,C)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_line > Tangent Orthogonal",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_line > Orthogonal",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_line > Relative angle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_line > Snake",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_line > Snake (X)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_line > Snake (Y)",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_line > Draw Fast",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_line > Angle From Line",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_line > Orthogonal From Line",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_line > From Point To Line",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_line > Slice/Divide Line",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_line > Slice/Divide Circle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_line > Center Mark",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_line > Centerline",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_line > Radiant Line",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_circle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_circle > Center, Point",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_circle > 2 Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_circle > 2 Points, Radius",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_circle > 3 Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_circle > Center, Radius",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_circle > Tangential 2 Entities, 1 Point",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_circle > Tangential, 2 Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_circle > Tangential 2 Entities, Radius",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_circle > Tangential 3 Entities",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_circle > Circle Inscribed",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_circle > Concentric",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_circle > By Arc",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_dimension",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_dimension > Aligned",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_dimension > Linear",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_dimension > Horizontal",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_dimension > Vertical",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_dimension > Baseline",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_dimension > Continue",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_dimension > Radial",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_dimension > Diametric",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_dimension > Angular",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_dimension > Arc",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_dimension > Leader",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_dimension > Ordinate",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_dimension > Select Ordinates by base",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_dimension > Ordinates Re-base",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_dimension > Copy Style",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_dimension > Regenerate Dimensions",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:dock_dimension > Dimension Styles",
+   "status": "passed",
+   "detail": "dialog Drawing Preferences"
+  },
+  {
+   "id": "panel:ucs_dockwidget",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:ucs_dockwidget > Create UCS",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:ucs_dockwidget > Set UCS by ordinate dimension",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:ucs_dockwidget > Saves currently used coordinate system (it is usefull if UCS",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:ucs_dockwidget > Settings",
+   "status": "passed",
+   "detail": "dialog UCS List Options"
+  },
+  {
+   "id": "panel:view_dockwidget",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:view_dockwidget > Settings",
+   "status": "passed",
+   "detail": "dialog Named Views Settings"
+  },
+  {
+   "id": "panel:view_dockwidget > Create view for current zoom and offset of drawing",
+   "status": "passed",
+   "detail": "dialog New View"
+  },
+  {
+   "id": "panel:layer_tree_dockwidget",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:layer_tree_dockwidget > Settings",
+   "status": "passed",
+   "detail": "dialog Layers Tree Options"
+  },
+  {
+   "id": "panel:layer_tree_dockwidget > Show all layers",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:layer_tree_dockwidget > Hide all layers except current",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:layer_tree_dockwidget > Show Active Layer Only",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:layer_tree_dockwidget > Expand All",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:layer_tree_dockwidget > Collapse All",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:layer_tree_dockwidget > Collapse Secondary",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:layer_tree_dockwidget > Unlock all layers",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:layer_tree_dockwidget > Lock all layers",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:layer_tree_dockwidget > Add a layer",
+   "status": "passed",
+   "detail": "dialog Add Layer"
+  },
+  {
+   "id": "panel:layer_tree_dockwidget > Add dimensions Layer",
+   "status": "passed",
+   "detail": "dialog Add Secondary Layer"
+  },
+  {
+   "id": "panel:layer_tree_dockwidget > Remove layer",
+   "status": "passed",
+   "detail": "dialog Remove Layer"
+  },
+  {
+   "id": "panel:layer_tree_dockwidget > Modify layer attributes / rename",
+   "status": "passed",
+   "detail": "dialog Edit Layer"
+  },
+  {
+   "id": "panel:quick_entity_info",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:quick_entity_info > Entity Properties",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:quick_entity_info > Collect Coordinates",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:quick_entity_info > Settings",
+   "status": "passed",
+   "detail": "dialog Dialog"
+  },
+  {
+   "id": "panel:block_dockwidget",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:block_dockwidget > Show all blocks",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:block_dockwidget > Hide all blocks",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:block_dockwidget > Create Block",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:block_dockwidget > Add Block",
+   "status": "passed",
+   "detail": "dialog Add Block"
+  },
+  {
+   "id": "panel:block_dockwidget > Remove Block",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:block_dockwidget > Rename Block",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:block_dockwidget > Edit Block",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:block_dockwidget > Save Block",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:block_dockwidget > Insert Block",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:library_dockwidget",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:library_dockwidget > Insert",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:library_dockwidget > Refresh",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:library_dockwidget > Rebuild",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:pen_wiz_dockwidget",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:pen_wiz_dockwidget > Add to favorites",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:pen_wiz_dockwidget > colorwin_button",
+   "status": "passed",
+   "detail": "dialog Select Color"
+  },
+  {
+   "id": "panel:property_sheet",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:property_sheet > Selection Pointer",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:property_sheet > Additive/Exclusive Selection",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:property_sheet > Select Entities",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:property_sheet > Select Quick",
+   "status": "passed",
+   "detail": "dialog Quick Select"
+  },
+  {
+   "id": "panel:property_sheet > Settings",
+   "status": "passed",
+   "detail": "dialog Property Sheet Properties"
+  },
+  {
+   "id": "panel:layer_dockwidget",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:layer_dockwidget > Show all layers",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:layer_dockwidget > Hide all layers except current",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:layer_dockwidget > Unlock all",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:layer_dockwidget > Lock all",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:layer_dockwidget > Add Layer",
+   "status": "passed",
+   "detail": "dialog Layer Settings"
+  },
+  {
+   "id": "panel:layer_dockwidget > Remove Layer",
+   "status": "passed",
+   "detail": "dialog Remove Layer"
+  },
+  {
+   "id": "panel:layer_dockwidget > Edit Layer",
+   "status": "passed",
+   "detail": "dialog Layer Settings"
+  },
+  {
+   "id": "panel:command_dockwidget",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "panel:command_dockwidget > Click to see more options",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "status:TBCoordinates",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "status:TBRelZero",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "status:TBMouse",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "status:TBSelectionInfo",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "status:TBActiveLayer",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "status:TBGridStatus",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "status:Current size of Grid/MetaGrid",
+   "status": "passed",
+   "detail": "dialog Drawing Preferences"
+  },
+  {
+   "id": "status:TBUCSStatus",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "status:TBAnglesBasis",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "status:anglesBase",
+   "status": "passed",
+   "detail": "dialog Drawing Preferences"
   }
  ]
 }

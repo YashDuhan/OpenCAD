@@ -43,6 +43,10 @@ namespace LC_AIToolbar {
     QList<LC_AITool> tools();
     /** Every toolbar button and toolbar list: id, label, toolbars, kind and state. */
     QJsonArray inventory();
+    /** The rest of the window, as {id, group, label, kind, how, task, why}: menu entries ("menu:<path>"), commands that only
+     *  have a keyboard shortcut ("shortcut:<id>"), the panels and their buttons ("panel:<name>[ > <button>]"), the status bar
+     *  ("status:<field>"), and the right-click menus, Properties panel and drawing preferences their recipes test. */
+    QJsonArray surfaces();
 
     /** The ids that have a test recipe (buttons, and "tool:<name>" for the AI's own tools). */
     QStringList recipeIds();
@@ -56,6 +60,14 @@ namespace LC_AIToolbar {
     QHash<QString, LC_AIButtonTest> savedResults();
     /** Why the AI does not use this button (it quits OpenCAD, is the AI's own, is hidden), or empty. */
     QString notAgenticReason(const QString& id);
+    /** A recipe that calls the AI's tools itself instead of pressing a button: "tool:<name>", and the other parts of the
+     *  window ("properties:", "menu:", "panel:", "context:", "status:", "prefs:", "shortcut:"). */
+    bool isToolRecipe(const QString& id);
+}
+
+/** Developer mode: drives the AI chat from a script (OPENCAD_AI_E2E=<steps.json>, see lc_aie2etest.cpp). */
+namespace LC_AIE2E {
+    void start();
 }
 
 #endif

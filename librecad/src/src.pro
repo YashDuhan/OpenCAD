@@ -1358,6 +1358,7 @@ SOURCES += \
     ui/dock_widgets/ai_assistant/lc_aitoolbar.cpp \
     ui/dock_widgets/ai_assistant/lc_aiproperties.cpp \
     ui/dock_widgets/ai_assistant/lc_aiagentprogress.cpp \
+    ui/dock_widgets/ai_assistant/lc_aie2etest.cpp \
     ui/dock_widgets/ai_assistant/lc_aicontrol.cpp \
     ui/dock_widgets/ai_assistant/lc_aisidebar.cpp \
     ui/dock_widgets/views_list/lc_dlgnamedviewslistoptions.cpp \

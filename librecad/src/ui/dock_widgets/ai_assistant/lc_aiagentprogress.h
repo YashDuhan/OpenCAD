@@ -69,6 +69,7 @@ private:
     void updateSummary();
     void setResult(const LC_AIButtonTest& result);
     void askAI(QTreeWidgetItem* item);
+    QTreeWidget* currentTree() const;
     QStringList selectedIds() const;
     QStringList visibleIds() const;
     void onStarted(int total);
@@ -80,6 +81,7 @@ private:
     QTabWidget* m_tabs {nullptr};
     QTreeWidget* m_buttons {nullptr};
     QTreeWidget* m_tools {nullptr};
+    QTreeWidget* m_parts {nullptr}; // menus, panels, status bar, right-click menus, Properties, preferences
     QProgressBar* m_progress {nullptr};
     QLabel* m_status {nullptr};
     QPushButton* m_ask {nullptr};

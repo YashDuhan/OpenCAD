@@ -1129,8 +1129,16 @@ namespace {
             });
             return;
         }
-        QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
-        QApplication::sendEvent(popup, &enter);
+        // chosen from the event loop: an entry that opens a modal dialog does not return before the dialog closes, and
+        // the caller has to be watching by then to report the dialog
+        QPointer<QMenu> menu = popup;
+        QTimer::singleShot(0, qApp, [menu] {
+            if (menu) {
+                const LC_AIControl::AIInput input;
+                QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+                QApplication::sendEvent(menu, &enter);
+            }
+        });
         done(QString(), {});
     }
 
@@ -3353,6 +3361,271 @@ namespace {
         return t;
     }
 
+    // ------------------------------------------------------------------ the rest of the window
+    // Menu entries, commands that only have a keyboard shortcut, the panels and their buttons, and the status bar:
+    // listed (Agent Progress, the checklist) and tested like the toolbar buttons. Each gets a test made from it unless a
+    // written recipe has its id: the AI's own tool reaches it and it really goes off ("fired"). What a command then does
+    // is tested with the toolbar button that runs the same command; right-click menus, the Properties panel and the
+    // drawing preferences have written recipes ("context:", "properties:", "prefs:").
+
+    struct Surface {
+        QString id;
+        QString group; // Menus, Keyboard shortcuts, Panels, Status bar (and the groups of written recipes)
+        QString label;
+        QString kind;  // tool, toggle, command, dialog, panel, button, status
+        QString how;   // the tool call that uses it
+        QString task;  // the start of a task for the AI chat
+        QString why;   // why the AI does not use it, or empty
+        QJsonObject recipe; // the test made from it (no "id" yet)
+    };
+
+    QString quoted(const QString& s) {
+        return "“" + s + "”";
+    }
+
+    /** Menu entries that come and go with what is open (recent files, drawing windows, saved workspaces). */
+    bool comesAndGoes(const MenuEntry& e) {
+        if (!e.action->objectName().isEmpty()) {
+            return false;
+        }
+        if (e.action->data().isValid()) {
+            return true; // a recent file, a drawing window or a saved workspace carries its index or name
+        }
+        if (qobject_cast<QDockWidget*>(e.action->parent()) != nullptr || qobject_cast<QToolBar*>(e.action->parent()) != nullptr) {
+            return false; // shows or hides a panel or a toolbar (Workspace > Widgets, Toolbars)
+        }
+        const QString p = norm(e.path);
+        return p.contains("recent") || (norm(e.top) == "workspace" && !p.contains("drawings"));
+    }
+
+    /** Entries whose test would close, save or reload drawings, or rearrange the whole window: listed, not run. */
+    QString riskyToTest(const QString& label, const QString& objectName) {
+        const QString l = norm(label);
+        static const QStringList words = {"close", "quit", "exit", "save all", "revert", "reload", "restart", "fullscreen",
+                                          "full screen"};
+        for (const QString& w : words) {
+            if (l.contains(w) && l != "reload style sheet") {
+                return QStringLiteral("not run by the test: it would %1 your own drawings or window").arg(w.startsWith("full") ? "resize" : w);
+            }
+        }
+        if (l.contains("re-dock") || l.contains("redock") || l == "tile" || l.contains("cascade") || l.contains("window mode")
+            || l.contains("tab mode")) {
+            return QStringLiteral("not run by the test: it rearranges your panels or drawing windows");
+        }
+        if (objectName.startsWith("Workspace", Qt::CaseInsensitive) || l.contains("workspace")) {
+            return QStringLiteral("not run by the test: it rearranges your window (workspaces are tested with list:workspaces)");
+        }
+        return {};
+    }
+
+    QList<Surface> collectSurfaces() {
+        QList<Surface> out;
+        QC_ApplicationWindow* app = appWindow();
+        if (app == nullptr) {
+            return out;
+        }
+        QSet<QString> seen;
+        QSet<QString> reachable; // actions a toolbar or the menu bar already offers
+        for (const Button& b : collectButtons()) {
+            reachable.insert(b.id);
+        }
+        QHash<QString, QString> buttonOf; // action -> its toolbar button, for the notes
+        for (const Button& b : collectButtons()) {
+            if (b.action) {
+                buttonOf.insert(b.action->objectName(), b.id);
+            }
+        }
+
+        // the menu bar
+        for (const MenuEntry& e : menuBarEntries()) {
+            if (!e.action || comesAndGoes(e)) {
+                continue;
+            }
+            Surface s;
+            s.id = "menu:" + e.path;
+            if (seen.contains(s.id)) {
+                continue;
+            }
+            seen.insert(s.id);
+            reachable.insert(e.action->objectName());
+            s.group = QStringLiteral("Menus");
+            s.label = e.path;
+            s.kind = clean(e.action->text()).endsWith("...") ? QStringLiteral("dialog") : kindOf(e.action);
+            s.how = QStringLiteral("use_menu path=\"%1\"").arg(e.path);
+            if (const QString button = buttonOf.value(e.action->objectName()); !button.isEmpty()) {
+                s.how += QStringLiteral(" (also toolbar button %1)").arg(button);
+            }
+            s.task = QObject::tr("Using the menu entry %1 (use_menu): ").arg(quoted(e.path));
+            s.why = menuRefusal(e);
+            QJsonObject recipe{{"press", false},
+                               {"then", QJsonArray{QJsonObject{{"tool", "use_menu"}, {"args", QJsonObject{{"path", e.path}}}}}},
+                               {"expect", QJsonObject{{"fired", QJsonObject{{"menu", e.path}}}}}};
+            if (e.action->isCheckable()) {
+                recipe.insert("restore", true);
+            }
+            if (const QString risky = riskyToTest(clean(e.action->text()), e.action->objectName()); !risky.isEmpty()) {
+                recipe.insert("skip", risky);
+            }
+            s.recipe = recipe;
+            out << s;
+        }
+
+        // commands that only have a keyboard shortcut (Options > Keyboard Shortcuts lists them with the others)
+        QList<QAction*> actions = app->findChildren<QAction*>();
+        std::sort(actions.begin(), actions.end(), [](const QAction* a, const QAction* b) { return a->objectName() < b->objectName(); });
+        for (QAction* a : std::as_const(actions)) {
+            const QString name = a->objectName();
+            if (name.isEmpty() || name.startsWith("qt_") || reachable.contains(name) || seen.contains("shortcut:" + name)
+                || a->isSeparator() || a->menu() != nullptr || clean(a->text()).isEmpty()
+                || (!a->property("RS2:actionType").isValid() && a->shortcut().isEmpty())) {
+                continue;
+            }
+            Surface s;
+            s.id = "shortcut:" + name;
+            seen.insert(s.id);
+            s.group = QStringLiteral("Keyboard shortcuts");
+            s.label = labelOf(a) + (a->shortcut().isEmpty() ? QString() : " (" + a->shortcut().toString(QKeySequence::NativeText) + ")");
+            s.kind = kindOf(a);
+            s.how = QStringLiteral("press_toolbar_button id=%1").arg(name);
+            s.task = QObject::tr("Using the command %1 (%2, press_toolbar_button): ").arg(quoted(labelOf(a)), name);
+            s.why = LC_AIToolbar::notAgenticReason(name);
+            QJsonObject recipe{{"press", false},
+                               {"then", QJsonArray{QJsonObject{{"tool", "press_toolbar_button"}, {"args", QJsonObject{{"id", name}}}}}},
+                               {"expect", QJsonObject{{"fired", QJsonObject{{"action", name}}}}}};
+            if (a->isCheckable()) {
+                recipe.insert("restore", true);
+            }
+            if (const QString risky = riskyToTest(clean(a->text()), name); !risky.isEmpty()) {
+                recipe.insert("skip", risky);
+            }
+            s.recipe = recipe;
+            out << s;
+        }
+
+        // the panels and their buttons
+        for (QDockWidget* dock : panelDocks()) {
+            const QString title = clean(dock->windowTitle());
+            Surface s;
+            s.id = "panel:" + dock->objectName();
+            if (seen.contains(s.id)) {
+                continue;
+            }
+            seen.insert(s.id);
+            s.group = QStringLiteral("Panels");
+            s.label = title;
+            s.kind = QStringLiteral("panel");
+            s.how = QStringLiteral("use_panel panel=\"%1\"").arg(title);
+            s.task = QObject::tr("Using the %1 panel (use_panel): ").arg(quoted(title));
+            s.recipe = QJsonObject{{"press", false},
+                                   {"then", QJsonArray{QJsonObject{{"tool", "use_panel"}, {"args", QJsonObject{{"panel", dock->objectName()}}}}}},
+                                   {"expect", QJsonObject{{"text", QString("Panel \"" + QRegularExpression::escape(title) + "\"")}}}};
+            out << s;
+            QWidget* content = dock->widget() != nullptr ? dock->widget() : dock;
+            for (QAbstractButton* b : dialogButtons(content)) {
+                const QString name = buttonName(b);
+                Surface button;
+                button.id = s.id + " > " + name;
+                if (seen.contains(button.id)) {
+                    continue;
+                }
+                seen.insert(button.id);
+                button.group = s.group;
+                button.label = title + " > " + name;
+                button.kind = QStringLiteral("button");
+                button.how = QStringLiteral("use_panel panel=\"%1\" button=\"%2\"").arg(title, name);
+                button.task = QObject::tr("Using the %1 button of the %2 panel (use_panel): ").arg(quoted(name), quoted(title));
+                QJsonObject recipe{{"press", false},
+                                   {"then", QJsonArray{QJsonObject{{"tool", "use_panel"},
+                                                                   {"args", QJsonObject{{"panel", dock->objectName()}, {"button", name}}}}}},
+                                   {"expect", QJsonObject{{"fired", QJsonObject{{"panel", dock->objectName()}, {"button", name}}}}}};
+                if (const QString risky = riskyToTest(name, b->objectName()); !risky.isEmpty()) {
+                    recipe.insert("skip", risky);
+                }
+                button.recipe = recipe;
+                out << button;
+            }
+        }
+
+        // the status bar: its fields (read) and the ones a click opens
+        for (QWidget* part : statusBarParts()) {
+            auto* toolbar = qobject_cast<QToolBar*>(part);
+            const QString title = toolbar != nullptr ? clean(part->windowTitle()) : QStringLiteral("Messages");
+            // a field to read (a toolbar of buttons at the bottom, like the snap toolbar, is listed with the toolbar buttons)
+            bool ofButtons = false;
+            if (toolbar != nullptr) {
+                for (QAction* a : toolbar->actions()) {
+                    ofButtons = ofButtons || (!a->objectName().isEmpty() && reachable.contains(a->objectName()));
+                }
+            }
+            if (toolbar != nullptr && !ofButtons && !part->findChildren<QLabel*>().isEmpty()) {
+                Surface s;
+                s.id = "status:" + (part->objectName().isEmpty() ? title : part->objectName());
+                if (!seen.contains(s.id)) {
+                    seen.insert(s.id);
+                    s.group = QStringLiteral("Status bar");
+                    s.label = title;
+                    s.kind = QStringLiteral("status");
+                    s.how = QStringLiteral("use_panel panel=statusbar");
+                    s.task = QObject::tr("Using the status bar's %1 (use_panel panel=statusbar): ").arg(quoted(title));
+                    s.recipe = QJsonObject{{"press", false},
+                                           {"then", QJsonArray{QJsonObject{{"tool", "use_panel"}, {"args", QJsonObject{{"panel", "statusbar"}}}}}},
+                                           {"expect", QJsonObject{{"text", QString(QRegularExpression::escape(title) + ":")}}}};
+                    out << s;
+                }
+            }
+            for (QWidget* w : part->findChildren<QWidget*>()) {
+                if (!isClickable(w)) {
+                    continue;
+                }
+                const QString tip = clean(QString(w->toolTip()).remove(QRegularExpression(QStringLiteral("<[^>]*>"))));
+                const QString name = tip.isEmpty() ? w->objectName() : tip.section('.', 0, 0).left(40).trimmed();
+                if (name.isEmpty()) {
+                    continue;
+                }
+                Surface s;
+                s.id = "status:" + name;
+                if (seen.contains(s.id)) {
+                    continue;
+                }
+                seen.insert(s.id);
+                s.group = QStringLiteral("Status bar");
+                s.label = title + " > " + name;
+                s.kind = QStringLiteral("button");
+                s.how = QStringLiteral("use_panel panel=statusbar button=\"%1\"").arg(name);
+                s.task = QObject::tr("Using the status bar's %1 field (use_panel panel=statusbar): ").arg(quoted(name));
+                s.recipe = QJsonObject{{"press", false},
+                                       {"then", QJsonArray{QJsonObject{{"tool", "use_panel"},
+                                                                       {"args", QJsonObject{{"panel", "statusbar"}, {"button", name}}}}}},
+                                       {"expect", QJsonObject{{"fired", QJsonObject{{"status", name}}}}}};
+                out << s;
+            }
+        }
+        return out;
+    }
+
+    /** Group and label of a written recipe for a part of the window ("context:", "properties:", "prefs:"). */
+    void describeWrittenRecipe(const QJsonObject& recipe, QString& group, QString& label) {
+        const QString id = recipe.value("id").toString();
+        const QString prefix = id.section(':', 0, 0);
+        group = recipe.value("group").toString();
+        if (group.isEmpty()) {
+            group = prefix == "context" ? QStringLiteral("Right-click menus")
+                  : prefix == "properties" ? QStringLiteral("Properties panel")
+                  : prefix == "prefs" ? QStringLiteral("Drawing preferences")
+                  : prefix == "menu" ? QStringLiteral("Menus")
+                  : prefix == "panel" ? QStringLiteral("Panels")
+                  : prefix == "status" ? QStringLiteral("Status bar")
+                  : QStringLiteral("Keyboard shortcuts");
+        }
+        label = recipe.value("label").toString();
+        if (label.isEmpty()) {
+            label = id.section(':', 1).replace('_', ' ');
+            if (!label.isEmpty()) {
+                label[0] = label[0].toUpper();
+            }
+        }
+    }
+
     LC_AITool setToolbarValue() {
         LC_AITool t;
         t.name = "set_toolbar_value";
@@ -3486,7 +3759,7 @@ namespace {
         return ids;
     }
 
-    QJsonArray loadRecipes(QString& error) {
+    QJsonArray loadRecipes(QString& error, const bool generated = true) {
         QString path = qEnvironmentVariable("OPENCAD_AI_TOOLBAR_RECIPES");
         if (path.isEmpty()) {
             path = QStringLiteral(":/ai/toolbar_recipes.json");
@@ -3502,7 +3775,23 @@ namespace {
             error = QStringLiteral("The button recipes are not valid JSON: %1").arg(parseError.errorString());
             return {};
         }
-        return doc.isArray() ? doc.array() : doc.object().value("recipes").toArray();
+        QJsonArray recipes = doc.isArray() ? doc.array() : doc.object().value("recipes").toArray();
+        if (generated && (path.startsWith(':') || QFileInfo(path).fileName() == "toolbar_recipes.json")) { // OpenCAD's own recipes
+            // the parts of the window without a written recipe get the test made from them
+            QSet<QString> written;
+            for (const QJsonValue& r : std::as_const(recipes)) {
+                written.insert(r.toObject().value("id").toString());
+            }
+            for (const Surface& sf : collectSurfaces()) {
+                if (!written.contains(sf.id) && sf.why.isEmpty()) {
+                    QJsonObject r = sf.recipe;
+                    r.insert("id", sf.id);
+                    r.insert("generated", true);
+                    recipes.append(r);
+                }
+            }
+        }
+        return recipes;
     }
 
     QString scratchDir() {
@@ -3610,6 +3899,13 @@ namespace {
         int thenIndex {0};
         int beforeIndex {0};
         QHash<QString, bool> savedToggles;
+        QList<std::pair<QPointer<QAction>, bool>> savedDocks; // the show/hide switches of the panels and toolbars
+        bool savedStatusBar {true};
+        // "fired": the menu entry, panel button or status bar field of the recipe really went off
+        bool firedSeen {false};
+        QList<QMetaObject::Connection> firedConnections;
+        QPointer<QWidget> firedWidget;
+        std::unique_ptr<QObject> firedWatcher;
         QTimer* watchdog {nullptr};
         bool inTest {false};
 
@@ -3661,8 +3957,8 @@ namespace {
                 return;
             }
             Button b;
-            if (id.startsWith("tool:")) {
-                b = Button{}; // one of the AI's own tools: its recipe calls it in "then"
+            if (LC_AIToolbar::isToolRecipe(id)) {
+                b = Button{}; // one of the AI's own tools, or a panel, menu or other part of the app: its recipe calls tools in "then"
             }
             else if (!findButton(id, b)) {
                 record({id, "failed", "no such button in this build", {}});
@@ -3724,6 +4020,7 @@ namespace {
             view->getGraphic()->setModified(false);
             view->redraw(RS2::RedrawAll);
             savedToggles = toggleStates();
+            savedDocks = dockStates();
             beforeIndex = 0;
             runBefore();
         }
@@ -3782,14 +4079,139 @@ namespace {
             outputs.clear(); // only what the button did counts
             dialogsSeen.clear();
             anyError = false;
+            QString greyedOut;
+            if (!armFired(greyedOut)) {
+                fail("cannot find what the recipe uses: "
+                     + QString::fromUtf8(QJsonDocument(recipe.value("expect").toObject().value("fired").toObject()).toJson(QJsonDocument::Compact)));
+                return;
+            }
+            if (!greyedOut.isEmpty() && recipe.value("generated").toBool()) {
+                // a test made from the entry: it needs a drawing where it applies (a written recipe sets that up)
+                record({recipe.value("id").toString(), "skipped", greyedOut + "; it needs a written recipe that sets up a drawing where it applies", {}});
+                cleanup();
+                return;
+            }
             start = snapshot();
             startChecked = action ? action->isChecked() : false;
-            if (!action || !recipe.value("press").toBool(true)) {
+            if (!action || !recipe.value("press").toBool(true) || LC_AIToolbar::isToolRecipe(recipe.value("id").toString())) {
                 runThen();
                 return;
             }
             QJsonObject args{{"id", recipe.value("id")}, {"steps", recipe.value("steps").toArray()}};
             call("press_toolbar_button", args, [self] { self->runThen(); });
+        }
+
+        /** Clicks on a widget that is not a button (status bar fields). */
+        struct ClickWatcher : QObject {
+            bool* seen {nullptr};
+            bool eventFilter(QObject* watched, QEvent* event) override {
+                if (event->type() == QEvent::MouseButtonRelease || event->type() == QEvent::MouseButtonDblClick) {
+                    *seen = true;
+                }
+                return QObject::eventFilter(watched, event);
+            }
+        };
+
+        /** Starts watching what "expect.fired" names; false when it cannot be found. greyedOut says why it cannot be used now. */
+        bool armFired(QString& greyedOut) {
+            firedSeen = false;
+            const QJsonObject fired = recipe.value("expect").toObject().value("fired").toObject();
+            if (fired.isEmpty()) {
+                return true;
+            }
+            QAction* target = nullptr;
+            if (fired.contains("menu")) {
+                for (const MenuEntry& e : menuBarEntries()) {
+                    if (e.path == fired.value("menu").toString()) {
+                        target = e.action;
+                        break;
+                    }
+                }
+            }
+            else if (fired.contains("action")) {
+                Button b;
+                target = findButton(fired.value("action").toString(), b) ? b.action.data() : nullptr;
+            }
+            if (target != nullptr) {
+                if (!target->isEnabled()) {
+                    greyedOut = QStringLiteral("\"%1\" is greyed out on the test drawing").arg(clean(target->text()));
+                }
+                firedConnections << QObject::connect(target, &QAction::triggered, qApp, [this] { firedSeen = true; });
+                if (!action) {
+                    action = target; // a switch is put back afterwards ("restore")
+                }
+                return true;
+            }
+            if (fired.contains("panel")) {
+                QDockWidget* dock = findPanel(fired.value("panel").toString());
+                QWidget* content = dock != nullptr && dock->widget() != nullptr ? dock->widget() : dock;
+                if (content == nullptr) {
+                    return false;
+                }
+                for (QAbstractButton* b : dialogButtons(content)) {
+                    if (buttonName(b) == fired.value("button").toString()) {
+                        if (!b->isEnabled()) {
+                            greyedOut = QStringLiteral("\"%1\" is greyed out on the test drawing").arg(buttonName(b));
+                        }
+                        // pressed comes before the click's own work (which may be a dialog that waits for an answer)
+                        firedConnections << QObject::connect(b, &QAbstractButton::pressed, qApp, [this] { firedSeen = true; });
+                        return true;
+                    }
+                }
+                return false;
+            }
+            if (fired.contains("status")) {
+                QWidget* w = findStatusWidget(fired.value("status").toString());
+                if (w == nullptr) {
+                    return false;
+                }
+                auto* watcher = new ClickWatcher;
+                watcher->seen = &firedSeen;
+                firedWatcher.reset(watcher);
+                firedWidget = w;
+                w->installEventFilter(watcher);
+                return true;
+            }
+            return false;
+        }
+
+        void disarmFired() {
+            for (const QMetaObject::Connection& c : std::as_const(firedConnections)) {
+                QObject::disconnect(c);
+            }
+            firedConnections.clear();
+            if (firedWidget && firedWatcher) {
+                firedWidget->removeEventFilter(firedWatcher.get());
+            }
+            firedWatcher.reset();
+            firedWidget = nullptr;
+        }
+
+        /** Which panels and toolbars are shown: a test may show or hide some (use_panel, the Workspace menu). */
+        QList<std::pair<QPointer<QAction>, bool>> dockStates() {
+            QList<std::pair<QPointer<QAction>, bool>> states;
+            if (QC_ApplicationWindow* app = appWindow()) {
+                for (QDockWidget* dock : app->findChildren<QDockWidget*>()) {
+                    states.append({dock->toggleViewAction(), dock->toggleViewAction()->isChecked()});
+                }
+                for (QToolBar* toolbar : app->findChildren<QToolBar*>()) {
+                    states.append({toolbar->toggleViewAction(), toolbar->toggleViewAction()->isChecked()});
+                }
+                savedStatusBar = app->statusBar() == nullptr || !app->statusBar()->isHidden();
+            }
+            return states;
+        }
+
+        void restoreDocks() {
+            for (const auto& [toggle, shown] : std::as_const(savedDocks)) {
+                if (toggle && toggle->isChecked() != shown) {
+                    toggle->trigger();
+                }
+            }
+            if (QC_ApplicationWindow* app = appWindow(); app != nullptr && app->statusBar() != nullptr && app->statusBar()->isHidden() == savedStatusBar) {
+                app->statusBar()->setVisible(savedStatusBar);
+            }
+            savedDocks.clear();
         }
 
         void call(const QString& name, const QJsonObject& args, std::function<void()> then) {
@@ -3955,6 +4377,10 @@ namespace {
                     problems << QStringLiteral("expected /%1/ in the results").arg(expect.value("text").toString());
                 }
             }
+            // an entry whose own work is a modal dialog announces itself only when the dialog closes: the dialog is the proof
+            if (expect.contains("fired") && !firedSeen && dialogsSeen.isEmpty() && QApplication::activeModalWidget() == nullptr) {
+                problems << "the entry was not set off: " + QString::fromUtf8(QJsonDocument(expect.value("fired").toObject()).toJson(QJsonDocument::Compact));
+            }
             if (expect.value("no_error").toBool(true) && anyError) {
                 problems << "a tool call failed";
             }
@@ -3998,6 +4424,7 @@ namespace {
         void cleanup() {
             inTest = false;
             watchdog->stop();
+            disarmFired();
             auto self = shared_from_this();
             // close what the test left open: dialogs (several rounds: closing one may open another), tools, toggles
             closeDialogs(6, [self] {
@@ -4010,6 +4437,7 @@ namespace {
                 }
                 self->restoreToggles(); // no test leaves a snap or view mode changed for the next one
                 self->savedToggles.clear();
+                self->restoreDocks();
                 QTimer::singleShot(80, qApp, [self] {
                     self->closeDialogs(6, [self] { self->closeTestWindows(); });
                 });
@@ -4212,6 +4640,43 @@ namespace {
                         .arg(b.value("label").toString().replace('|', '/'), id, b.value("kind").toString(),
                              isAgentic ? "[x]" : "[-]", testedMark, note);
         }
+        // the rest of the window, group by group (ids "menu:", "shortcut:", "panel:", "status:", "context:", ...)
+        int partsTotal = 0, partsAgentic = 0, partsPassed = 0, partsFailed = 0;
+        QString lastGroup;
+        for (const QJsonValue& v : LC_AIToolbar::surfaces()) {
+            const QJsonObject part = v.toObject();
+            const QString id = part.value("id").toString();
+            const QString group = part.value("group").toString();
+            if (group != lastGroup) {
+                rows << "" << QStringLiteral("## %1").arg(group) << ""
+                     << "| Entry | Id | Kind | Agentic | Tested | Notes |" << "|---|---|---|---|---|---|";
+                lastGroup = group;
+            }
+            ++partsTotal;
+            const QString why = part.value("why").toString();
+            partsAgentic += why.isEmpty() ? 1 : 0;
+            QString testedMark = "[ ]";
+            QString note = part.value("how").toString();
+            if (!why.isEmpty()) {
+                testedMark = "[-]";
+                note = why;
+            }
+            else if (const auto it = results.constFind(id); it != results.constEnd()) {
+                testedMark = it->status == "passed" ? "[x]" : it->status == "skipped" ? "[-]" : "[!]";
+                partsPassed += it->status == "passed" ? 1 : 0;
+                partsFailed += it->status == "failed" ? 1 : 0;
+                if (it->status == "skipped") {
+                    note = it->detail;
+                }
+                else if (it->status == "failed") {
+                    note = "FAILED: " + it->detail.section('\n', 0, 0);
+                }
+            }
+            note.replace('|', '/').replace('\n', ' ');
+            rows << QStringLiteral("| %1 | %2 | %3 | %4 | %5 | %6 |")
+                        .arg(part.value("label").toString().replace('|', '/'), QString(id).replace('|', '/'), part.value("kind").toString(),
+                             why.isEmpty() ? "[x]" : "[-]", testedMark, note);
+        }
         // the AI's own tools, tested the same way (ids "tool:<name>")
         int toolsTotal = 0, toolsPassed = 0;
         rows << "" << "## AI tools (what the AI calls)" << "" << "| Tool | Name | Agentic | Tested | Notes |" << "|---|---|---|---|---|";
@@ -4239,17 +4704,25 @@ namespace {
             rows << QStringLiteral("| %1 | %2 | [x] | %3 | %4 |").arg(toolLabels.value(name, name), name, testedMark, note);
         }
         QStringList head;
-        head << "# OpenCAD toolbar buttons: AI checklist" << ""
-             << QStringLiteral("Generated by OpenCAD's button self-test (OPENCAD_AI_TOOLBAR_TEST) on %1.")
+        head << "# OpenCAD: what the AI can use (checklist)" << ""
+             << QStringLiteral("Generated by OpenCAD's self-test (OPENCAD_AI_TOOLBAR_TEST) on %1.")
                     .arg(QDateTime::currentDateTime().toString(Qt::ISODate))
              << ""
-             << "Agentic: the AI can use the button (list_toolbar_buttons, press_toolbar_button, then run_command, "
-                "click_drawing, select_entities, handle_dialog; lists with set_toolbar_value)."
-             << "Tested: [x] pressed with its recipe in the real app and the result checked, [!] the check failed, "
-                "[-] not run on purpose (see notes), [ ] not tested yet."
+             << "Agentic: the AI can use it. Toolbar buttons: list_toolbar_buttons, press_toolbar_button, then run_command, "
+                "click_drawing, select_entities, handle_dialog; lists with set_toolbar_value. Menus: use_menu. Panels and the "
+                "status bar: use_panel. Right-click menus: context_menu (drawing) or use_panel item click right (panels). "
+                "Properties panel: use_properties. Anything else: look_at_app and press_in_app."
+             << "Tested: [x] used with its recipe in the real app and the result checked, [!] the check failed, "
+                "[-] not run on purpose (see notes), [ ] not tested yet. Menu entries, panel buttons, status bar fields and "
+                "shortcut-only commands are tested by using them with the AI's tool and checking they went off; what the "
+                "command then does is tested with the toolbar button that runs it."
              << ""
              << QStringLiteral("Toolbar buttons: total %1 | agentic %2 | tested and passed %3 | failed %4")
                     .arg(total).arg(agentic).arg(tested).arg(failedCount)
+             << ""
+             << QStringLiteral("Menus, panels, status bar, right-click menus, Properties and preferences: total %1 | agentic %2 | "
+                               "tested and passed %3 | failed %4")
+                    .arg(partsTotal).arg(partsAgentic).arg(partsPassed).arg(partsFailed)
              << ""
              << QStringLiteral("AI tools: total %1 | tested and passed %2").arg(toolsTotal).arg(toolsPassed)
              << ""
@@ -4280,13 +4753,23 @@ namespace {
                     f.write(QJsonDocument(inventory).toJson());
                 }
             }
+            if (const QString dump = qEnvironmentVariable("OPENCAD_AI_SURFACES_INVENTORY"); !dump.isEmpty()) {
+                QFile f(dump); // the menus, panels and other parts of the window
+                if (f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+                    f.write(QJsonDocument(LC_AIToolbar::surfaces()).toJson());
+                }
+            }
             QString error;
             QJsonArray recipes = loadRecipes(error);
             if (const QString only = qEnvironmentVariable("OPENCAD_AI_TOOLBAR_ONLY"); !only.isEmpty()) {
                 const QStringList ids = only.split(',', Qt::SkipEmptyParts);
                 QJsonArray chosen;
                 for (const QJsonValue& r : recipes) {
-                    if (ids.contains(r.toObject().value("id").toString())) {
+                    const QString id = r.toObject().value("id").toString();
+                    // "menu:*" chooses every id starting with "menu:"
+                    if (ids.contains(id) || std::any_of(ids.cbegin(), ids.cend(), [&id](const QString& w) {
+                            return w.endsWith('*') && id.startsWith(w.chopped(1));
+                        })) {
                         chosen.append(r);
                     }
                 }
@@ -4342,6 +4825,13 @@ namespace {
 
 Q_COREAPP_STARTUP_FUNCTION(developerSelfTest)
 
+namespace {
+    void e2eStart() {
+        LC_AIE2E::start();
+    }
+}
+Q_COREAPP_STARTUP_FUNCTION(e2eStart)
+
 QJsonArray LC_AIToolbar::inventory() {
     QJsonArray out;
     for (const Button& b : collectButtons()) {
@@ -4368,6 +4858,49 @@ QJsonArray LC_AIToolbar::inventory() {
     return out;
 }
 
+QJsonArray LC_AIToolbar::surfaces() {
+    QJsonArray out;
+    QSet<QString> listed;
+    for (const Surface& sf : collectSurfaces()) {
+        out.append(QJsonObject{{"id", sf.id}, {"group", sf.group}, {"label", sf.label}, {"kind", sf.kind}, {"how", sf.how},
+                               {"task", sf.task}, {"why", sf.why}});
+        listed.insert(sf.id);
+    }
+    // parts only written recipes reach (right-click menus, the Properties panel, the drawing preferences), by group
+    QString error;
+    QList<QJsonObject> written;
+    for (const QJsonValue& v : loadRecipes(error, false)) {
+        const QJsonObject recipe = v.toObject();
+        const QString id = recipe.value("id").toString();
+        if (LC_AIToolbar::isToolRecipe(id) && !id.startsWith("tool:") && !listed.contains(id)) {
+            written << recipe;
+        }
+    }
+    std::stable_sort(written.begin(), written.end(), [](const QJsonObject& a, const QJsonObject& b) {
+        QString ga, gb, la, lb;
+        describeWrittenRecipe(a, ga, la);
+        describeWrittenRecipe(b, gb, lb);
+        return ga < gb;
+    });
+    for (const QJsonObject& recipe : std::as_const(written)) {
+        QString group, label;
+        describeWrittenRecipe(recipe, group, label);
+        QStringList tools;
+        for (const QJsonValue& c : recipe.value("then").toArray()) {
+            const QString name = c.toObject().value("tool").toString();
+            if (!tools.contains(name)) {
+                tools << name;
+            }
+        }
+        const QString id = recipe.value("id").toString();
+        out.append(QJsonObject{{"id", id}, {"group", group}, {"label", label}, {"kind", QStringLiteral("check")},
+                               {"how", tools.join(", ")}, {"note", recipe.value("note").toString()},
+                               {"task", QObject::tr("Using the %1: %2 (%3): ").arg(group, label, tools.join(", "))},
+                               {"why", QString()}});
+    }
+    return out;
+}
+
 QList<LC_AITool> LC_AIToolbar::tools() {
     return {listButtons(), pressButton(), clickDrawing(), selectEntities(), toolOptions(), handleDialog(), setToolbarValue(),
             usePanel(),    useMenu(),     contextMenu(),  lookAtApp(),      pressInApp(),  testButtons()};
@@ -4379,6 +4912,7 @@ QStringList LC_AIToolbar::recipeIds() {
     for (const QJsonValue& r : loadRecipes(error)) {
         ids << r.toObject().value("id").toString();
     }
+    ids.removeDuplicates();
     return ids;
 }
 
@@ -4435,6 +4969,16 @@ QHash<QString, LC_AIButtonTest> LC_AIToolbar::savedResults() {
         out.insert(it.key(), {it.key(), o.value("status").toString(), o.value("detail").toString(), o.value("when").toString()});
     }
     return out;
+}
+
+bool LC_AIToolbar::isToolRecipe(const QString& id) {
+    static const QStringList prefixes = {"tool:", "properties:", "menu:", "panel:", "context:", "status:", "prefs:", "shortcut:"};
+    for (const QString& p : prefixes) {
+        if (id.startsWith(p)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 QString LC_AIToolbar::notAgenticReason(const QString& id) {

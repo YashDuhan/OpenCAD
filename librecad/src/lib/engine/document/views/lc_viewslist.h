@@ -73,7 +73,7 @@ public:
  * @return View at given position or NULL if i is out of range.
  */
     LC_View *at(const unsigned int i) const {
-        return m_namedViews.at(i);
+        return i < static_cast<unsigned int>(m_namedViews.size()) ? m_namedViews.at(i) : nullptr;
     }
 
     void add(LC_View *view);

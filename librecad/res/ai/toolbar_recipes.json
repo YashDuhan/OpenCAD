@@ -11402,5 +11402,3361 @@
  {
   "id": "tool:browser_screenshot",
   "skip": "needs a page opened from the internet; try it from the chat"
+ },
+ {
+  "id": "properties:read_no_selection",
+  "press": false,
+  "note": "Nothing selected: the panel shows the drawing's settings (Active Pen, Active Layer, grid, units...). The Properties dock is opened if it was hidden.",
+  "then": [
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "read"
+    }
+   }
+  ],
+  "expect": {
+   "selected": 0,
+   "text": "nothing is selected[\\s\\S]*Selected types \\(choose_type\\): \\[No Selection\\]\\n[\\s\\S]*p0 Active Pen:\\n  p0\\.0 Color \\[colour\\] = By Layer[\\s\\S]*Active Layer:\\n  p1\\.0 Name \\[layer\\] = 0 options: 0\\n[\\s\\S]*Visible layer \\[true/false\\] = true"
+  }
+ },
+ {
+  "id": "properties:read_line",
+  "press": false,
+  "select": [
+   "L1"
+  ],
+  "note": "L1 (0,0 - 100,0) selected: its start and end points, and the calculated length, which is read-only.",
+  "then": [
+   {
+    "tool": "use_properties",
+    "args": {}
+   }
+  ],
+  "expect": {
+   "selected": 1,
+   "text": "selected entity \\(Line \\(1\\)\\)[\\s\\S]*\\[Line \\(1\\)\\][\\s\\S]*p1\\.0 Start \\[point x,y\\] = 0, 0\\n  p1\\.1 End \\[point x,y\\] = 100, 0\\n[\\s\\S]*Length \\[text, read-only\\] = \"100\\.0000\"[\\s\\S]*\"Move / Copy\" \\| \"Rotate\""
+  }
+ },
+ {
+  "id": "properties:read_circle",
+  "press": false,
+  "select": [
+   "C1"
+  ],
+  "note": "C1 (centre 300,50, radius 40) selected: centre, radius and the values derived from it; reading the Center row lists its X and Y parts.",
+  "then": [
+   {
+    "tool": "use_properties",
+    "args": {}
+   },
+   {
+    "tool": "use_properties",
+    "args": {
+     "row": "Geometry / Center"
+    }
+   }
+  ],
+  "expect": {
+   "text": "p1\\.0 Center \\[point x,y\\] = 300, 50\\n  p1\\.1 Radius \\[distance\\] = 40\\n  p1\\.2 Diameter \\[distance\\] = 80\\n[\\s\\S]*use_properties: [\\s\\S]*p1\\.0 Geometry / Center \\[point x,y\\] = 300, 50 \\(pickable from the drawing\\)\\n  About: Center point of circle\\n  p1\\.0\\.0 X \\[x\\] = 300 [^\\n]*\\n  p1\\.0\\.1 Y \\[y\\] = 50 "
+  }
+ },
+ {
+  "id": "properties:read_text",
+  "press": false,
+  "select": [
+   "T1"
+  ],
+  "note": "T1 (\"LABEL\" at 200,200, height 10) selected: its content, alignment choices and height.",
+  "then": [
+   {
+    "tool": "use_properties",
+    "args": {}
+   }
+  ],
+  "expect": {
+   "text": "Insertion Point \\[point x,y\\] = 200, 200[\\s\\S]*Content \\[text\\] = \"LABEL\"\\n  p2\\.1 Horizontal Align \\[choice\\] = Left options: Left \\| Center \\| Right[\\s\\S]*Height \\[distance\\] = 10\\n"
+  }
+ },
+ {
+  "id": "properties:set_double",
+  "press": false,
+  "select": [
+   "C1"
+  ],
+  "note": "Radius 40 -> 50 on C1: the derived rows follow, C1 is replaced by an edited copy (one undo step).",
+  "then": [
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "set",
+     "row": "Geometry / Radius",
+     "value": 50
+    }
+   },
+   {
+    "tool": "list_entities",
+    "args": {
+     "type": "circle",
+     "x1": 250,
+     "y1": 0,
+     "x2": 355,
+     "y2": 100
+    }
+   }
+  ],
+  "expect": {
+   "added": {
+    "circle": 1
+   },
+   "removed": 1,
+   "selected": 1,
+   "text": "Set \"Geometry / Radius\" to 50 \\(was 40\\)\\.\\n[\\s\\S]*Geometry / Diameter: 80 -> 100\\n[\\s\\S]*Geometry / Radius: 40 -> 50\\n[\\s\\S]*Drawing: changed 1 entity[\\s\\S]*one undo step[\\s\\S]*list_entities: 1 matching entities[^\\n]*\\n#\\d+ circle layer=0 centre=\\(300, 50\\) radius=50 \\[selected\\]$"
+  }
+ },
+ {
+  "id": "properties:set_point",
+  "press": false,
+  "select": [
+   "L1"
+  ],
+  "note": "Start point of L1 from 0,0 to 10,20, typed as \"x,y\".",
+  "then": [
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "set",
+     "row": "Start",
+     "value": "10,20"
+    }
+   },
+   {
+    "tool": "list_entities",
+    "args": {
+     "type": "line",
+     "selected_only": true
+    }
+   }
+  ],
+  "expect": {
+   "added": {
+    "line": 1
+   },
+   "removed": 1,
+   "text": "Set \"Geometry / Start\" to 10, 20 \\(was 0, 0\\)[\\s\\S]*one undo step[\\s\\S]*list_entities: 1 matching entities[^\\n]*\\n#\\d+ line layer=0 \\(10, 20\\) -> \\(100, 0\\)"
+  }
+ },
+ {
+  "id": "properties:set_point_x",
+  "press": false,
+  "select": [
+   "L1"
+  ],
+  "note": "Only the X of L1's end point (a part row, path Geometry / End / X): 100 -> 150.",
+  "then": [
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "set",
+     "row": "Geometry / End / X",
+     "value": 150
+    }
+   },
+   {
+    "tool": "list_entities",
+    "args": {
+     "type": "line",
+     "selected_only": true
+    }
+   }
+  ],
+  "expect": {
+   "added": {
+    "line": 1
+   },
+   "removed": 1,
+   "text": "Set \"Geometry / End / X\" to 150 \\(was 100\\)[\\s\\S]*Geometry / End: 100, 0 -> 150, 0[\\s\\S]*list_entities: 1 matching entities[^\\n]*\\n#\\d+ line layer=0 \\(0, 0\\) -> \\(150, 0\\) length=150"
+  }
+ },
+ {
+  "id": "properties:set_angle",
+  "press": false,
+  "select": [
+   "A1"
+  ],
+  "note": "A1 (centre 500,50, radius 40, 0..180 degrees): End Angle 180 -> 90, typed in degrees.",
+  "then": [
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "set",
+     "row": "End Angle",
+     "value": "90"
+    }
+   },
+   {
+    "tool": "list_entities",
+    "args": {
+     "type": "arc"
+    }
+   }
+  ],
+  "expect": {
+   "added": {
+    "arc": 1
+   },
+   "removed": 1,
+   "text": "Set \"Geometry / End Angle\" to 90° \\(was 180°\\)[\\s\\S]*Calculated / Arc Length: \"125\\.6637\" -> \"62\\.8319\"[\\s\\S]*one undo step[\\s\\S]*list_entities: 1 matching entities[^\\n]*\\n#\\d+ arc layer=0 centre=\\(500, 50\\) radius=40 start=0° end=90°"
+  }
+ },
+ {
+  "id": "properties:set_varies",
+  "press": false,
+  "select": [
+   "L1",
+   "L3"
+  ],
+  "note": "Two lines selected (L1 0,0-100,0 and L3 150,-20-150,120): their End row shows (VARIES); setting it to 200,200 moves both ends in one undo step.",
+  "then": [
+   {
+    "tool": "use_properties",
+    "args": {}
+   },
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "set",
+     "row": "Geometry / End",
+     "value": "200,200"
+    }
+   },
+   {
+    "tool": "list_entities",
+    "args": {
+     "type": "line",
+     "selected_only": true
+    }
+   }
+  ],
+  "expect": {
+   "added": {
+    "line": 2
+   },
+   "removed": 2,
+   "selected": 2,
+   "text": "\\[Line \\(2\\)\\][\\s\\S]*End \\[point x,y\\] = \\(VARIES: 100, 0 \\| 150, 120\\)[\\s\\S]*Geometry / End: \\(VARIES: 100, 0 \\| 150, 120\\) -> 200, 200\\n[\\s\\S]*Drawing: changed 2 entities[\\s\\S]*one undo step[\\s\\S]*list_entities: 2 matching entities[^\\n]*\\n#\\d+ line layer=0 \\(0, 0\\) -> \\(200, 200\\)[^\\n]*\\n#\\d+ line layer=0 \\(150, -20\\) -> \\(200, 200\\)"
+  }
+ },
+ {
+  "id": "properties:set_layer",
+  "press": false,
+  "select": [
+   "L1"
+  ],
+  "note": "Setup adds layer Walls (Add Layer dialog); then L1's Layer row is set to Walls.",
+  "before": [
+   {
+    "tool": "press_toolbar_button",
+    "args": {
+     "id": "LayersAdd"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "Layer Name",
+       "value": "Walls"
+      }
+     ],
+     "button": "OK"
+    }
+   }
+  ],
+  "then": [
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "set",
+     "row": "General / Layer",
+     "value": "Walls"
+    }
+   },
+   {
+    "tool": "list_entities",
+    "args": {
+     "layer": "Walls"
+    }
+   }
+  ],
+  "expect": {
+   "added": {
+    "line": 1
+   },
+   "removed": 1,
+   "text": "Set \"General / Layer\" to Walls \\(was 0\\)[\\s\\S]*General / Layer: 0 -> Walls[\\s\\S]*one undo step[\\s\\S]*list_entities: 1 matching entities[^\\n]*\\n#\\d+ line layer=Walls \\(0, 0\\) -> \\(100, 0\\)"
+  }
+ },
+ {
+  "id": "properties:set_color",
+  "press": false,
+  "select": [
+   "L1"
+  ],
+  "note": "L1's colour By Layer -> Red; re-read shows the row.",
+  "then": [
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "set",
+     "row": "General / Color",
+     "value": "Red"
+    }
+   },
+   {
+    "tool": "use_properties",
+    "args": {
+     "row": "Color"
+    }
+   }
+  ],
+  "expect": {
+   "added": {
+    "line": 1
+   },
+   "removed": 1,
+   "text": "General / Color: By Layer -> Red \\(#ff0000\\)[\\s\\S]*one undo step[\\s\\S]*use_properties: [\\s\\S]*General / Color \\[colour\\] = Red \\(#ff0000\\) options: By Layer \\| By Block \\| Red"
+  }
+ },
+ {
+  "id": "properties:set_linetype",
+  "press": false,
+  "select": [
+   "L1"
+  ],
+  "note": "L1's line type By Layer -> Dash.",
+  "then": [
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "set",
+     "row": "General / Line Type",
+     "value": "Dash"
+    }
+   }
+  ],
+  "expect": {
+   "added": {
+    "line": 1
+   },
+   "removed": 1,
+   "text": "General / Line Type: By Layer -> Dash\\n[\\s\\S]*one undo step"
+  }
+ },
+ {
+  "id": "properties:set_linewidth",
+  "press": false,
+  "select": [
+   "L1"
+  ],
+  "note": "L1's line width By Layer -> 0.50 mm, given as the panel shows widths (\"0.50mm (ISO)\").",
+  "then": [
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "set",
+     "row": "General / Line Width",
+     "value": "0.50mm (ISO)"
+    }
+   }
+  ],
+  "expect": {
+   "added": {
+    "line": 1
+   },
+   "removed": 1,
+   "text": "General / Line Width: By Layer -> 0\\.50mm[^\\n]*\\n[\\s\\S]*one undo step"
+  }
+ },
+ {
+  "id": "properties:set_enum",
+  "press": false,
+  "select": [
+   "T1"
+  ],
+  "note": "T1's horizontal alignment Left -> Center (a choice row).",
+  "then": [
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "set",
+     "row": "Horizontal Align",
+     "value": "Center"
+    }
+   }
+  ],
+  "expect": {
+   "added": {
+    "text": 1
+   },
+   "removed": 1,
+   "text": "Set \"Text / Horizontal Align\" to Center \\(was Left\\)[\\s\\S]*Text / Horizontal Align: Left -> Center[\\s\\S]*one undo step"
+  }
+ },
+ {
+  "id": "properties:set_bool",
+  "press": false,
+  "select": [
+   "P1"
+  ],
+  "note": "P1 (closed square) gets Is Closed = false: P1 is replaced by a copy that reports open. OpenCAD's panel only clears the closed flag (RS_Polyline::setClosed(bool)), so the closing segment stays and the length stays 400.",
+  "then": [
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "set",
+     "row": "Is Closed",
+     "value": false
+    }
+   },
+   {
+    "tool": "use_properties",
+    "args": {
+     "row": "Geometry / Is Closed"
+    }
+   }
+  ],
+  "expect": {
+   "added": {
+    "polyline": 1
+   },
+   "removed": 1,
+   "text": "Set \"Geometry / Is Closed\" to false \\(was true\\)[\\s\\S]*Geometry / Is Closed: true -> false[\\s\\S]*Drawing: changed 1 entity[\\s\\S]*one undo step[\\s\\S]*use_properties: [\\s\\S]*Geometry / Is Closed \\[true/false\\] = false\\n"
+  }
+ },
+ {
+  "id": "properties:set_bool_toggle",
+  "press": false,
+  "note": "Nothing selected: Active Layer / Locked = true locks layer 0. Its row toggles the layer on any change, so setting true again must change nothing.",
+  "then": [
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "set",
+     "row": "Active Layer / Locked",
+     "value": true
+    }
+   },
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "set",
+     "row": "Active Layer / Locked",
+     "value": "true"
+    }
+   },
+   {
+    "tool": "get_drawing_info",
+    "args": {}
+   }
+  ],
+  "expect": {
+   "text": "Active Layer / Locked: false -> true[\\s\\S]*A drawing setting: applied at once[\\s\\S]*use_properties: [\\s\\S]*Nothing changed[\\s\\S]*- 0: 13 entities \\[locked, current\\]"
+  }
+ },
+ {
+  "id": "properties:set_bool_visible_layer",
+  "press": false,
+  "note": "Setup adds layer Second (it becomes the active layer). Active Layer / Visible layer = false hides it: the row's own check box reports the opposite (isFrozen); the tool reads and sets the real visibility. A hidden layer cannot stay active, so OpenCAD makes layer 0 active.",
+  "before": [
+   {
+    "tool": "press_toolbar_button",
+    "args": {
+     "id": "LayersAdd"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "Layer Name",
+       "value": "Second"
+      }
+     ],
+     "button": "OK"
+    }
+   }
+  ],
+  "then": [
+   {
+    "tool": "use_properties",
+    "args": {
+     "row": "Active Layer / Visible layer"
+    }
+   },
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "set",
+     "row": "Active Layer / Visible layer",
+     "value": false
+    }
+   },
+   {
+    "tool": "get_drawing_info",
+    "args": {}
+   }
+  ],
+  "expect": {
+   "text": "Visible layer \\[true/false\\] = true \\(the real visibility[\\s\\S]*Set \"Active Layer / Visible layer\" to false \\(was true\\)[\\s\\S]*Active layer: 0 \\(was Second\\)[\\s\\S]*- 0: 13 entities \\[current\\]\\n- Second: 0 entities \\[hidden\\]"
+  }
+ },
+ {
+  "id": "properties:set_text",
+  "press": false,
+  "select": [
+   "T1"
+  ],
+  "note": "T1's content LABEL -> HELLO (a text row).",
+  "then": [
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "set",
+     "row": "Text / Content",
+     "value": "HELLO"
+    }
+   },
+   {
+    "tool": "list_entities",
+    "args": {
+     "type": "text"
+    }
+   }
+  ],
+  "expect": {
+   "added": {
+    "text": 1
+   },
+   "removed": 1,
+   "text": "Text / Content: \"LABEL\" -> \"HELLO\"[\\s\\S]*one undo step[\\s\\S]*list_entities: 1 matching entities[^\\n]*\\n#\\d+ text layer=0 at=\\(200, 200\\) height=10 text=\"HELLO\""
+  }
+ },
+ {
+  "id": "properties:readonly_refused",
+  "press": false,
+  "select": [
+   "L1"
+  ],
+  "note": "A calculated row (L1's Length) is read-only: the edit is refused and nothing changes.",
+  "then": [
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "set",
+     "row": "Length",
+     "value": 50
+    }
+   },
+   {
+    "tool": "list_entities",
+    "args": {
+     "type": "line",
+     "selected_only": true
+    }
+   }
+  ],
+  "expect": {
+   "no_error": false,
+   "text": "\"Calculated / Length\" is read-only[\\s\\S]*list_entities: 1 matching entities[^\\n]*\\n#\\d+ line layer=0 \\(0, 0\\) -> \\(100, 0\\) length=100"
+  }
+ },
+ {
+  "id": "properties:undo",
+  "press": false,
+  "select": [
+   "C1"
+  ],
+  "note": "Radius 40 -> 50, then Undo brings C1 back (unselected, as Undo leaves it); selected again, the panel shows radius 40.",
+  "then": [
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "set",
+     "row": "Radius",
+     "value": 50
+    }
+   },
+   {
+    "tool": "press_toolbar_button",
+    "args": {
+     "id": "EditUndo"
+    }
+   },
+   {
+    "tool": "select_entities",
+    "args": {
+     "type": "circle",
+     "x1": 250,
+     "y1": 0,
+     "x2": 355,
+     "y2": 100
+    }
+   },
+   {
+    "tool": "use_properties",
+    "args": {
+     "row": "Radius"
+    }
+   },
+   {
+    "tool": "list_entities",
+    "args": {
+     "type": "circle",
+     "x1": 250,
+     "y1": 0,
+     "x2": 355,
+     "y2": 100
+    }
+   }
+  ],
+  "expect": {
+   "selected": 1,
+   "text": "Geometry / Radius: 40 -> 50[\\s\\S]*press_toolbar_button: Pressed \"Undo\"[\\s\\S]*Added 1 entity:\\n  #\\d+ circle layer=0 centre=\\(300, 50\\) radius=40\\n[\\s\\S]*use_properties: [\\s\\S]*Geometry / Radius \\[distance\\] = 40 [\\s\\S]*list_entities: 1 matching entities[^\\n]*\\n#\\d+ circle layer=0 centre=\\(300, 50\\) radius=40 \\[selected\\]$"
+  }
+ },
+ {
+  "id": "properties:undo_two",
+  "press": false,
+  "select": [
+   "L1",
+   "C1"
+  ],
+  "note": "A line and a circle get Color Blue from the All view in one set; one Undo puts both back: the edit of several entities is a single undo step.",
+  "then": [
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "set",
+     "row": "General / Color",
+     "value": "Blue"
+    }
+   },
+   {
+    "tool": "press_toolbar_button",
+    "args": {
+     "id": "EditUndo"
+    }
+   },
+   {
+    "tool": "list_entities",
+    "args": {
+     "type": "line",
+     "x1": 10,
+     "y1": -5,
+     "x2": 90,
+     "y2": 5
+    }
+   },
+   {
+    "tool": "list_entities",
+    "args": {
+     "type": "circle",
+     "x1": 250,
+     "y1": 0,
+     "x2": 355,
+     "y2": 100
+    }
+   }
+  ],
+  "expect": {
+   "text": "Drawing: changed 2 entities[\\s\\S]*one undo step[\\s\\S]*press_toolbar_button: Pressed \"Undo\"[^\\n]*\\nAdded 2 entities:\\n  #\\d+ line layer=0 \\(0, 0\\) -> \\(100, 0\\)[^\\n]*\\n  #\\d+ circle layer=0 centre=\\(300, 50\\) radius=40\\nRemoved 2 entities[\\s\\S]*list_entities: 1 matching entities[\\s\\S]*list_entities: 1 matching entities"
+  }
+ },
+ {
+  "id": "properties:link_dialog",
+  "press": false,
+  "note": "Nothing selected: the Active Layer section's link \"Add layer...\" opens the layer dialog; handle_dialog names the layer Doors and presses OK.",
+  "then": [
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "click_link",
+     "link": "Add layer..."
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "Layer Name",
+       "value": "Doors"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "get_drawing_info",
+    "args": {}
+   }
+  ],
+  "expect": {
+   "dialog": "layer",
+   "layers_added": 1,
+   "text": "Clicked the link \"Add layer\\.\\.\\.\"[\\s\\S]*Use handle_dialog[\\s\\S]*- Doors: 0 entities"
+  }
+ },
+ {
+  "id": "properties:choose_type",
+  "press": false,
+  "select": [
+   "L1",
+   "C1"
+  ],
+  "note": "A line and a circle selected: the panel shows what they have in common (All); setting Color there changes both (one undo step). Then the type list picks Circle.",
+  "then": [
+   {
+    "tool": "use_properties",
+    "args": {}
+   },
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "set",
+     "row": "General / Color",
+     "value": "Blue"
+    }
+   },
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "choose_type",
+     "type": "Circle"
+    }
+   }
+  ],
+  "expect": {
+   "added": {
+    "line": 1,
+    "circle": 1
+   },
+   "removed": 2,
+   "selected": 2,
+   "text": "\\[All \\(2\\)\\] \\| Line \\(1\\) \\| Circle \\(1\\)[\\s\\S]*General / Color: By Layer -> Blue[\\s\\S]*Drawing: changed 2 entities[\\s\\S]*one undo step[\\s\\S]*The panel now shows \"Circle \\(1\\)\"[\\s\\S]*Radius \\[distance\\] = 40"
+  }
+ },
+ {
+  "id": "properties:collapse_expand",
+  "press": false,
+  "select": [
+   "C1"
+  ],
+  "note": "Collapse the Geometry section (the panel hides its rows), read, expand it again.",
+  "then": [
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "collapse",
+     "row": "Geometry"
+    }
+   },
+   {
+    "tool": "use_properties",
+    "args": {}
+   },
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "expand",
+     "row": "Geometry"
+    }
+   },
+   {
+    "tool": "use_properties",
+    "args": {}
+   }
+  ],
+  "expect": {
+   "text": "Collapsed \"Geometry\"[\\s\\S]*use_properties: [\\s\\S]*p1 Geometry \\(collapsed: 5 rows hidden[\\s\\S]*Expanded \"Geometry\"[\\s\\S]*use_properties: [\\s\\S]*p1 Geometry:\\n  p1\\.0 Center"
+  }
+ },
+ {
+  "id": "properties:settings",
+  "press": false,
+  "note": "The panel's settings button opens its options dialog; Cancel closes it.",
+  "then": [
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "settings"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "button": "Cancel"
+    }
+   }
+  ],
+  "expect": {
+   "dialog": "Property Sheet",
+   "text": "Clicked the panel's settings button[\\s\\S]*Use handle_dialog"
+  }
+ },
+ {
+  "id": "properties:tool_options",
+  "press": false,
+  "note": "While Circle (Center, Radius) runs, the panel shows its options: Radius set to 27.5 there (a value no other test leaves behind), then a click at 700,200 gives the centre of a circle of radius 27.5.",
+  "then": [
+   {
+    "tool": "press_toolbar_button",
+    "args": {
+     "id": "DrawCircleCR"
+    }
+   },
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "set",
+     "row": "Action Options / Radius",
+     "value": 27.5
+    }
+   },
+   {
+    "tool": "click_drawing",
+    "args": {
+     "x": 700,
+     "y": 200
+    }
+   },
+   {
+    "tool": "press_toolbar_button",
+    "args": {
+     "id": "EditKillAllActions"
+    }
+   },
+   {
+    "tool": "list_entities",
+    "args": {
+     "type": "circle",
+     "x1": 650,
+     "y1": 150,
+     "x2": 750,
+     "y2": 250
+    }
+   }
+  ],
+  "expect": {
+   "added": {
+    "circle": 1
+   },
+   "text": "Set \"Action Options / Radius\" to 27.5 \\(was [\\d.]+\\)[\\s\\S]*An option of the running tool \"Center, Radius\"[\\s\\S]*list_entities: 1 matching entities[^\\n]*\\n#\\d+ circle layer=0 centre=\\([\\d.]+, [\\d.]+\\) radius=27.5(?![\\d])"
+  }
+ },
+ {
+  "id": "properties:pick",
+  "press": false,
+  "select": [
+   "C1"
+  ],
+  "note": "Pick C1's centre from the drawing: the pick tool starts, a click near 350,60 (whole pixels) gives the new centre.",
+  "then": [
+   {
+    "tool": "use_properties",
+    "args": {
+     "action": "pick",
+     "row": "Geometry / Center"
+    }
+   },
+   {
+    "tool": "click_drawing",
+    "args": {
+     "x": 350,
+     "y": 60
+    }
+   },
+   {
+    "tool": "list_entities",
+    "args": {
+     "type": "circle"
+    }
+   }
+  ],
+  "expect": {
+   "added": {
+    "circle": 1
+   },
+   "removed": 1,
+   "text": "Started picking \"Geometry / Center\"[\\s\\S]*Running tool: Pick Point\\.[\\s\\S]*click_drawing: [\\s\\S]*list_entities: 2 matching entities[\\s\\S]*centre=\\((349\\.9|350)[\\d.]*, (60|60\\.1)[\\d.]*\\) radius=40"
+  }
+ },
+ {
+  "id": "context:empty_space",
+  "group": "Right-click menus",
+  "label": "Drawing, on empty space",
+  "press": false,
+  "note": "Right-click on empty space lists the general menu (Select, Edit, Draw, Modify, View, File, Options...); choosing Draw > Line > 2 Points starts that tool.",
+  "then": [
+   {
+    "tool": "context_menu",
+    "args": {
+     "x": 230,
+     "y": 150
+    }
+   },
+   {
+    "tool": "context_menu",
+    "args": {
+     "x": 230,
+     "y": 150,
+     "item": "Draw > Line > 2 Points"
+    }
+   }
+  ],
+  "expect": {
+   "text": "The menu offers: [^\\n]*Draw > Line > 2 Points[^\\n]*Options > Current Drawing Preferences",
+   "running": "^2 Points"
+  }
+ },
+ {
+  "id": "context:line",
+  "group": "Right-click menus",
+  "label": "Drawing, on a line",
+  "press": false,
+  "note": "Right-click on L1 offers Modify Line, Draw Line, dimensions, layers and info entries; Modify Line > Offset starts Offset on it.",
+  "then": [
+   {
+    "tool": "context_menu",
+    "args": {
+     "x": 50,
+     "y": 0
+    }
+   },
+   {
+    "tool": "context_menu",
+    "args": {
+     "x": 50,
+     "y": 0,
+     "item": "Modify Line > Offset"
+    }
+   }
+  ],
+  "expect": {
+   "text": "The menu offers: [^\\n]*Modify Line > Offset[^\\n]*Add Dimensions > Aligned",
+   "running": "^Offset"
+  }
+ },
+ {
+  "id": "context:circle",
+  "group": "Right-click menus",
+  "label": "Drawing, on a circle",
+  "press": false,
+  "note": "Right-click on C1 offers Modify Circle and circle dimensions; Add Dimensions > Radial adds a radial dimension of C1.",
+  "then": [
+   {
+    "tool": "context_menu",
+    "args": {
+     "x": 340,
+     "y": 50
+    }
+   },
+   {
+    "tool": "context_menu",
+    "args": {
+     "x": 340,
+     "y": 50,
+     "item": "Add Dimensions > Radial"
+    }
+   }
+  ],
+  "expect": {
+   "text": "The menu offers: [^\\n]*Modify Circle > Offset",
+   "added": {
+    "dim_radial": 1
+   }
+  }
+ },
+ {
+  "id": "context:arc",
+  "group": "Right-click menus",
+  "label": "Drawing, on an arc",
+  "press": false,
+  "note": "Right-click on A1 offers Modify Arc entries; Modify Generic > Delete deletes the arc.",
+  "then": [
+   {
+    "tool": "context_menu",
+    "args": {
+     "x": 500,
+     "y": 90
+    }
+   },
+   {
+    "tool": "context_menu",
+    "args": {
+     "x": 500,
+     "y": 90,
+     "item": "Modify Generic > Delete"
+    }
+   }
+  ],
+  "expect": {
+   "text": "The menu offers: [^\\n]*Modify Arc > Revert direction",
+   "removed": 1
+  }
+ },
+ {
+  "id": "context:ellipse",
+  "group": "Right-click menus",
+  "label": "Drawing, on an ellipse",
+  "press": false,
+  "note": "Right-click on E1; Draw Other > Bounding Box draws its 4-line bounding box.",
+  "then": [
+   {
+    "tool": "context_menu",
+    "args": {
+     "x": 360,
+     "y": 250
+    }
+   },
+   {
+    "tool": "context_menu",
+    "args": {
+     "x": 360,
+     "y": 250,
+     "item": "Draw Other > Bounding Box"
+    }
+   }
+  ],
+  "expect": {
+   "text": "The menu offers: [^\\n]*Modify Generic > Move / Copy",
+   "added": {
+    "line": 4
+   }
+  }
+ },
+ {
+  "id": "context:polyline",
+  "group": "Right-click menus",
+  "label": "Drawing, on a polyline",
+  "press": false,
+  "note": "Right-click on P1 offers Modify Polyline entries; Add node starts that tool on it.",
+  "then": [
+   {
+    "tool": "context_menu",
+    "args": {
+     "x": 50,
+     "y": 200
+    }
+   },
+   {
+    "tool": "context_menu",
+    "args": {
+     "x": 50,
+     "y": 200,
+     "item": "Modify Polyline > Add node"
+    }
+   }
+  ],
+  "expect": {
+   "text": "The menu offers: [^\\n]*Modify Polyline > Delete node",
+   "running": "^Add node"
+  }
+ },
+ {
+  "id": "context:point",
+  "group": "Right-click menus",
+  "label": "Drawing, on a point",
+  "press": false,
+  "note": "Right-click on PT1 offers the point tools; Line of Points starts it.",
+  "then": [
+   {
+    "tool": "context_menu",
+    "args": {
+     "x": 450,
+     "y": 250
+    }
+   },
+   {
+    "tool": "context_menu",
+    "args": {
+     "x": 450,
+     "y": 250,
+     "item": "Line of Points"
+    }
+   }
+  ],
+  "expect": {
+   "text": "The menu offers: [^\\n]*Select Points",
+   "running": "^Line of Points"
+  }
+ },
+ {
+  "id": "context:block_insert",
+  "group": "Right-click menus",
+  "label": "Drawing, on a block insert",
+  "press": false,
+  "note": "Right-click on I1 offers Edit Block and Explode; Explode turns the insert into its circle.",
+  "then": [
+   {
+    "tool": "context_menu",
+    "args": {
+     "x": 610,
+     "y": 50
+    }
+   },
+   {
+    "tool": "context_menu",
+    "args": {
+     "x": 610,
+     "y": 50,
+     "item": "Explode"
+    }
+   }
+  ],
+  "expect": {
+   "text": "The menu offers: [^\\n]*Edit Block: FixtureBlock",
+   "added": {
+    "circle": 1
+   },
+   "removed": 1
+  }
+ },
+ {
+  "id": "context:text",
+  "group": "Right-click menus",
+  "label": "Drawing, on a text",
+  "press": false,
+  "note": "Right-click on T1 (LABEL); Modify Text > Explode Text into Letters makes 5 letters.",
+  "then": [
+   {
+    "tool": "context_menu",
+    "args": {
+     "x": 205,
+     "y": 204
+    }
+   },
+   {
+    "tool": "context_menu",
+    "args": {
+     "x": 205,
+     "y": 204,
+     "item": "Modify Text > Explode Text into Letters"
+    }
+   }
+  ],
+  "expect": {
+   "text": "The menu offers: [^\\n]*Modify Text > Explode Text into Letters",
+   "added": {
+    "text": 5
+   },
+   "removed": 1
+  }
+ },
+ {
+  "id": "context:entity_layer",
+  "group": "Right-click menus",
+  "label": "Drawing, the entity's layer",
+  "press": false,
+  "note": "A new layer Walls is made current first (OpenCAD does not hide the current layer); right-click on L1 (layer 0), Layers > Hide Entity's Layer hides layer 0.",
+  "then": [
+   {
+    "tool": "context_menu",
+    "args": {
+     "x": 50,
+     "y": 0,
+     "item": "Layers > Hide Entity's Layer"
+    }
+   },
+   {
+    "tool": "get_drawing_info",
+    "args": {}
+   }
+  ],
+  "expect": {
+   "text": "- 0: \\d+ entities \\[[^\\]]*hidden"
+  },
+  "before": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Layers",
+     "button": "Add Layer"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "Layer Name:",
+       "value": "Walls"
+      }
+     ],
+     "button": "OK"
+    }
+   }
+  ]
+ },
+ {
+  "id": "context:selection",
+  "group": "Right-click menus",
+  "label": "Drawing, with a selection",
+  "press": false,
+  "select": [
+   "L1",
+   "C1"
+  ],
+  "note": "With L1 and C1 selected, right-click on empty space offers Modify and Modify More for the selection; Modify > Delete deletes both.",
+  "then": [
+   {
+    "tool": "context_menu",
+    "args": {
+     "x": 230,
+     "y": 150
+    }
+   },
+   {
+    "tool": "context_menu",
+    "args": {
+     "x": 230,
+     "y": 150,
+     "item": "Modify > Delete"
+    }
+   }
+  ],
+  "expect": {
+   "text": "The menu offers: [^\\n]*Modify More > Trim",
+   "removed": 2
+  }
+ },
+ {
+  "id": "context:opens_dialog",
+  "group": "Right-click menus",
+  "label": "Drawing, an entry that opens a dialog",
+  "press": false,
+  "note": "Options > Current Drawing Preferences from the right-click menu opens its dialog, and the tool reports it.",
+  "then": [
+   {
+    "tool": "context_menu",
+    "args": {
+     "x": 230,
+     "y": 150,
+     "item": "Options > Current Drawing Preferences"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "button": "Cancel"
+    }
+   }
+  ],
+  "expect": {
+   "dialog": "Drawing Preferences"
+  }
+ },
+ {
+  "id": "context:layers_panel",
+  "group": "Right-click menus",
+  "label": "Layers panel, on a layer",
+  "press": false,
+  "note": "Right-click on layer 0 in the Layers panel lists its menu; Add Layer opens Layer Settings, filled in (name Walls, colour Red) and OK: the new layer is there.",
+  "then": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Layers",
+     "item": {
+      "row": "0",
+      "click": "right"
+     }
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Layers",
+     "item": {
+      "row": "0",
+      "click": "right",
+      "menu": "Add Layer"
+     }
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "Layer Name:",
+       "value": "Walls"
+      },
+      {
+       "field": "Color:",
+       "value": "Red"
+      }
+     ],
+     "button": "OK"
+    }
+   }
+  ],
+  "expect": {
+   "text": "its menu offers: [^\\n]*Toggle Layer Lock[^\\n]*Add Layer",
+   "dialog": "Layer Settings",
+   "layers_added": 1
+  }
+ },
+ {
+  "id": "context:layers_tree_panel",
+  "group": "Right-click menus",
+  "label": "Layers Tree panel, on a layer",
+  "press": false,
+  "note": "Right-click on layer 0 in the Layers Tree lists its menu; Create Layer Copy adds layer 0(Copy0).",
+  "then": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Layers Tree",
+     "item": {
+      "row": "0",
+      "click": "right"
+     }
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Layers Tree",
+     "item": {
+      "row": "0",
+      "click": "right",
+      "menu": "Create Layer Copy"
+     }
+    }
+   }
+  ],
+  "expect": {
+   "text": "its menu offers: [^\\n]*Duplicate Layer With Content",
+   "layers_added": 1
+  }
+ },
+ {
+  "id": "context:blocks_panel",
+  "group": "Right-click menus",
+  "label": "Blocks panel, on a block",
+  "press": false,
+  "note": "Right-click on FixtureBlock in the Blocks panel; Toggle Block Visibility hides it.",
+  "then": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Blocks",
+     "item": {
+      "row": "FixtureBlock",
+      "click": "right",
+      "menu": "Toggle Block Visibility"
+     }
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Blocks"
+    }
+   }
+  ],
+  "expect": {
+   "text": "r0: hidden \\| FixtureBlock"
+  }
+ },
+ {
+  "id": "prefs:paper_size",
+  "group": "Drawing preferences",
+  "label": "Paper: A3 landscape",
+  "press": false,
+  "note": "Current Drawing Preferences, Paper: A3 and Landscape, OK; reopened, the drawing's paper limit is 420 x 297.",
+  "then": [
+   {
+    "tool": "use_menu",
+    "args": {
+     "path": "Options > Current Drawing Preferences"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "Format",
+       "value": "A3"
+      },
+      {
+       "field": "Landscape",
+       "value": "true"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "use_menu",
+    "args": {
+     "path": "Options > Current Drawing Preferences"
+    }
+   }
+  ],
+  "expect": {
+   "text": "(?s)Pressed \"OK\".*PLIMMAX \\| 10 \\| VECTOR \\| 420/297"
+  }
+ },
+ {
+  "id": "prefs:custom_paper",
+  "group": "Drawing preferences",
+  "label": "Paper: custom size",
+  "press": false,
+  "note": "Paper format Custom, width 500, height 250, OK; reopened, the paper limit is 500 x 250.",
+  "then": [
+   {
+    "tool": "use_menu",
+    "args": {
+     "path": "Options > Current Drawing Preferences"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "Format",
+       "value": "Custom"
+      },
+      {
+       "field": "Width:",
+       "value": "500"
+      },
+      {
+       "field": "Height:",
+       "value": "250"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "use_menu",
+    "args": {
+     "path": "Options > Current Drawing Preferences"
+    }
+   }
+  ],
+  "expect": {
+   "text": "(?s)Pressed \"OK\".*PLIMMAX \\| 10 \\| VECTOR \\| 500/250"
+  }
+ },
+ {
+  "id": "prefs:margins",
+  "group": "Drawing preferences",
+  "label": "Paper: margins",
+  "press": false,
+  "note": "Left margin 10 on the Paper tab, OK; reopened, it is 10.",
+  "then": [
+   {
+    "tool": "use_menu",
+    "args": {
+     "path": "Options > Current Drawing Preferences"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "leMarginLeft",
+       "value": "10"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "use_menu",
+    "args": {
+     "path": "Options > Current Drawing Preferences"
+    }
+   }
+  ],
+  "expect": {
+   "text": "(?s)Pressed \"OK\".*leMarginLeft = \"10\""
+  }
+ },
+ {
+  "id": "prefs:units",
+  "group": "Drawing preferences",
+  "label": "Units: millimetres, 2 decimals",
+  "press": false,
+  "note": "Units tab: main unit Millimeter and linear precision 0.00, OK; the drawing's units are millimetres.",
+  "then": [
+   {
+    "tool": "use_menu",
+    "args": {
+     "path": "Options > Current Drawing Preferences"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "Main drawing unit:",
+       "value": "Millimeter"
+      },
+      {
+       "field": "Linear precision:",
+       "value": "0.00"
+      }
+     ],
+     "button": "OK",
+     "tab": "Units"
+    }
+   },
+   {
+    "tool": "get_drawing_info",
+    "args": {}
+   }
+  ],
+  "expect": {
+   "text": "Units: Millimeter"
+  }
+ },
+ {
+  "id": "prefs:angle_units",
+  "group": "Drawing preferences",
+  "label": "Units: angles in deg/min/sec",
+  "press": false,
+  "note": "Angular units Deg/min/sec, OK; reopened, AUNITS is 1.",
+  "then": [
+   {
+    "tool": "use_menu",
+    "args": {
+     "path": "Options > Current Drawing Preferences"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "Angular units:",
+       "value": "Deg/min/sec"
+      }
+     ],
+     "button": "OK",
+     "tab": "Units"
+    }
+   },
+   {
+    "tool": "use_menu",
+    "args": {
+     "path": "Options > Current Drawing Preferences"
+    }
+   }
+  ],
+  "expect": {
+   "text": "(?s)Pressed \"OK\".*AUNITS \\| 70 \\| INT \\| 1"
+  }
+ },
+ {
+  "id": "prefs:grid",
+  "group": "Drawing preferences",
+  "label": "Grid: spacing 10 x 10",
+  "press": false,
+  "note": "Grid tab: X and Y spacing 10, OK; reopened, GRIDUNIT is 10/10.",
+  "then": [
+   {
+    "tool": "use_menu",
+    "args": {
+     "path": "Options > Current Drawing Preferences"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "X Spacing:",
+       "value": "10"
+      },
+      {
+       "field": "Y Spacing:",
+       "value": "10"
+      }
+     ],
+     "button": "OK",
+     "tab": "Grid"
+    }
+   },
+   {
+    "tool": "use_menu",
+    "args": {
+     "path": "Options > Current Drawing Preferences"
+    }
+   }
+  ],
+  "expect": {
+   "text": "(?s)Pressed \"OK\".*GRIDUNIT \\| 10 \\| VECTOR \\| 10/10"
+  }
+ },
+ {
+  "id": "prefs:point_style",
+  "group": "Drawing preferences",
+  "label": "Points: style",
+  "press": false,
+  "note": "Points tab: the plus style, OK; reopened, the plus style is the checked one.",
+  "then": [
+   {
+    "tool": "use_menu",
+    "args": {
+     "path": "Options > Current Drawing Preferences"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "bPlus",
+       "value": "true"
+      }
+     ],
+     "button": "OK",
+     "tab": "Points"
+    }
+   },
+   {
+    "tool": "use_menu",
+    "args": {
+     "path": "Options > Current Drawing Preferences"
+    }
+   }
+  ],
+  "expect": {
+   "text": "(?s)Pressed \"OK\".*name=bPlus = checked"
+  }
+ },
+ {
+  "id": "prefs:metadata",
+  "group": "Drawing preferences",
+  "label": "Metadata: title and author",
+  "press": false,
+  "note": "Metadata tab: title and author, OK; reopened, both are kept.",
+  "then": [
+   {
+    "tool": "use_menu",
+    "args": {
+     "path": "Options > Current Drawing Preferences"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "Title:",
+       "value": "AI test drawing"
+      },
+      {
+       "field": "Author:",
+       "value": "OpenCAD AI"
+      }
+     ],
+     "button": "OK",
+     "tab": "Metadata"
+    }
+   },
+   {
+    "tool": "use_menu",
+    "args": {
+     "path": "Options > Current Drawing Preferences"
+    }
+   }
+  ],
+  "expect": {
+   "text": "(?s)Pressed \"OK\".*leMetaTitle = \"AI test drawing\"[\\s\\S]*leMetaAuthor = \"OpenCAD AI\""
+  }
+ },
+ {
+  "id": "menu:File > Save",
+  "press": false,
+  "before": [
+   {
+    "tool": "add_text",
+    "args": {
+     "labels": [
+      {
+       "text": "SAVE ME",
+       "x": 20,
+       "y": 20,
+       "height": 5
+      }
+     ]
+    }
+   }
+  ],
+  "note": "A changed drawing (a text added): File > Save asks for a file name (never saved), answered with a file in the test folder.",
+  "then": [
+   {
+    "tool": "use_menu",
+    "args": {
+     "path": "File > Save"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "file_path": "${TMP}/saved-by-menu.dxf",
+     "button": "Save"
+    }
+   }
+  ],
+  "expect": {
+   "fired": {
+    "menu": "File > Save"
+   },
+   "file": "${TMP}/saved-by-menu.dxf"
+  }
+ },
+ {
+  "id": "menu:Edit > Redo",
+  "press": false,
+  "before": [
+   {
+    "tool": "add_text",
+    "args": {
+     "labels": [
+      {
+       "text": "REDO",
+       "x": 20,
+       "y": 20,
+       "height": 5
+      }
+     ]
+    }
+   },
+   {
+    "tool": "press_toolbar_button",
+    "args": {
+     "id": "EditUndo"
+    }
+   }
+  ],
+  "note": "A text added then undone (setup); Edit > Redo brings it back.",
+  "then": [
+   {
+    "tool": "use_menu",
+    "args": {
+     "path": "Edit > Redo"
+    }
+   }
+  ],
+  "expect": {
+   "fired": {
+    "menu": "Edit > Redo"
+   },
+   "added": {
+    "text": 1
+   }
+  }
+ },
+ {
+  "id": "menu:View > Views Restore > Restore View 1",
+  "press": false,
+  "before": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 60,
+     "y1": -40,
+     "x2": 140,
+     "y2": 40
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V1"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 160,
+     "y1": -40,
+     "x2": 240,
+     "y2": 40
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V2"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 260,
+     "y1": -40,
+     "x2": 340,
+     "y2": 40
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V3"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 360,
+     "y1": -40,
+     "x2": 440,
+     "y2": 40
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V4"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 460,
+     "y1": -40,
+     "x2": 540,
+     "y2": 40
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V5"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 0,
+     "y1": 200,
+     "x2": 60,
+     "y2": 260
+    }
+   }
+  ],
+  "note": "Five named views V1..V5 saved around x = 100, 200, ... 500 (setup; the Named Views panel is opened first, as it narrows the drawing), then a zoom elsewhere; Restore View 1 brings back V1 (centre 100, 0).",
+  "then": [
+   {
+    "tool": "use_menu",
+    "args": {
+     "path": "View > Views Restore > Restore View 1"
+    }
+   }
+  ],
+  "expect": {
+   "fired": {
+    "menu": "View > Views Restore > Restore View 1"
+   },
+   "view_center": [
+    100,
+    0,
+    3
+   ]
+  }
+ },
+ {
+  "id": "menu:View > Views Restore > Restore View 2",
+  "press": false,
+  "before": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 60,
+     "y1": -40,
+     "x2": 140,
+     "y2": 40
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V1"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 160,
+     "y1": -40,
+     "x2": 240,
+     "y2": 40
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V2"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 260,
+     "y1": -40,
+     "x2": 340,
+     "y2": 40
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V3"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 360,
+     "y1": -40,
+     "x2": 440,
+     "y2": 40
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V4"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 460,
+     "y1": -40,
+     "x2": 540,
+     "y2": 40
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V5"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 0,
+     "y1": 200,
+     "x2": 60,
+     "y2": 260
+    }
+   }
+  ],
+  "note": "Five named views V1..V5 saved around x = 100, 200, ... 500 (setup; the Named Views panel is opened first, as it narrows the drawing), then a zoom elsewhere; Restore View 2 brings back V2 (centre 200, 0).",
+  "then": [
+   {
+    "tool": "use_menu",
+    "args": {
+     "path": "View > Views Restore > Restore View 2"
+    }
+   }
+  ],
+  "expect": {
+   "fired": {
+    "menu": "View > Views Restore > Restore View 2"
+   },
+   "view_center": [
+    200,
+    0,
+    3
+   ]
+  }
+ },
+ {
+  "id": "menu:View > Views Restore > Restore View 3",
+  "press": false,
+  "before": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 60,
+     "y1": -40,
+     "x2": 140,
+     "y2": 40
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V1"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 160,
+     "y1": -40,
+     "x2": 240,
+     "y2": 40
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V2"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 260,
+     "y1": -40,
+     "x2": 340,
+     "y2": 40
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V3"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 360,
+     "y1": -40,
+     "x2": 440,
+     "y2": 40
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V4"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 460,
+     "y1": -40,
+     "x2": 540,
+     "y2": 40
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V5"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 0,
+     "y1": 200,
+     "x2": 60,
+     "y2": 260
+    }
+   }
+  ],
+  "note": "Five named views V1..V5 saved around x = 100, 200, ... 500 (setup; the Named Views panel is opened first, as it narrows the drawing), then a zoom elsewhere; Restore View 3 brings back V3 (centre 300, 0).",
+  "then": [
+   {
+    "tool": "use_menu",
+    "args": {
+     "path": "View > Views Restore > Restore View 3"
+    }
+   }
+  ],
+  "expect": {
+   "fired": {
+    "menu": "View > Views Restore > Restore View 3"
+   },
+   "view_center": [
+    300,
+    0,
+    3
+   ]
+  }
+ },
+ {
+  "id": "menu:View > Views Restore > Restore View 4",
+  "press": false,
+  "before": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 60,
+     "y1": -40,
+     "x2": 140,
+     "y2": 40
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V1"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 160,
+     "y1": -40,
+     "x2": 240,
+     "y2": 40
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V2"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 260,
+     "y1": -40,
+     "x2": 340,
+     "y2": 40
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V3"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 360,
+     "y1": -40,
+     "x2": 440,
+     "y2": 40
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V4"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 460,
+     "y1": -40,
+     "x2": 540,
+     "y2": 40
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V5"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 0,
+     "y1": 200,
+     "x2": 60,
+     "y2": 260
+    }
+   }
+  ],
+  "note": "Five named views V1..V5 saved around x = 100, 200, ... 500 (setup; the Named Views panel is opened first, as it narrows the drawing), then a zoom elsewhere; Restore View 4 brings back V4 (centre 400, 0).",
+  "then": [
+   {
+    "tool": "use_menu",
+    "args": {
+     "path": "View > Views Restore > Restore View 4"
+    }
+   }
+  ],
+  "expect": {
+   "fired": {
+    "menu": "View > Views Restore > Restore View 4"
+   },
+   "view_center": [
+    400,
+    0,
+    3
+   ]
+  }
+ },
+ {
+  "id": "menu:View > Views Restore > Restore View 5",
+  "press": false,
+  "before": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 60,
+     "y1": -40,
+     "x2": 140,
+     "y2": 40
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V1"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 160,
+     "y1": -40,
+     "x2": 240,
+     "y2": 40
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V2"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 260,
+     "y1": -40,
+     "x2": 340,
+     "y2": 40
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V3"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 360,
+     "y1": -40,
+     "x2": 440,
+     "y2": 40
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V4"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 460,
+     "y1": -40,
+     "x2": 540,
+     "y2": 40
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V5"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 0,
+     "y1": 200,
+     "x2": 60,
+     "y2": 260
+    }
+   }
+  ],
+  "note": "Five named views V1..V5 saved around x = 100, 200, ... 500 (setup; the Named Views panel is opened first, as it narrows the drawing), then a zoom elsewhere; Restore View 5 brings back V5 (centre 500, 0).",
+  "then": [
+   {
+    "tool": "use_menu",
+    "args": {
+     "path": "View > Views Restore > Restore View 5"
+    }
+   }
+  ],
+  "expect": {
+   "fired": {
+    "menu": "View > Views Restore > Restore View 5"
+   },
+   "view_center": [
+    500,
+    0,
+    3
+   ]
+  }
+ },
+ {
+  "id": "menu:View > To WCS",
+  "press": false,
+  "before": [
+   {
+    "tool": "press_toolbar_button",
+    "args": {
+     "id": "UCSCreate",
+     "steps": [
+      {
+       "type": "type",
+       "text": "100,0"
+      },
+      {
+       "type": "type",
+       "text": "100,100"
+      }
+     ]
+    }
+   }
+  ],
+  "note": "A UCS rotated 90 degrees at 100,0 (setup); View > To WCS goes back to world coordinates: a typed line lands at the same world coordinates.",
+  "then": [
+   {
+    "tool": "use_menu",
+    "args": {
+     "path": "View > To WCS"
+    }
+   },
+   {
+    "tool": "run_command",
+    "args": {
+     "commands": [
+      "line",
+      "300,-50",
+      "360,-50",
+      "ESC",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "tool": "list_entities",
+    "args": {
+     "type": "line",
+     "x1": 290,
+     "y1": -60,
+     "x2": 370,
+     "y2": -40
+    }
+   }
+  ],
+  "expect": {
+   "fired": {
+    "menu": "View > To WCS"
+   },
+   "added": {
+    "line": 1
+   },
+   "text": "\\(300, -50\\) -> \\(360, -50\\)"
+  }
+ },
+ {
+  "id": "panel:pen_palette_dockwidget > Save",
+  "press": false,
+  "note": "A pen named MyPen, colour Red, in the editor; Save adds it to the palette.",
+  "then": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Pens Palette",
+     "fields": [
+      {
+       "field": "Pen Name:",
+       "value": "MyPen"
+      },
+      {
+       "field": "Color:",
+       "value": "Red"
+      }
+     ],
+     "button": "Save"
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Pens Palette"
+    }
+   }
+  ],
+  "expect": {
+   "fired": {
+    "panel": "pen_palette_dockwidget",
+    "button": "Save"
+   },
+   "text": "(?s)Pressed \"Save\".*Name:MyPen"
+  }
+ },
+ {
+  "id": "panel:ucs_dockwidget > Restores selected user coordinates system.",
+  "press": false,
+  "before": [
+   {
+    "tool": "press_toolbar_button",
+    "args": {
+     "id": "UCSCreate",
+     "steps": [
+      {
+       "type": "type",
+       "text": "100,0"
+      },
+      {
+       "type": "type",
+       "text": "100,100"
+      }
+     ]
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "User Coordinate Systems",
+     "item": {
+      "row": "WCS"
+     }
+    }
+   }
+  ],
+  "note": "A rotated UCS is current (setup) and WCS is chosen in the list; Restore makes WCS current: a typed line lands at the same world coordinates.",
+  "then": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "User Coordinate Systems",
+     "button": "Restores selected user coordinates system."
+    }
+   },
+   {
+    "tool": "run_command",
+    "args": {
+     "commands": [
+      "line",
+      "300,-50",
+      "360,-50",
+      "ESC",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "tool": "list_entities",
+    "args": {
+     "type": "line",
+     "x1": 290,
+     "y1": -60,
+     "x2": 370,
+     "y2": -40
+    }
+   }
+  ],
+  "expect": {
+   "fired": {
+    "panel": "ucs_dockwidget",
+    "button": "Restores selected user coordinates system."
+   },
+   "added": {
+    "line": 1
+   },
+   "text": "\\(300, -50\\) -> \\(360, -50\\)"
+  }
+ },
+ {
+  "id": "panel:ucs_dockwidget > Edit selected user coordinates name. No-name UCS are tempora",
+  "press": false,
+  "before": [
+   {
+    "tool": "press_toolbar_button",
+    "args": {
+     "id": "UCSCreate",
+     "steps": [
+      {
+       "type": "type",
+       "text": "100,0"
+      },
+      {
+       "type": "type",
+       "text": "100,100"
+      }
+     ]
+    }
+   }
+  ],
+  "note": "A new UCS (setup, no name); Edit name opens a dialog, answered with MyUCS; the list shows it.",
+  "then": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "User Coordinate Systems",
+     "button": "Edit selected user coordinates name. No-name UCS are tempora"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {}
+   }
+  ],
+  "expect": {
+   "fired": {
+    "panel": "ucs_dockwidget",
+    "button": "Edit selected user coordinates name. No-name UCS are tempora"
+   }
+  }
+ },
+ {
+  "id": "panel:ucs_dockwidget > Preview of coordinate system origin and angle.",
+  "press": false,
+  "before": [
+   {
+    "tool": "press_toolbar_button",
+    "args": {
+     "id": "UCSCreate",
+     "steps": [
+      {
+       "type": "type",
+       "text": "100,0"
+      },
+      {
+       "type": "type",
+       "text": "100,100"
+      }
+     ]
+    }
+   }
+  ],
+  "note": "A new UCS (setup); Preview shows its origin and angle in the drawing.",
+  "then": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "User Coordinate Systems",
+     "button": "Preview of coordinate system origin and angle."
+    }
+   }
+  ],
+  "expect": {
+   "fired": {
+    "panel": "ucs_dockwidget",
+    "button": "Preview of coordinate system origin and angle."
+   }
+  }
+ },
+ {
+  "id": "panel:ucs_dockwidget > Removes selected user coordinates system.",
+  "press": false,
+  "before": [
+   {
+    "tool": "press_toolbar_button",
+    "args": {
+     "id": "UCSCreate",
+     "steps": [
+      {
+       "type": "type",
+       "text": "100,0"
+      },
+      {
+       "type": "type",
+       "text": "100,100"
+      }
+     ]
+    }
+   }
+  ],
+  "note": "A new UCS (setup), chosen in the list; Remove takes it away: only WCS is left.",
+  "then": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "User Coordinate Systems",
+     "button": "Removes selected user coordinates system."
+    }
+   }
+  ],
+  "expect": {
+   "fired": {
+    "panel": "ucs_dockwidget",
+    "button": "Removes selected user coordinates system."
+   },
+   "text": "tvTable = 1 row\\(s\\)[^\\n]*\\n\\s+r0: WCS"
+  }
+ },
+ {
+  "id": "panel:view_dockwidget > Update selected view by current zoom/position",
+  "press": false,
+  "before": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V1"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "item": {
+      "row": "V1"
+     }
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 0,
+     "y1": 0,
+     "x2": 50,
+     "y2": 50
+    }
+   }
+  ],
+  "note": "A view V1 saved (setup) and chosen; after a zoom, Update stores the new zoom in V1.",
+  "then": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Update selected view by current zoom/position"
+    }
+   }
+  ],
+  "expect": {
+   "fired": {
+    "panel": "view_dockwidget",
+    "button": "Update selected view by current zoom/position"
+   }
+  }
+ },
+ {
+  "id": "panel:view_dockwidget > Removes selected view",
+  "press": false,
+  "before": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V1"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "item": {
+      "row": "V1"
+     }
+    }
+   }
+  ],
+  "note": "A view V1 saved (setup) and chosen; Remove takes it away.",
+  "then": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Removes selected view"
+    }
+   }
+  ],
+  "expect": {
+   "fired": {
+    "panel": "view_dockwidget",
+    "button": "Removes selected view"
+   },
+   "text": "tvTable = 0 row"
+  }
+ },
+ {
+  "id": "panel:view_dockwidget > Edit selected view name",
+  "press": false,
+  "before": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V1"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "item": {
+      "row": "V1"
+     }
+    }
+   }
+  ],
+  "note": "A view V1 saved (setup) and chosen; Edit opens the name dialog.",
+  "then": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Edit selected view name"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {}
+   }
+  ],
+  "expect": {
+   "fired": {
+    "panel": "view_dockwidget",
+    "button": "Edit selected view name"
+   }
+  }
+ },
+ {
+  "id": "panel:view_dockwidget > Restores selected view",
+  "press": false,
+  "before": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views"
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 60,
+     "y1": -40,
+     "x2": 140,
+     "y2": 40
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Create view for current zoom and offset of drawing"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "View name:",
+       "value": "V1"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "item": {
+      "row": "V1"
+     }
+    }
+   },
+   {
+    "tool": "zoom_to_area",
+    "args": {
+     "x1": 0,
+     "y1": 200,
+     "x2": 60,
+     "y2": 260
+    }
+   }
+  ],
+  "note": "A view V1 saved around 100,0 and chosen (setup), then a zoom elsewhere; Restore brings V1 back.",
+  "then": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Named Views",
+     "button": "Restores selected view"
+    }
+   }
+  ],
+  "expect": {
+   "fired": {
+    "panel": "view_dockwidget",
+    "button": "Restores selected view"
+   },
+   "view_center": [
+    100,
+    0,
+    3
+   ]
+  }
+ },
+ {
+  "id": "panel:quick_entity_info > Select current entity in drawing",
+  "press": false,
+  "before": [
+   {
+    "tool": "press_toolbar_button",
+    "args": {
+     "id": "EntityDescriptionInfo",
+     "steps": [
+      {
+       "type": "click",
+       "x": 50,
+       "y": 0
+      }
+     ]
+    }
+   },
+   {
+    "tool": "press_toolbar_button",
+    "args": {
+     "id": "DeselectAll"
+    }
+   }
+  ],
+  "note": "L1 shown in Entity Info (setup, picked with Show Entity Description), then nothing selected; the button selects L1 in the drawing.",
+  "then": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Entity Info",
+     "button": "Select current entity in drawing"
+    }
+   }
+  ],
+  "expect": {
+   "fired": {
+    "panel": "quick_entity_info",
+    "button": "Select current entity in drawing"
+   },
+   "selected": 1
+  }
+ },
+ {
+  "id": "panel:quick_entity_info > Properties Edit",
+  "press": false,
+  "before": [
+   {
+    "tool": "press_toolbar_button",
+    "args": {
+     "id": "EntityDescriptionInfo",
+     "steps": [
+      {
+       "type": "click",
+       "x": 205,
+       "y": 204
+      }
+     ]
+    }
+   }
+  ],
+  "note": "The text T1 shown in Entity Info (setup); Properties Edit opens its text dialog (OpenCAD has no such dialog for lines yet).",
+  "then": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Entity Info",
+     "button": "Properties Edit"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "button": "Cancel"
+    }
+   }
+  ],
+  "expect": {
+   "fired": {
+    "panel": "quick_entity_info",
+    "button": "Properties Edit"
+   },
+   "dialog": "."
+  }
+ },
+ {
+  "id": "panel:quick_entity_info > Copy to Clipboard",
+  "press": false,
+  "before": [
+   {
+    "tool": "press_toolbar_button",
+    "args": {
+     "id": "EntityDescriptionInfo",
+     "steps": [
+      {
+       "type": "click",
+       "x": 50,
+       "y": 0
+      }
+     ]
+    }
+   }
+  ],
+  "note": "L1 shown in Entity Info (setup); its description goes to the clipboard.",
+  "then": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Entity Info",
+     "button": "Copy to Clipboard"
+    }
+   }
+  ],
+  "expect": {
+   "fired": {
+    "panel": "quick_entity_info",
+    "button": "Copy to Clipboard"
+   }
+  }
+ },
+ {
+  "id": "panel:quick_entity_info > Clear",
+  "press": false,
+  "before": [
+   {
+    "tool": "press_toolbar_button",
+    "args": {
+     "id": "EntityDescriptionInfo",
+     "steps": [
+      {
+       "type": "click",
+       "x": 50,
+       "y": 0
+      }
+     ]
+    }
+   }
+  ],
+  "note": "L1 shown in Entity Info (setup); Clear empties the panel.",
+  "then": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Entity Info",
+     "button": "Clear"
+    }
+   }
+  ],
+  "expect": {
+   "fired": {
+    "panel": "quick_entity_info",
+    "button": "Clear"
+   }
+  }
  }
 ]

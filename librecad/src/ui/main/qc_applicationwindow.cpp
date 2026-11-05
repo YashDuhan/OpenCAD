@@ -2742,7 +2742,7 @@ void QC_ApplicationWindow::restoreNamedView(const QString& viewName) const {
 }
 
 void QC_ApplicationWindow::doRestoreNamedView(const int i) const {
-    m_namedViewsWidget->restoreView(i);
+    m_namedViewsWidget->restoreView(i - 1); // "Restore View 1" is the first view of the list
 }
 
 void QC_ApplicationWindow::invokeToolbarCreator() {

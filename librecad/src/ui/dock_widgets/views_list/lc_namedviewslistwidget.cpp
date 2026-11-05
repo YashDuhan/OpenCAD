@@ -595,7 +595,7 @@ void LC_NamedViewsListWidget::updateExistingView(LC_View* view) {
 }
 
 void LC_NamedViewsListWidget::restoreView(const int index) {
-    if (m_currentViewList != nullptr) {
+    if (m_currentViewList != nullptr && index >= 0 && index < static_cast<int>(m_currentViewList->count())) {
         const LC_View* view = m_currentViewList->at(index);
         if (view != nullptr) {
             restoreView(view);
