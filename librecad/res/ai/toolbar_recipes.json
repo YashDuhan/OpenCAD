@@ -14758,5 +14758,66 @@
     "button": "Clear"
    }
   }
+ },
+ {
+  "id": "panel:pen_palette_dockwidget > Delete Pen",
+  "press": false,
+  "before": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Pens Palette",
+     "fields": [
+      {
+       "field": "Pen Name:",
+       "value": "MyPen"
+      },
+      {
+       "field": "Color:",
+       "value": "Red"
+      }
+     ],
+     "button": "Save"
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Pens Palette",
+     "item": {
+      "row": "MyPen"
+     }
+    }
+   }
+  ],
+  "note": "A pen MyPen saved and chosen in the palette (setup); Delete Pen removes it (OpenCAD's question answered Yes): 3 pens left.",
+  "then": [
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Pens Palette",
+     "button": "Delete Pen"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "button": "Yes"
+    }
+   },
+   {
+    "tool": "use_panel",
+    "args": {
+     "panel": "Pens Palette"
+    }
+   }
+  ],
+  "expect": {
+   "fired": {
+    "panel": "pen_palette_dockwidget",
+    "button": "Delete Pen"
+   },
+   "text": "(?s)use_panel: \\nPanel \"Pens Palette\".*tableView = 3 row"
+  }
  }
 ]

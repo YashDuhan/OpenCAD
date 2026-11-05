@@ -3398,22 +3398,25 @@ namespace {
         return p.contains("recent") || (norm(e.top) == "workspace" && !p.contains("drawings"));
     }
 
-    /** Entries whose test would close, save or reload drawings, or rearrange the whole window: listed, not run. */
+    /**
+     * Entries whose test would close or save the user's drawings or rearrange their window: listed, and not run from
+     * the Agent Progress window. The developer self-test (offscreen, throwaway settings and drawings) runs them too.
+     */
     QString riskyToTest(const QString& label, const QString& objectName) {
+        if (qEnvironmentVariableIsSet("OPENCAD_AI_TOOLBAR_TEST")) {
+            return {};
+        }
         const QString l = norm(label);
-        static const QStringList words = {"close", "quit", "exit", "save all", "revert", "reload", "restart", "fullscreen",
-                                          "full screen"};
+        static const QStringList words = {"close", "quit", "exit", "save all", "restart", "fullscreen", "full screen"};
         for (const QString& w : words) {
-            if (l.contains(w) && l != "reload style sheet") {
-                return QStringLiteral("not run by the test: it would %1 your own drawings or window").arg(w.startsWith("full") ? "resize" : w);
+            if (l.contains(w)) {
+                return QStringLiteral("not run from here: it would %1 your own drawings or window (the offscreen self-test runs it)")
+                    .arg(w.startsWith("full") ? "resize" : w);
             }
         }
         if (l.contains("re-dock") || l.contains("redock") || l == "tile" || l.contains("cascade") || l.contains("window mode")
-            || l.contains("tab mode")) {
-            return QStringLiteral("not run by the test: it rearranges your panels or drawing windows");
-        }
-        if (objectName.startsWith("Workspace", Qt::CaseInsensitive) || l.contains("workspace")) {
-            return QStringLiteral("not run by the test: it rearranges your window (workspaces are tested with list:workspaces)");
+            || l.contains("tab mode") || objectName.startsWith("WorkspaceRemove") || objectName.startsWith("WorkspaceRestore")) {
+            return QStringLiteral("not run from here: it rearranges your panels or drawing windows (the offscreen self-test runs it)");
         }
         return {};
     }
@@ -4377,8 +4380,11 @@ namespace {
                     problems << QStringLiteral("expected /%1/ in the results").arg(expect.value("text").toString());
                 }
             }
-            // an entry whose own work is a modal dialog announces itself only when the dialog closes: the dialog is the proof
-            if (expect.contains("fired") && !firedSeen && dialogsSeen.isEmpty() && QApplication::activeModalWidget() == nullptr) {
+            // an entry whose own work is a modal dialog announces itself only when the dialog closes: the dialog is the proof;
+            // a menu that is rebuilt each time it opens (Workspace > Drawings) has new entries: its switch flipping is the proof
+            static const QRegularExpression flipped(QStringLiteral("\" is now (on|off) \\(was (off|on)\\)"));
+            const bool switched = expect.value("fired").toObject().contains("menu") && flipped.match(outputs.join('\n')).hasMatch();
+            if (expect.contains("fired") && !firedSeen && !switched && dialogsSeen.isEmpty() && QApplication::activeModalWidget() == nullptr) {
                 problems << "the entry was not set off: " + QString::fromUtf8(QJsonDocument(expect.value("fired").toObject()).toJson(QJsonDocument::Compact));
             }
             if (expect.value("no_error").toBool(true) && anyError) {
