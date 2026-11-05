@@ -44,6 +44,9 @@ CATALOG_PROVIDERS = ["anthropic", "openai", "google", "openrouter", "xai", "deep
                      "cerebras", "together", "fireworks", "nvidia", "huggingface", "moonshotai", "zai", "minimax",
                      "vercel-ai-gateway"]
 
+# the chat history list of the AI sidebar (lc_aichathistorypopup.cpp)
+LUCIDE_ICONS += ["history", "file", "message-square"]
+
 
 def svg_from_react_icon(pack: str, name: str) -> str:
     source = (CYPHER / "node_modules/react-icons" / pack / "index.js").read_text()

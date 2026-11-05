@@ -23,6 +23,7 @@ class QLabel;
 class LC_AIChatTranscript;
 class LC_AIApprovalBox;
 class LC_AIApprovalModeButton;
+class LC_AIChatSession;
 class QPlainTextEdit;
 class QPushButton;
 class QToolButton;
@@ -86,6 +87,11 @@ private:
     LC_AIApprovalBox* m_approvals {nullptr};
     LC_AIApprovalModeButton* m_approvalMode {nullptr};
     QSet<QString> m_sessionAllows; // "Allow for this session" answers, until New Chat
+
+    // chat history per drawing (lc_aichatsession.cpp): saves the chat, follows the active drawing
+    LC_AIChatSession* m_chats {nullptr};
+    /** Shows a saved chat (or an empty one) in place of the conversation. */
+    void showChat(const QList<LC_AIChatMessage>& messages);
 };
 
 #endif
