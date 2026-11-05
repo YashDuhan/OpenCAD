@@ -299,7 +299,10 @@ QToolBar* LC_ToolbarFactory::createAIToolbar(const QSizePolicy &tbPolicy) const 
     toggle->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_L));
     connect(toggle, &QAction::toggled, sidebar, &LC_AISidebar::setOpen);
     // the AI chat is open whenever OpenCAD starts (Ctrl+L or the AI button closes it)
-    QTimer::singleShot(0, toggle, [toggle] { toggle->setChecked(true); });
+    // (not in the developer button test, whose recipes expect the drawing view without it)
+    if (!qEnvironmentVariableIsSet("OPENCAD_AI_TOOLBAR_TEST")) {
+        QTimer::singleShot(0, toggle, [toggle] { toggle->setChecked(true); });
+    }
     result->setToolButtonStyle(Qt::ToolButtonTextOnly);
     result->addAction(toggle);
     if (auto* button = qobject_cast<QToolButton*>(result->widgetForAction(toggle))) {

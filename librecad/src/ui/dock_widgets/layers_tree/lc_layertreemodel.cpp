@@ -812,6 +812,37 @@ QVariant LC_LayerTreeModel::data ( const QModelIndex & index, const int role ) c
     const int col = translateColumn(index.column());
 
     switch (role) {
+        case Qt::AccessibleTextRole: { // the icon columns' state in words (screen readers, the AI's panel reader)
+            switch (col) {
+                case COLUMN_EMPTY:
+                    if (layerItem->isVirtual()) {
+                        return QObject::tr("group");
+                    }
+                    switch (layerItem->getLayerType()) {
+                        case RS_Layer::LayerType::DIMENSIONAL:
+                            return QObject::tr("dimensions layer");
+                        case RS_Layer::LayerType::INFORMATIONAL:
+                            return QObject::tr("info layer");
+                        case RS_Layer::LayerType::ALTERNATE_POSITION:
+                            return QObject::tr("alternative view layer");
+                        default:
+                            return QObject::tr("layer");
+                    }
+                case COLUMN_VISIBLE:
+                    return layerItem->isVisible() ? QObject::tr("visible") : QObject::tr("hidden");
+                case COLUMN_LOCKED:
+                    return layerItem->isLocked() ? QObject::tr("locked") : QObject::tr("unlocked");
+                case COLUMN_PRINT:
+                    return layerItem->isPrint() ? QObject::tr("printed") : QObject::tr("not printed");
+                case COLUMN_CONSTRUCTION:
+                    return layerItem->isConstruction() ? QObject::tr("construction") : QObject::tr("not construction");
+                case COLUMN_NAME:
+                    return QString(layerItem->getDisplayName() + (layerItem->isActiveLayer() ? QObject::tr(" (active)") : QString()));
+                default:
+                    break;
+            }
+            break;
+        }
         case Qt::DecorationRole: {
             switch (col) {
                 case COLUMN_EMPTY: {

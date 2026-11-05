@@ -93,6 +93,8 @@ private:
     void userActivity();
     void tick();
     void placeBanner();
+    void addDialogBanner(QWidget* dialog);
+    void placeDialogBanners();
     void setState(State state);
     void rememberView();
     void restoreView();
@@ -102,6 +104,7 @@ private:
     State m_state {State::Idle};
     QPointer<QMainWindow> m_window;
     QPointer<LC_AIControlBanner> m_banner;
+    QList<QPointer<LC_AIControlBanner>> m_dialogBanners; // in dialogs the AI has open (they block the main window)
     QTimer* m_idle {nullptr};
     int m_secondsLeft {RESUME_AFTER_IDLE_S};
     QList<std::function<void()>> m_waiting; // tool calls held while the user has control

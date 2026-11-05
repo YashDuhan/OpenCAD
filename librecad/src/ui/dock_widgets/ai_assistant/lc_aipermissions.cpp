@@ -25,10 +25,22 @@ namespace {
                                      "open_drawing", "request_clarification", "list_toolbar_buttons",
                                      // follow-ups of a button the user already let the AI press; a modal dialog
                                      // would also block the approval box
-                                     "handle_dialog", "select_entities"};
+                                     "handle_dialog", "select_entities", "look_at_app"};
     // tools that change the drawing: asked by default, approved by "Auto-accept edits"
     const QSet<QString> EDIT_TOOLS = {"run_command", "add_text", "press_toolbar_button", "click_drawing", "set_toolbar_value",
-                                      "tool_options"};
+                                      "tool_options", "use_panel", "use_menu", "context_menu", "press_in_app"};
+
+    /** Calls of edit tools that only read (describe a panel, list the menus): they need no approval. */
+    bool onlyReads(const QString& toolName, const QJsonObject& arguments) {
+        if (toolName == "use_panel") {
+            return !arguments.contains("fields") && !arguments.contains("item") && !arguments.contains("keys")
+                   && !arguments.contains("button");
+        }
+        if (toolName == "use_menu") {
+            return arguments.value("path").toString().trimmed().isEmpty();
+        }
+        return false;
+    }
 
     QString permissionText(const LC_AIPermissions::Permission p) {
         switch (p) {
@@ -44,6 +56,16 @@ namespace {
 
     /** Built-in safety rule: deleting entities asks even in Auto mode (Cypher's "ask" guardrails). */
     QString safetyRule(const QString& toolName, const QJsonObject& arguments) {
+        if (toolName == "handle_dialog" || toolName == "use_panel") {
+            // Application Preferences: wiping or replacing all settings, or the window layout
+            static const QStringList wipes = {"layout", "all", "clear settings", "import settings from file", "export settings to file",
+                                              "reset all"};
+            const QString button = arguments.value("button").toString().trimmed().toLower().remove('&');
+            if (wipes.contains(button)) {
+                return QStringLiteral("Safety rule: \"%1\" clears or replaces settings").arg(arguments.value("button").toString());
+            }
+            return {};
+        }
         if (toolName == "press_toolbar_button") {
             // buttons that delete entities, or close, write or print files, ask even in Auto mode
             static const QRegularExpression risky(QStringLiteral("^(ModifyDelete\\w*|ModifyDeleteQuick|EditCut|LayersRemove|"
@@ -196,6 +218,9 @@ LC_AIPermissions::Decision LC_AIPermissions::decide(const QString& toolName, con
     Decision d;
     const Mode m = mode();
     Permission p = permission(toolName);
+    if (p != Permission::Deny && onlyReads(toolName, arguments)) {
+        p = Permission::Allow;
+    }
     if (p == Permission::Deny) {
         d.permission = Permission::Deny;
         d.reason = QObject::tr("Tool \"%1\" is denied by the user's tool permissions.").arg(toolName);
@@ -210,7 +235,8 @@ LC_AIPermissions::Decision LC_AIPermissions::decide(const QString& toolName, con
         d.permission = Permission::Ask;
         d.reason = rule;
         d.ruleAsked = true;
-        d.key = toolName == "press_toolbar_button" ? "rule:button:" + arguments.value("id").toString() : QStringLiteral("rule:delete");
+        d.key = toolName == "press_toolbar_button" ? "rule:button:" + arguments.value("id").toString()
+                : toolName == "run_command" ? QStringLiteral("rule:delete") : "rule:" + toolName + ":" + rule;
     }
     else {
         d.permission = p;

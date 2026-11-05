@@ -38,7 +38,7 @@ namespace {
     /** Tools that only look (no view restore before them: the user may keep looking around). */
     bool onlyLooks(const QString& tool) {
         static const QStringList looking = {"capture_view", "get_view", "get_drawing_info", "list_entities", "list_commands",
-                                            "list_toolbar_buttons", "view_image_file", "request_clarification"};
+                                            "list_toolbar_buttons", "view_image_file", "request_clarification", "look_at_app"};
         return looking.contains(tool) || tool.startsWith("browser_") || tool.startsWith("mcp__");
     }
 
@@ -208,6 +208,12 @@ void LC_AIControl::end() {
     if (m_state == State::Idle) {
         return;
     }
+    for (const QPointer<LC_AIControlBanner>& b : std::as_const(m_dialogBanners)) {
+        if (b) {
+            b->deleteLater();
+        }
+    }
+    m_dialogBanners.clear();
     qApp->removeEventFilter(this);
     if (m_idle != nullptr) {
         m_idle->stop();
@@ -235,6 +241,15 @@ void LC_AIControl::setState(const State state) {
             m_banner->raise();
         }
     }
+    for (const QPointer<LC_AIControlBanner>& b : std::as_const(m_dialogBanners)) {
+        if (b && state == State::Working) {
+            b->showWorking();
+        }
+        else if (b && state == State::Paused) {
+            b->showPaused(m_secondsLeft, !m_waiting.isEmpty());
+        }
+    }
+    placeDialogBanners();
     emit stateChanged(state);
 }
 
@@ -248,6 +263,34 @@ void LC_AIControl::placeBanner() {
     const int width = qMin(m_banner->sizeHint().width(), area.width() - 24);
     m_banner->setGeometry(area.left() + (area.width() - width) / 2, area.top() + 10, width, m_banner->sizeHint().height());
     m_banner->raise();
+}
+
+void LC_AIControl::addDialogBanner(QWidget* dialog) {
+    for (const QPointer<LC_AIControlBanner>& b : std::as_const(m_dialogBanners)) {
+        if (b && b->parentWidget() == dialog) {
+            return;
+        }
+    }
+    // a modal dialog blocks the main window and its banner: Take over and Stop go into the dialog too
+    auto* banner = new LC_AIControlBanner(dialog);
+    m_state == State::Paused ? banner->showPaused(m_secondsLeft, !m_waiting.isEmpty()) : banner->showWorking();
+    m_dialogBanners << banner;
+    placeDialogBanners();
+    banner->show();
+    banner->raise();
+}
+
+void LC_AIControl::placeDialogBanners() {
+    for (const QPointer<LC_AIControlBanner>& b : std::as_const(m_dialogBanners)) {
+        if (!b || b->parentWidget() == nullptr) {
+            continue;
+        }
+        QWidget* dialog = b->parentWidget();
+        b->adjustSize();
+        const int width = qMin(b->sizeHint().width(), dialog->width() - 16);
+        b->setGeometry(8, dialog->height() - b->sizeHint().height() - 8, width, b->sizeHint().height());
+        b->raise();
+    }
 }
 
 void LC_AIControl::takeOver() {
@@ -278,6 +321,7 @@ void LC_AIControl::resume() {
 }
 
 void LC_AIControl::tick() {
+    placeDialogBanners();
     if (m_state != State::Paused) {
         m_idle->stop();
         return;
@@ -553,6 +597,20 @@ bool LC_AIControl::eventFilter(QObject* watched, QEvent* event) {
         QTimer::singleShot(0, this, [this] { placeBanner(); });
         return false;
     }
+    if (event->type() == QEvent::Show && m_state != State::Idle) {
+        auto* dialog = qobject_cast<QDialog*>(watched);
+        if (dialog != nullptr && dialog->isWindow() && dialog->isModal() && !isAIWidget(dialog)) {
+            QPointer<QDialog> d = dialog;
+            QTimer::singleShot(0, this, [this, d] {
+                if (d && m_state != State::Idle) {
+                    addDialogBanner(d);
+                }
+            });
+        }
+    }
+    if (event->type() == QEvent::Resize && qobject_cast<QDialog*>(watched) != nullptr) {
+        QTimer::singleShot(0, this, [this] { placeDialogBanners(); });
+    }
     if (m_state == State::Paused) {
         switch (event->type()) {
             case QEvent::MouseButtonPress:
@@ -578,6 +636,12 @@ bool LC_AIControl::eventFilter(QObject* watched, QEvent* event) {
             && m_banner) {
             m_banner->flash();
             placeBanner();
+            for (const QPointer<LC_AIControlBanner>& b : std::as_const(m_dialogBanners)) {
+                if (b) {
+                    b->flash();
+                }
+            }
+            placeDialogBanners();
         }
         return true;
     }

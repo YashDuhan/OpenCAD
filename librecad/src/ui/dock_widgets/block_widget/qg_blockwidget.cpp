@@ -116,6 +116,14 @@ QVariant QG_BlockModel::data ( const QModelIndex & index, const int role ) const
 
     const RS_Block* blk = m_listBlock.at(index.row());
 
+    if (role == Qt::AccessibleTextRole) { // the state in words (screen readers, the AI's panel reader)
+        if (index.column() == VISIBLE) {
+            return blk->isFrozen() ? QObject::tr("hidden") : QObject::tr("visible");
+        }
+        if (index.column() == NAME) {
+            return (m_activeBlock != nullptr && m_activeBlock == blk) ? QString(blk->getName() + QObject::tr(" (active)")) : blk->getName();
+        }
+    }
     if (role ==Qt::DecorationRole && index.column() == VISIBLE) {
         if (!blk->isFrozen()) {
             return m_iconBlockVisible;

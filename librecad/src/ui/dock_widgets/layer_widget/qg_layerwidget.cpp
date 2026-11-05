@@ -122,6 +122,25 @@ QVariant QG_LayerModel::data( const QModelIndex & index, const int role ) const{
     const int col{index.column()};
 
     switch (role) {
+        case Qt::AccessibleTextRole:
+            // the icon columns' state in words (screen readers, the AI's panel reader)
+            switch (col) {
+                case COLUMN_VISIBLE:
+                    return layer->isFrozen() ? QObject::tr("hidden") : QObject::tr("visible");
+                case COLUMN_LOCKED:
+                    return layer->isLocked() ? QObject::tr("locked") : QObject::tr("unlocked");
+                case COLUMN_PRINT:
+                    return layer->isPrint() ? QObject::tr("printed") : QObject::tr("not printed");
+                case COLUMN_CONSTRUCTION:
+                    return layer->isConstruction() ? QObject::tr("construction") : QObject::tr("not construction");
+                case COLUMN_COLOR_SAMPLE:
+                    return layer->getPen().getColor().toQColor().name();
+                case COLUMN_NAME:
+                    return layer->getName();
+                default:
+                    break;
+            }
+            break;
         case Qt::DecorationRole:
             switch (col) {
                 case COLUMN_VISIBLE:

@@ -48,6 +48,18 @@
 #include <QStandardPaths>
 #include <QTabWidget>
 #include <QTextEdit>
+#include <QHeaderView>
+#include <QTableView>
+#include <QTreeView>
+#include <QStatusBar>
+#include <QDockWidget>
+#include <QMenuBar>
+#include <QWheelEvent>
+#include <QWindow>
+#include <QKeySequence>
+#include <QBuffer>
+#include <QContextMenuEvent>
+#include <QHelpEvent>
 #include <QTimer>
 #include <QToolBar>
 #include <QToolButton>
@@ -612,7 +624,7 @@ namespace {
                 return clean(label->text());
             }
         }
-        if (auto* box = qobject_cast<QAbstractButton*>(w); box != nullptr && !clean(box->text()).isEmpty()) {
+        if (auto* box = qobject_cast<QAbstractButton*>(w); box != nullptr && !clean(box->text()).isEmpty() && clean(box->text()) != "...") {
             return clean(box->text());
         }
         if (QWidget* parent = w->parentWidget()) {
@@ -738,6 +750,10 @@ namespace {
                      && !tb->objectName().startsWith("qt_")) {
                 kind = "toggle button";
             }
+            else if (auto* view = qobject_cast<QAbstractItemView*>(w); view != nullptr && qobject_cast<QHeaderView*>(w) == nullptr
+                     && view->model() != nullptr) {
+                kind = qobject_cast<QTreeView*>(w) != nullptr && qobject_cast<QTableView*>(w) == nullptr ? "tree view" : "table";
+            }
             if (!kind.isEmpty()) {
                 fields.append({w, kind, labelForWidget(w, dialog)});
             }
@@ -781,13 +797,351 @@ namespace {
         return list;
     }
 
+    // ------------------------------------------------------------------ tables and trees (item views)
+
+    /** What a cell shows: its text, else its state in words (icon columns), its tooltip, or a check box. */
+    QString cellText(const QModelIndex& index) {
+        QString text = clean(index.data(Qt::DisplayRole).toString());
+        if (text.isEmpty()) {
+            text = clean(index.data(Qt::AccessibleTextRole).toString());
+        }
+        if (text.isEmpty()) {
+            text = clean(QString(index.data(Qt::ToolTipRole).toString()).remove(QRegularExpression(QStringLiteral("<[^>]*>")))).left(40);
+        }
+        const QVariant check = index.data(Qt::CheckStateRole);
+        if (check.isValid()) {
+            text = QString(check.toInt() == Qt::Checked ? "[x] " : check.toInt() == Qt::PartiallyChecked ? "[~] " : "[ ] ") + text;
+        }
+        return text;
+    }
+
+    QString headerText(const QAbstractItemModel* model, const int column) {
+        const QString text = clean(model->headerData(column, Qt::Horizontal, Qt::DisplayRole).toString());
+        return text == QString::number(column + 1) ? QString() : text; // Qt's default numbering says nothing
+    }
+
+    /** How a row is called: the text it shows (its name), else what its first cell says. */
+    QString rowLabel(const QModelIndex& index) {
+        const QAbstractItemModel* model = index.model();
+        if (model == nullptr) {
+            return {};
+        }
+        for (int c = model->columnCount(index.parent()) - 1; c >= 0; --c) {
+            const QString text = clean(index.siblingAtColumn(c).data(Qt::DisplayRole).toString());
+            if (!text.isEmpty()) {
+                return text;
+            }
+        }
+        return cellText(index.siblingAtColumn(0));
+    }
+
+    /** The rows of a table or tree: "r3: a | b | c", children indented, [selected] / [current] marked. */
+    QString itemViewText(QAbstractItemView* view, const int maxRows) {
+        QAbstractItemModel* model = view->model();
+        if (model == nullptr) {
+            return {};
+        }
+        auto* tree = qobject_cast<QTreeView*>(view);
+        auto* table = qobject_cast<QTableView*>(view);
+        QStringList headers;
+        for (int c = 0; c < model->columnCount(); ++c) {
+            if (table != nullptr && table->isColumnHidden(c)) {
+                continue;
+            }
+            if (tree != nullptr && tree->isColumnHidden(c)) {
+                continue;
+            }
+            const QString h = headerText(model, c);
+            headers << QStringLiteral("c%1%2").arg(c).arg(h.isEmpty() ? QString() : "=" + h);
+        }
+        QStringList rows;
+        int shown = 0;
+        int total = 0;
+        std::function<void(const QModelIndex&, int)> walk = [&](const QModelIndex& parent, const int depth) {
+            for (int r = 0; r < model->rowCount(parent); ++r) {
+                if (table != nullptr && table->isRowHidden(r)) {
+                    continue;
+                }
+                if (tree != nullptr && tree->isRowHidden(r, parent)) {
+                    continue;
+                }
+                ++total;
+                const QModelIndex first = model->index(r, 0, parent);
+                if (shown < maxRows) {
+                    QStringList cells;
+                    for (int c = 0; c < model->columnCount(parent); ++c) {
+                        if ((table != nullptr && table->isColumnHidden(c)) || (tree != nullptr && tree->isColumnHidden(c))) {
+                            continue;
+                        }
+                        cells << cellText(model->index(r, c, parent));
+                    }
+                    QStringList marks;
+                    if (view->selectionModel() != nullptr && view->selectionModel()->isRowSelected(r, parent)) {
+                        marks << "selected";
+                    }
+                    if (view->currentIndex().isValid() && view->currentIndex().row() == r && view->currentIndex().parent() == parent) {
+                        marks << "current";
+                    }
+                    if (tree != nullptr && model->hasChildren(first)) {
+                        marks << (tree->isExpanded(first) ? "expanded" : "collapsed");
+                    }
+                    rows << QStringLiteral("%1r%2: %3%4").arg(QString(depth * 2, ' ')).arg(r).arg(cells.join(" | "),
+                                                                                            marks.isEmpty() ? QString() : "  [" + marks.join(", ") + "]");
+                    ++shown;
+                }
+                if (tree != nullptr && model->hasChildren(first) && tree->isExpanded(first)) {
+                    walk(first, depth + 1);
+                }
+            }
+        };
+        walk(QModelIndex(), 0);
+        QString out = QStringLiteral("%1 row(s); columns %2").arg(total).arg(headers.join(", "));
+        for (const QString& r : rows) {
+            out += "\n      " + r;
+        }
+        if (total > shown) {
+            out += QStringLiteral("\n      ... %1 more").arg(total - shown);
+        }
+        return out;
+    }
+
+    /**
+     * A row by its text in any column (exact first, then the only partial match), a number ("3" = row 3), or a tree path
+     * ("Group > Layer"); column by number or header text (default: the column holding the matched text).
+     */
+    QModelIndex findItem(QAbstractItemView* view, const QString& rowSpec, const QString& columnSpec, QString& error) {
+        QAbstractItemModel* model = view->model();
+        if (model == nullptr) {
+            error = "this list has no rows";
+            return {};
+        }
+        const auto columnOf = [&](const QModelIndex& parent) -> int {
+            if (columnSpec.isEmpty()) {
+                return -1;
+            }
+            bool isNumber = false;
+            const int n = QString(columnSpec).remove('c').toInt(&isNumber);
+            if (isNumber) {
+                return n;
+            }
+            for (int c = 0; c < model->columnCount(parent); ++c) {
+                if (norm(headerText(model, c)) == norm(columnSpec)) {
+                    return c;
+                }
+            }
+            return -2;
+        };
+        QModelIndex parent;
+        const QStringList path = rowSpec.split(" > ", Qt::SkipEmptyParts);
+        QModelIndex found;
+        int foundColumn = 0;
+        for (int level = 0; level < path.size(); ++level) {
+            const QString wanted = path[level].trimmed();
+            found = QModelIndex();
+            bool isNumber = false;
+            const int asNumber = QString(wanted).remove(QRegularExpression(QStringLiteral("^r"))).toInt(&isNumber);
+            QList<QModelIndex> partial;
+            for (int r = 0; !found.isValid() && r < model->rowCount(parent); ++r) {
+                for (int c = 0; c < model->columnCount(parent); ++c) {
+                    const QModelIndex idx = model->index(r, c, parent);
+                    const QStringList candidates = {clean(idx.data(Qt::DisplayRole).toString()), clean(idx.data(Qt::UserRole).toString()),
+                                                    clean(idx.data(Qt::AccessibleTextRole).toString())};
+                    for (const QString& t : candidates) {
+                        if (t.isEmpty()) {
+                            continue;
+                        }
+                        if (norm(t) == norm(wanted)) {
+                            found = idx;
+                            foundColumn = c;
+                            break;
+                        }
+                        if (norm(t).contains(norm(wanted))) {
+                            partial << idx;
+                        }
+                    }
+                    if (found.isValid()) {
+                        break;
+                    }
+                }
+            }
+            if (!found.isValid() && isNumber && path.size() == 1 && asNumber >= 0 && asNumber < model->rowCount(parent)) {
+                found = model->index(asNumber, 0, parent); // no row shows that text: a row number ("r3" or "3")
+                partial.clear();
+            }
+            if (!found.isValid()) {
+                QSet<int> rowsHit;
+                for (const QModelIndex& idx : std::as_const(partial)) {
+                    rowsHit.insert(idx.row());
+                }
+                if (rowsHit.size() == 1) {
+                    found = partial.first();
+                    foundColumn = found.column();
+                }
+            }
+            if (!found.isValid()) {
+                error = QStringLiteral("no row \"%1\"").arg(wanted);
+                return {};
+            }
+            if (level + 1 < path.size()) {
+                if (auto* tree = qobject_cast<QTreeView*>(view)) {
+                    tree->expand(found.siblingAtColumn(0));
+                }
+                parent = found.siblingAtColumn(0);
+            }
+        }
+        if (!found.isValid()) {
+            error = "say which row";
+            return {};
+        }
+        const int column = columnOf(found.parent());
+        if (column == -2) {
+            error = QStringLiteral("no column \"%1\"").arg(columnSpec);
+            return {};
+        }
+        return found.siblingAtColumn(column >= 0 ? column : foundColumn);
+    }
+
+    /** Clicks a cell like a person: scrolls it into view, then mouse press and release (and double) at its middle. */
+    bool clickItem(QAbstractItemView* view, const QModelIndex& index, const Qt::MouseButton button, const Qt::KeyboardModifiers mods,
+                   const bool twice, QString& error) {
+        view->scrollTo(index);
+        QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+        const QRect rect = view->visualRect(index);
+        if (!rect.isValid() || !view->viewport()->rect().intersects(rect)) {
+            error = "that row is not visible in the list";
+            return false;
+        }
+        const LC_AIControl::AIInput aiInput;
+        QWidget* port = view->viewport();
+        const QPointF at = QRectF(rect).center();
+        const QPointF global = port->mapToGlobal(at);
+        QMouseEvent move(QEvent::MouseMove, at, global, Qt::NoButton, Qt::NoButton, mods);
+        QApplication::sendEvent(port, &move);
+        QMouseEvent press(QEvent::MouseButtonPress, at, global, button, button, mods);
+        QApplication::sendEvent(port, &press);
+        QMouseEvent release(QEvent::MouseButtonRelease, at, global, button, Qt::NoButton, mods);
+        QApplication::sendEvent(port, &release);
+        if (twice) {
+            QMouseEvent dbl(QEvent::MouseButtonDblClick, at, global, button, button, mods);
+            QApplication::sendEvent(port, &dbl);
+            QMouseEvent release2(QEvent::MouseButtonRelease, at, global, button, Qt::NoButton, mods);
+            QApplication::sendEvent(port, &release2);
+        }
+        return true;
+    }
+
+    // ------------------------------------------------------------------ menus that pop up (right-click menus)
+
+    /** The entries of a menu and its submenus: "Modify > Offset", disabled ones marked. */
+    void menuEntries(QMenu* menu, const QString& prefix, QStringList& out, const int depth = 0) {
+        if (menu == nullptr || depth > 4) {
+            return;
+        }
+        emit menu->aboutToShow(); // some menus fill themselves when they open
+        for (QAction* a : menu->actions()) {
+            if (a->isSeparator() || !a->isVisible() || clean(a->text()).isEmpty()) {
+                continue;
+            }
+            const QString path = prefix.isEmpty() ? clean(a->text()) : prefix + " > " + clean(a->text());
+            if (a->menu() != nullptr) {
+                menuEntries(a->menu(), path, out, depth + 1);
+            }
+            else {
+                out << path + (a->isEnabled() ? QString() : " (disabled)")
+                           + (a->isCheckable() ? (a->isChecked() ? " [on]" : " [off]") : QString());
+            }
+        }
+    }
+
+    void closePopups() {
+        for (int i = 0; i < 6; ++i) {
+            QWidget* popup = QApplication::activePopupWidget();
+            if (popup == nullptr) {
+                break;
+            }
+            popup->close();
+        }
+    }
+
+    /**
+     * Waits for a popup menu to open, then chooses path ("Modify > Offset") in it like a person: highlights each entry
+     * and opens submenus with the keyboard, then presses Return on the last one (so menus that act on the entry under
+     * the mouse, and actions owned by the menu, behave as for a click). Without a path it lists the entries and closes
+     * the menu. done(error, entries) runs once.
+     */
+    void chooseInPopup(const QStringList& path, std::function<void(const QString&, const QStringList&)> done, const int level = 0,
+                       const int tries = 30) {
+        auto* popup = qobject_cast<QMenu*>(QApplication::activePopupWidget());
+        if (popup == nullptr) {
+            if (tries <= 0) {
+                done(QStringLiteral("no menu opened"), {});
+                return;
+            }
+            QTimer::singleShot(50, qApp, [path, done, level, tries] { chooseInPopup(path, done, level, tries - 1); });
+            return;
+        }
+        if (path.isEmpty()) {
+            QStringList entries;
+            menuEntries(popup, QString(), entries);
+            closePopups();
+            done(QString(), entries);
+            return;
+        }
+        QAction* pick = nullptr;
+        QList<QAction*> starts;
+        for (QAction* a : popup->actions()) {
+            if (a->isSeparator() || !a->isVisible()) {
+                continue;
+            }
+            if (norm(a->text()) == norm(path[level])) {
+                pick = a;
+                break;
+            }
+            if (norm(a->text()).startsWith(norm(path[level]))) {
+                starts << a;
+            }
+        }
+        if (pick == nullptr && starts.size() == 1) {
+            pick = starts.first();
+        }
+        if (pick == nullptr || !pick->isEnabled()) {
+            QStringList entries;
+            menuEntries(popup, QString(), entries);
+            closePopups();
+            done(pick == nullptr ? QStringLiteral("no entry \"%1\" in the menu").arg(path[level])
+                                 : QStringLiteral("\"%1\" is disabled").arg(path[level]),
+                 entries);
+            return;
+        }
+        const LC_AIControl::AIInput aiInput;
+        popup->setActiveAction(pick);
+        if (pick->menu() != nullptr && level + 1 < path.size()) {
+            QKeyEvent right(QEvent::KeyPress, Qt::Key_Right, Qt::NoModifier);
+            QApplication::sendEvent(popup, &right);
+            QPointer<QMenu> parentMenu = popup;
+            QTimer::singleShot(80, qApp, [path, done, level, parentMenu] {
+                if (QApplication::activePopupWidget() == parentMenu) { // the submenu did not open: open it by its action
+                    if (parentMenu && parentMenu->activeAction() != nullptr && parentMenu->activeAction()->menu() != nullptr) {
+                        parentMenu->activeAction()->menu()->popup(parentMenu->mapToGlobal(parentMenu->actionGeometry(parentMenu->activeAction()).topRight()));
+                    }
+                }
+                chooseInPopup(path, done, level + 1, 20);
+            });
+            return;
+        }
+        QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+        QApplication::sendEvent(popup, &enter);
+        done(QString(), {});
+    }
+
     QString valueOf(const Field& f) {
         QWidget* w = f.widget;
         if (w == nullptr) {
             return {};
         }
         if (auto* e = qobject_cast<QLineEdit*>(w)) {
-            return QStringLiteral("\"%1\"").arg(e->echoMode() == QLineEdit::Normal ? e->text() : QStringLiteral("(hidden)"));
+            return QStringLiteral("\"%1\"%2").arg(e->echoMode() == QLineEdit::Normal ? e->text() : QStringLiteral("(hidden)"),
+                                                 e->isReadOnly() ? QStringLiteral(" (read-only)") : QString());
         }
         if (auto* d = qobject_cast<QDoubleSpinBox*>(w)) {
             return QStringLiteral("%1 (%2 .. %3)").arg(d->value()).arg(d->minimum()).arg(d->maximum());
@@ -840,6 +1194,9 @@ namespace {
         }
         if (auto* s = qobject_cast<QAbstractSlider*>(w)) {
             return QStringLiteral("%1 (%2 .. %3)").arg(s->value()).arg(s->minimum()).arg(s->maximum());
+        }
+        if (auto* view = qobject_cast<QAbstractItemView*>(w)) {
+            return itemViewText(view, MAX_LIST_ITEMS);
         }
         return {};
     }
@@ -898,7 +1255,7 @@ namespace {
         QStringList buttons;
         for (QAbstractButton* b : dialogButtons(dialog)) {
             const bool iconOnly = clean(b->text()).isEmpty() || clean(b->text()) == "...";
-            buttons << "\"" + buttonName(b) + "\"" + (iconOnly && buttonName(b) != b->objectName() ? " (name " + b->objectName() + ")" : QString())
+            buttons << "\"" + buttonName(b) + "\"" + (iconOnly && !b->objectName().isEmpty() && buttonName(b) != b->objectName() ? " (name " + b->objectName() + ")" : QString())
                            + (b->isEnabled() ? "" : " (disabled)");
         }
         if (!buttons.isEmpty()) {
@@ -917,6 +1274,10 @@ namespace {
                                                                                    : QString::number(value.toDouble(), 'g', 15);
         auto truthy = [&] { return value.isBool() ? value.toBool() : QStringList{"true", "1", "yes", "on", "checked"}.contains(text.toLower()); };
         if (auto* e = qobject_cast<QLineEdit*>(w)) {
+            if (e->isReadOnly()) {
+                error = "this field is read-only";
+                return false;
+            }
             e->setFocus();
             e->setText(text);
             emit e->textEdited(text);
@@ -946,24 +1307,64 @@ namespace {
             return true;
         }
         if (auto* c = qobject_cast<QComboBox*>(w)) {
+            // an exact option (text or data) first; an editable combo takes any text; a partial match only when it is
+            // the only one; a position only as "#n" (a number is a value, never an index)
             int i = c->findText(text, Qt::MatchFixedString);
             if (i < 0) {
-                i = c->findText(text, Qt::MatchContains);
+                i = c->findData(text, Qt::DisplayRole, Qt::MatchFixedString);
             }
-            if (i < 0 && value.isDouble()) {
-                i = qRound(value.toDouble());
+            if (i < 0) {
+                bool ok = false;
+                const double number = text.toDouble(&ok);
+                for (int k = 0; ok && i < 0 && k < c->count(); ++k) {
+                    bool itemOk = false;
+                    const double item = c->itemText(k).toDouble(&itemOk);
+                    if (itemOk && qFuzzyCompare(item + 1.0, number + 1.0)) {
+                        i = k; // "2" picks "2.0"
+                    }
+                }
+            }
+            if (i < 0 && text.startsWith('#')) {
+                bool ok = false;
+                const int k = text.mid(1).toInt(&ok);
+                i = ok && k >= 0 && k < c->count() ? k : -1;
+            }
+            if (i < 0 && c->isEditable()) {
+                c->setEditText(text);
+                if (c->lineEdit() != nullptr) {
+                    emit c->lineEdit()->editingFinished();
+                }
+                emit c->currentTextChanged(text);
+                return true;
+            }
+            if (i < 0) {
+                int found = -1;
+                int hits = 0;
+                for (int k = 0; k < c->count(); ++k) {
+                    if (c->itemText(k).contains(text, Qt::CaseInsensitive)) {
+                        found = k;
+                        ++hits;
+                    }
+                }
+                i = hits == 1 ? found : -1;
             }
             if (i < 0 || i >= c->count()) {
-                if (c->isEditable()) {
-                    c->setEditText(text);
-                    return true;
+                QStringList options;
+                for (int k = 0; k < c->count() && k < MAX_LIST_ITEMS; ++k) {
+                    options << c->itemText(k);
                 }
-                error = QStringLiteral("\"%1\" is not one of the options").arg(text);
+                error = QStringLiteral("\"%1\" is not one of the options (%2)").arg(text, options.join(" | "));
                 return false;
             }
             c->setCurrentIndex(i);
-            emit c->activated(i);
-            emit c->textActivated(c->itemText(i));
+            // activated may open a dialog (a colour box's "Custom..."): let it run from the event loop
+            QPointer<QComboBox> box = c;
+            QTimer::singleShot(0, c, [box, i] {
+                if (box) {
+                    emit box->activated(i);
+                    emit box->textActivated(box->itemText(i));
+                }
+            });
             return true;
         }
         if (auto* g = qobject_cast<QGroupBox*>(w)) {
@@ -1017,6 +1418,11 @@ namespace {
             }
             error = QStringLiteral("no tab \"%1\"").arg(text);
             return false;
+        }
+        if (auto* view = qobject_cast<QAbstractItemView*>(w)) {
+            // choose the row the way a person does: a click on it
+            const QModelIndex index = findItem(view, text, QString(), error);
+            return index.isValid() && clickItem(view, index, Qt::LeftButton, Qt::NoModifier, false, error);
         }
         if (auto* s = qobject_cast<QAbstractSlider*>(w)) {
             s->setValue(qRound(value.isDouble() ? value.toDouble() : text.toDouble()));
@@ -2005,6 +2411,948 @@ namespace {
         return t;
     }
 
+    // ------------------------------------------------------------------ panels, menus, the whole window
+
+    /** Sets field values (by field id f3, object name or label) on any dialog, panel or bar. */
+    void applyFields(QWidget* container, const QJsonArray& values, QStringList& did, QStringList& errors) {
+        const QList<Field> fields = dialogFields(container);
+        for (const QJsonValue& v : values) {
+            const QJsonObject f = v.toObject();
+            const QString key = f.value("field").toString().trimmed();
+            const Field* target = nullptr;
+            static const QRegularExpression fid(QStringLiteral("^f(\\d+)$"));
+            if (const auto m = fid.match(key); m.hasMatch() && m.captured(1).toInt() < fields.size()) {
+                target = &fields[m.captured(1).toInt()];
+            }
+            for (int i = 0; target == nullptr && i < fields.size(); ++i) {
+                if (fields[i].widget && fields[i].widget->objectName().compare(key, Qt::CaseInsensitive) == 0) {
+                    target = &fields[i];
+                }
+            }
+            for (int i = 0; target == nullptr && i < fields.size(); ++i) {
+                if (!fields[i].label.isEmpty() && norm(fields[i].label) == norm(key)) {
+                    target = &fields[i];
+                }
+            }
+            for (int i = 0; target == nullptr && i < fields.size(); ++i) {
+                if (!fields[i].label.isEmpty() && !norm(key).isEmpty() && norm(fields[i].label).contains(norm(key))) {
+                    target = &fields[i];
+                }
+            }
+            if (target == nullptr) {
+                errors << QStringLiteral("no field \"%1\"").arg(key);
+                continue;
+            }
+            QString error;
+            if (setField(*target, f.value("value"), error)) {
+                did << QStringLiteral("%1 = %2").arg(key, f.value("value").toVariant().toString());
+            }
+            else {
+                errors << QStringLiteral("%1: %2").arg(key, error);
+            }
+        }
+    }
+
+    /** The table or tree an "item" request means: a field id (f3), an object name, or the first one. */
+    QAbstractItemView* itemViewIn(QWidget* container, const QString& wanted) {
+        const QList<Field> fields = dialogFields(container);
+        static const QRegularExpression fid(QStringLiteral("^f(\\d+)$"));
+        if (const auto m = fid.match(wanted); m.hasMatch() && m.captured(1).toInt() < fields.size()) {
+            return qobject_cast<QAbstractItemView*>(fields[m.captured(1).toInt()].widget.data());
+        }
+        QAbstractItemView* first = nullptr;
+        for (const Field& f : fields) {
+            auto* view = qobject_cast<QAbstractItemView*>(f.widget.data());
+            if (view == nullptr) {
+                continue;
+            }
+            if (!wanted.isEmpty() && (view->objectName().compare(wanted, Qt::CaseInsensitive) == 0 || norm(f.label) == norm(wanted))) {
+                return view;
+            }
+            if (first == nullptr) {
+                first = view;
+            }
+        }
+        return wanted.isEmpty() ? first : nullptr;
+    }
+
+    /**
+     * {view, row, column, click: left | double | right, ctrl, shift, menu}: clicks a row or cell of a table or tree like a
+     * person; a right click opens its menu, where "menu" chooses an entry ("Add Sub-Layer > Dimensions") or, without it, the
+     * entries are listed. next(what was done, error) follows.
+     */
+    void itemAction(QWidget* container, const QJsonObject& item, std::function<void(const QString&, const QString&)> next) {
+        QAbstractItemView* view = itemViewIn(container, item.value("view").toString());
+        if (view == nullptr) {
+            next({}, QStringLiteral("no table or tree \"%1\" here").arg(item.value("view").toString()));
+            return;
+        }
+        QString error;
+        const QModelIndex index = findItem(view, item.value("row").toVariant().toString(), item.value("column").toVariant().toString(), error);
+        if (!index.isValid()) {
+            next({}, error);
+            return;
+        }
+        Qt::KeyboardModifiers mods;
+        if (item.value("ctrl").toBool()) {
+            mods |= Qt::ControlModifier;
+        }
+        if (item.value("shift").toBool()) {
+            mods |= Qt::ShiftModifier;
+        }
+        const QString click = item.value("click").toString("left").toLower();
+        const QString header = headerText(view->model(), index.column());
+        const QString what = QStringLiteral("%1 row \"%2\" column %3%4").arg(click == "double" ? "Double-clicked" : click == "right" ? "Right-clicked" : "Clicked",
+                                                                             rowLabel(index))
+                                 .arg(index.column()).arg(header.isEmpty() ? QString() : " (" + header + ")");
+        if (click != "right") {
+            if (!clickItem(view, index, Qt::LeftButton, mods, click == "double", error)) {
+                next({}, error);
+                return;
+            }
+            next(what, {});
+            return;
+        }
+        if (!clickItem(view, index, Qt::RightButton, mods, false, error)) {
+            next({}, error);
+            return;
+        }
+        // the menu: a context-menu event where the right click was, then choose in the menu that opens
+        const QStringList path = item.value("menu").toString().split(" > ", Qt::SkipEmptyParts);
+        QPointer<QWidget> port = view->viewport();
+        const QPoint at = view->visualRect(index).center();
+        chooseInPopup(path, [next, what, path](const QString& err, const QStringList& entries) {
+            if (!err.isEmpty() || path.isEmpty()) {
+                next(what + (entries.isEmpty() ? QString() : "; its menu offers: " + entries.join(" | ")), path.isEmpty() ? QString() : err);
+                return;
+            }
+            next(what + "; chose \"" + path.join(" > ") + "\"", {});
+        });
+        QTimer::singleShot(0, qApp, [port, at] {
+            if (port) {
+                const LC_AIControl::AIInput aiInput;
+                QContextMenuEvent menuEvent(QContextMenuEvent::Mouse, at, port->mapToGlobal(at));
+                QApplication::sendEvent(port, &menuEvent);
+            }
+        });
+    }
+
+    /** Keys typed into the focused widget: "Ctrl+Shift+G", "Return", "Escape", or several separated by ", ". */
+    bool sendKeys(QWidget* target, const QString& keys, QString& error) {
+        if (target == nullptr) {
+            error = "nothing has the keyboard focus";
+            return false;
+        }
+        const QKeySequence sequence = QKeySequence::fromString(keys, QKeySequence::PortableText);
+        if (sequence.isEmpty()) {
+            error = QStringLiteral("cannot read the keys \"%1\"").arg(keys);
+            return false;
+        }
+        const LC_AIControl::AIInput aiInput;
+        for (int i = 0; i < sequence.count(); ++i) {
+            const QKeyCombination combo = sequence[i];
+            const bool plain = !(combo.keyboardModifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier));
+            const QString name = QKeySequence(combo.key()).toString();
+            const QString text = plain && name.size() == 1 ? (combo.keyboardModifiers() & Qt::ShiftModifier ? name : name.toLower()) : QString();
+            QKeyEvent press(QEvent::KeyPress, combo.key(), combo.keyboardModifiers(), text);
+            QApplication::sendEvent(target, &press);
+            QKeyEvent release(QEvent::KeyRelease, combo.key(), combo.keyboardModifiers(), text);
+            QApplication::sendEvent(target, &release);
+        }
+        return true;
+    }
+
+    /** Text typed into the focused widget character by character, as from the keyboard. */
+    void typeText(QWidget* target, const QString& text) {
+        const LC_AIControl::AIInput aiInput;
+        for (const QChar c : text) {
+            const int key = c == '\n' ? Qt::Key_Return : c.toUpper().unicode();
+            QKeyEvent press(QEvent::KeyPress, key, Qt::NoModifier, c == '\n' ? QStringLiteral("\r") : QString(c));
+            QApplication::sendEvent(target, &press);
+            QKeyEvent release(QEvent::KeyRelease, key, Qt::NoModifier, c == '\n' ? QStringLiteral("\r") : QString(c));
+            QApplication::sendEvent(target, &release);
+        }
+    }
+
+    // ---- panels
+
+    QList<QDockWidget*> panelDocks() {
+        QList<QDockWidget*> list;
+        if (QC_ApplicationWindow* app = appWindow()) {
+            for (QDockWidget* dock : app->findChildren<QDockWidget*>()) {
+                if (!clean(dock->windowTitle()).isEmpty() && !QString(dock->widget() != nullptr ? dock->widget()->metaObject()->className() : "").startsWith("LC_AI")) {
+                    list << dock;
+                }
+            }
+        }
+        return list;
+    }
+
+    QDockWidget* findPanel(const QString& wanted) {
+        const QList<QDockWidget*> docks = panelDocks();
+        for (QDockWidget* d : docks) {
+            if (d->objectName().compare(wanted, Qt::CaseInsensitive) == 0 || norm(d->windowTitle()) == norm(wanted)) {
+                return d;
+            }
+        }
+        QList<QDockWidget*> partial;
+        for (QDockWidget* d : docks) {
+            if (norm(d->windowTitle()).contains(norm(wanted)) || d->objectName().contains(wanted, Qt::CaseInsensitive)) {
+                partial << d;
+            }
+        }
+        return partial.size() == 1 ? partial.first() : nullptr;
+    }
+
+    QString panelsList() {
+        QStringList lines;
+        lines << "Panels (use_panel panel=<name>):";
+        for (QDockWidget* d : panelDocks()) {
+            QStringList state;
+            state << (d->isVisible() ? "shown" : "hidden");
+            if (d->isFloating()) {
+                state << "floating";
+            }
+            lines << QStringLiteral("  %1 (%2) [%3]").arg(clean(d->windowTitle()), d->objectName(), state.join(", "));
+        }
+        lines << "  Status bar (statusbar): the coordinates, angles, selection, layer and grid fields at the bottom";
+        return lines.join('\n');
+    }
+
+    QString describePanel(QDockWidget* dock) {
+        QWidget* content = dock->widget() != nullptr ? dock->widget() : dock;
+        QString body = describeDialog(content).section('\n', 1); // the dialog description without its first line
+        QString head = QStringLiteral("Panel \"%1\" (%2).").arg(clean(dock->windowTitle()), dock->objectName());
+        if (body.trimmed().isEmpty()) {
+            body = "(nothing to read: it may need an open drawing)";
+        }
+        return head + "\n" + body
+               + "\nTables and trees are fields: click their rows with item {view: \"fN\", row: \"<text>\", click: left|double|right, menu: \"<entry>\"}.";
+    }
+
+    // ---- the status bar (its fields live in small toolbars at the bottom)
+
+    QList<QWidget*> statusBarParts() {
+        QList<QWidget*> parts;
+        QC_ApplicationWindow* app = appWindow();
+        if (app == nullptr) {
+            return parts;
+        }
+        for (QToolBar* tb : app->findChildren<QToolBar*>()) {
+            if (app->toolBarArea(tb) == Qt::BottomToolBarArea && tb->isVisible()) {
+                parts << tb;
+            }
+        }
+        if (app->statusBar() != nullptr) {
+            parts << app->statusBar();
+        }
+        return parts;
+    }
+
+    bool isClickable(const QWidget* w) {
+        return qobject_cast<const QAbstractButton*>(w) == nullptr && w->metaObject()->indexOfSignal("clicked()") >= 0;
+    }
+
+    QString describeStatusBar() {
+        QStringList lines;
+        lines << "Status bar:";
+        QC_ApplicationWindow* app = appWindow();
+        for (QWidget* part : statusBarParts()) {
+            QStringList texts;
+            for (QLabel* label : part->findChildren<QLabel*>()) {
+                if (!label->isVisible() || clean(label->text()).isEmpty()) {
+                    continue;
+                }
+                const QString tip = clean(QString(label->toolTip()).remove(QRegularExpression(QStringLiteral("<[^>]*>")))).left(50);
+                texts << (tip.isEmpty() ? clean(label->text()) : tip + ": " + clean(label->text()));
+            }
+            QStringList clickable;
+            for (QWidget* w : part->findChildren<QWidget*>()) {
+                if (w->isVisible() && isClickable(w)) {
+                    const QString tip = clean(QString(w->toolTip()).remove(QRegularExpression(QStringLiteral("<[^>]*>")))).left(50);
+                    clickable << QStringLiteral("\"%1\"").arg(tip.isEmpty() ? w->objectName() : tip);
+                }
+            }
+            if (texts.isEmpty() && clickable.isEmpty()) {
+                continue;
+            }
+            const QString title = qobject_cast<QToolBar*>(part) != nullptr ? clean(part->windowTitle()) : QStringLiteral("Messages");
+            lines << QStringLiteral("  %1: %2%3").arg(title, texts.join(" | "),
+                                                      clickable.isEmpty() ? QString() : "  (clickable: " + clickable.join(", ") + ")");
+        }
+        if (app != nullptr && app->statusBar() != nullptr && !app->statusBar()->currentMessage().isEmpty()) {
+            lines << "  Message: " + clean(app->statusBar()->currentMessage());
+        }
+        return lines.join('\n');
+    }
+
+    QWidget* findStatusWidget(const QString& wanted) {
+        for (QWidget* part : statusBarParts()) {
+            for (QWidget* w : part->findChildren<QWidget*>()) {
+                if (!w->isVisible() || !isClickable(w)) {
+                    continue;
+                }
+                const QString tip = clean(QString(w->toolTip()).remove(QRegularExpression(QStringLiteral("<[^>]*>"))));
+                if (w->objectName().compare(wanted, Qt::CaseInsensitive) == 0 || norm(tip).startsWith(norm(wanted))) {
+                    return w;
+                }
+            }
+        }
+        return nullptr;
+    }
+
+    void clickWidget(QWidget* w, const Qt::MouseButton button = Qt::LeftButton) {
+        const LC_AIControl::AIInput aiInput;
+        const QPointF at = QRectF(w->rect()).center();
+        QMouseEvent press(QEvent::MouseButtonPress, at, w->mapToGlobal(at), button, button, Qt::NoModifier);
+        QApplication::sendEvent(w, &press);
+        QMouseEvent release(QEvent::MouseButtonRelease, at, w->mapToGlobal(at), button, Qt::NoButton, Qt::NoModifier);
+        QApplication::sendEvent(w, &release);
+    }
+
+    LC_AITool usePanel() {
+        LC_AITool t;
+        t.name = "use_panel";
+        t.label = "Use panel";
+        t.description =
+            "Read and use OpenCAD's side panels (Layers, Layers Tree, Blocks, Library Browser, Pens Palette, Pen Wizard, Named "
+            "Views, User Coordinate Systems, Entity Info, Command Line, the CAD tool panels...) and the status bar, the way a "
+            "person does. Without panel: lists the panels. With panel only: shows it (opening its tab) and describes it: "
+            "fields f0, f1... with values, its tables and trees with every row and the state of each column in words (Layers: "
+            "visible/hidden, locked/unlocked, printed/not printed, construction, colour, name), and its buttons. fields sets "
+            "values (the filter box, check boxes...); item clicks a row or cell: {view: \"f3\", row: \"Walls\", column: 0 or "
+            "header, click: left|double|right, ctrl, shift, menu: \"Add Sub-Layer > Dimensions\"} (in Layers, a left click on "
+            "column 0 of a row toggles that layer's visibility, column 1 its lock, 2 printing, 3 construction; a click on the "
+            "name selects it, a double click makes it current); button presses a panel button by text, tooltip or name (Add "
+            "layer, Remove, Show all...); keys types keys into the focused field. panel \"statusbar\" reads the status bar "
+            "and button clicks its clickable fields (Grid Status, Base Angle). The result describes the panel afterwards and "
+            "any dialog that opened (answer it with handle_dialog).";
+        const QJsonObject field = schema({{"field", str("Field id (f3), label or object name")},
+                                          {"value", str("The value: text, number, true/false, an option, or a row of a table")}},
+                                         {"field", "value"});
+        const QJsonObject item = schema({{"view", str("The table or tree: its field id (f3) or name; default the first")},
+                                         {"row", str("The row: its text in any column, a number, or a tree path \"Group > Layer\"")},
+                                         {"column", str("Column number or header (default: the column with that text)")},
+                                         {"click", QJsonObject{{"type", "string"}, {"enum", QJsonArray{"left", "double", "right"}},
+                                                               {"description", "left (default), double, or right (opens the row's menu)"}}},
+                                         {"ctrl", flag("Hold Ctrl (add to the selection)")},
+                                         {"shift", flag("Hold Shift (select a range)")},
+                                         {"menu", str("With a right click: the menu entry to choose, \"Sub menu > Entry\"; without it, the entries are listed")}},
+                                        {"row"});
+        t.parameters = schema({{"panel", str("The panel: its title or object name; \"statusbar\"; or \"dialog\" for the open dialog (its tables, trees and keys)")},
+                               {"fields", QJsonObject{{"type", "array"}, {"items", field}, {"description", "Values to set, in order"}}},
+                               {"item", item},
+                               {"keys", str("Keys for the focused field, e.g. \"Return\" or \"Ctrl+A\"")},
+                               {"button", str("Then press this button of the panel (its text, tooltip or name)")},
+                               {"capture", flag("Also return a picture of the panel")}});
+        t.executeAsync = [](const QJsonObject& args, Done done) {
+            const QString wanted = args.value("panel").toString().trimmed();
+            if (wanted.isEmpty()) {
+                done(LC_AIToolResult::text(panelsList()));
+                return;
+            }
+            if (norm(wanted) == "statusbar" || norm(wanted) == "status bar") {
+                const QString buttonText = args.value("button").toString().trimmed();
+                if (buttonText.isEmpty()) {
+                    done(LC_AIToolResult::text(describeStatusBar()));
+                    return;
+                }
+                QWidget* w = findStatusWidget(buttonText);
+                if (w == nullptr) {
+                    done(LC_AIToolResult::error(QStringLiteral("No clickable \"%1\" in the status bar.\n%2").arg(buttonText, describeStatusBar())));
+                    return;
+                }
+                useQtDialogs();
+                auto run = makeRun({}, false, std::move(done));
+                run->header = QStringLiteral("Clicked \"%1\" in the status bar.").arg(buttonText);
+                QPointer<QWidget> target = w;
+                QTimer::singleShot(0, qApp, [target] {
+                    if (target) {
+                        clickWidget(target);
+                    }
+                });
+                run->start(DIALOG_SETTLE_MS);
+                return;
+            }
+            const bool isDialog = norm(wanted) == "dialog";
+            QDockWidget* dock = isDialog ? nullptr : findPanel(wanted);
+            QWidget* openDialog = isDialog ? currentDialog() : nullptr;
+            if (!isDialog && dock == nullptr) {
+                done(LC_AIToolResult::error(QStringLiteral("No panel \"%1\".\n%2").arg(wanted, panelsList())));
+                return;
+            }
+            if (isDialog && openDialog == nullptr) {
+                done(LC_AIToolResult::error(QStringLiteral("No dialog is open.")));
+                return;
+            }
+            QC_ApplicationWindow* app = appWindow();
+            const bool needsShowing = dock != nullptr && (!dock->isVisible() || dock->visibleRegion().isEmpty());
+            if (needsShowing && app != nullptr) {
+                app->requestDockVisible(dock); // opens it and brings its tab to the front
+                dock->raise();
+            }
+            // a panel's content, or (panel "dialog") the open dialog: tables, trees and keys work there too
+            QPointer<QWidget> panel = dock != nullptr ? static_cast<QWidget*>(dock) : openDialog;
+            const QJsonObject a = args;
+            QTimer::singleShot(needsShowing ? 250 : 0, qApp, [panel, a, done, isDialog] {
+                if (!panel) {
+                    done(LC_AIToolResult::error(QStringLiteral("The panel went away.")));
+                    return;
+                }
+                auto* asDock = qobject_cast<QDockWidget*>(panel.data());
+                QWidget* content = asDock != nullptr && asDock->widget() != nullptr ? asDock->widget() : panel.data();
+                const bool acts = a.contains("fields") || a.contains("item") || a.contains("keys") || a.contains("button");
+                const bool capture = a.value("capture").toBool();
+                auto finishWith = [panel, capture, done, isDialog](const LC_AIToolResult& r) {
+                    LC_AIToolResult out = r;
+                    if (panel && !isDialog && currentDialog() == nullptr) {
+                        out.content.append(LC_AIContent::makeText(describePanel(qobject_cast<QDockWidget*>(panel.data()))));
+                    }
+                    if (panel && isDialog && panel->isVisible()) {
+                        out.content.append(LC_AIContent::makeText(describeDialog(panel)));
+                    }
+                    if (panel && capture) {
+                        QByteArray png;
+                        QBuffer buffer(&png);
+                        buffer.open(QIODevice::WriteOnly);
+                        panel->grab().save(&buffer, "PNG");
+                        out.content.prepend(LC_AIContent::makeImage(png, QStringLiteral("image/png")));
+                    }
+                    done(out);
+                };
+                if (!acts) {
+                    finishWith(LC_AIToolResult::text(QString()));
+                    return;
+                }
+                useQtDialogs();
+                auto run = makeRun({}, false, finishWith);
+                QStringList did;
+                QStringList errors;
+                applyFields(content, a.value("fields").toArray(), did, errors);
+                auto afterItem = [run, content, a, did, errors](const QString& itemDone, const QString& itemError) mutable {
+                    QStringList header;
+                    if (!did.isEmpty()) {
+                        header << "Set: " + did.join("; ") + ".";
+                    }
+                    if (!itemDone.isEmpty()) {
+                        header << itemDone + ".";
+                    }
+                    if (!itemError.isEmpty()) {
+                        errors << itemError;
+                    }
+                    if (const QString keys = a.value("keys").toString(); !keys.isEmpty()) {
+                        QString error;
+                        if (sendKeys(QApplication::focusWidget(), keys, error)) {
+                            header << "Keys: " + keys + ".";
+                        }
+                        else {
+                            errors << error;
+                        }
+                    }
+                    if (const QString wanted = a.value("button").toString().trimmed(); !wanted.isEmpty()) {
+                        QPointer<QAbstractButton> button = findDialogButton(content, wanted);
+                        if (button == nullptr) {
+                            errors << QStringLiteral("no button \"%1\"").arg(wanted);
+                        }
+                        else if (!button->isEnabled()) {
+                            errors << QStringLiteral("the button \"%1\" is disabled").arg(buttonName(button));
+                        }
+                        else {
+                            header << QStringLiteral("Pressed \"%1\".").arg(buttonName(button));
+                            QTimer::singleShot(0, button, &QAbstractButton::click);
+                        }
+                    }
+                    if (!errors.isEmpty()) {
+                        header << "Could not: " + errors.join("; ") + ".";
+                        run->failed = did.isEmpty() && itemDone.isEmpty() && !header.join("").contains("Pressed");
+                    }
+                    run->header = header.join('\n');
+                    run->start(DIALOG_SETTLE_MS);
+                };
+                if (a.contains("item")) {
+                    itemAction(content, a.value("item").toObject(), afterItem);
+                }
+                else {
+                    afterItem({}, {});
+                }
+            });
+        };
+        return t;
+    }
+
+    // ---- the menu bar
+
+    struct MenuEntry {
+        QString path;
+        QPointer<QAction> action;
+        QString top;
+    };
+
+    QList<MenuEntry> menuBarEntries() {
+        QList<MenuEntry> out;
+        QC_ApplicationWindow* app = appWindow();
+        if (app == nullptr || app->menuBar() == nullptr) {
+            return out;
+        }
+        std::function<void(QMenu*, const QString&, const QString&, int)> walk = [&](QMenu* menu, const QString& prefix, const QString& top, int depth) {
+            if (menu == nullptr || depth > 5) {
+                return;
+            }
+            emit menu->aboutToShow(); // menus that fill themselves when opened (Workspace, Windows, Recent files)
+            for (QAction* a : menu->actions()) {
+                if (a->isSeparator() || !a->isVisible() || clean(a->text()).isEmpty()) {
+                    continue;
+                }
+                const QString path = prefix + " > " + clean(a->text());
+                if (a->menu() != nullptr) {
+                    walk(a->menu(), path, top, depth + 1);
+                }
+                else {
+                    out.append({path, a, top});
+                }
+            }
+        };
+        for (QAction* topAction : app->menuBar()->actions()) {
+            if (topAction->menu() != nullptr && topAction->isVisible()) {
+                walk(topAction->menu(), clean(topAction->text()), clean(topAction->text()), 0);
+            }
+        }
+        return out;
+    }
+
+    /** Why the AI does not choose this menu entry, or empty. */
+    QString menuRefusal(const MenuEntry& e) {
+        if (!e.action) {
+            return QStringLiteral("it went away");
+        }
+        if (REFUSED.contains(e.action->objectName()) || e.action->objectName() == "MainMenu") {
+            return QStringLiteral("the AI does not quit OpenCAD, hide the menu bar or close its own panel");
+        }
+        if (norm(e.top) == "help" && !norm(e.path).contains("about") && !norm(e.path).contains("license")) {
+            return QStringLiteral("it opens your web browser; the AI looks things up in its own browser window instead");
+        }
+        if (norm(e.path).endsWith("> ai") && e.action->isCheckable()) {
+            return QStringLiteral("it hides the AI's own toolbar");
+        }
+        return {};
+    }
+
+    LC_AITool useMenu() {
+        LC_AITool t;
+        t.name = "use_menu";
+        t.label = "Use menu";
+        t.description =
+            "Use OpenCAD's menu bar, including entries that are not toolbar buttons: recent files, plugins, showing or hiding "
+            "panels and toolbars, workspaces, drawing windows (tile, cascade, window mode), named views, UCS and options. "
+            "Without path it lists every entry as \"Menu > Submenu > Entry\" (with its button id when it has one, and on/off "
+            "for switches; search narrows the list). With path it chooses that entry like a click and reports what happened, "
+            "including a dialog it opened (answer it with handle_dialog).";
+        t.parameters = schema({{"path", str("The entry to choose, e.g. \"File > Recent Files > 1\" or \"Workspace > Widgets > Layers\"")},
+                               {"search", str("When listing: only entries containing this text")}});
+        t.executeAsync = [](const QJsonObject& args, Done done) {
+            const QString path = args.value("path").toString().trimmed();
+            const QList<MenuEntry> entries = menuBarEntries();
+            if (path.isEmpty()) {
+                const QString search = args.value("search").toString().trimmed().toLower();
+                QStringList lines;
+                for (const MenuEntry& e : entries) {
+                    if (!search.isEmpty() && !e.path.toLower().contains(search)) {
+                        continue;
+                    }
+                    QString line = "  " + e.path;
+                    if (!e.action->objectName().isEmpty()) {
+                        line += " [" + e.action->objectName() + "]";
+                    }
+                    if (e.action->isCheckable()) {
+                        line += e.action->isChecked() ? " (on)" : " (off)";
+                    }
+                    if (!e.action->isEnabled()) {
+                        line += " (disabled)";
+                    }
+                    lines << line;
+                }
+                lines.prepend(QStringLiteral("%1 menu entries:").arg(lines.size()));
+                done(LC_AIToolResult::text(lines.join('\n')));
+                return;
+            }
+            const QStringList wantedParts = path.split(">", Qt::SkipEmptyParts);
+            QString wanted;
+            for (const QString& p : wantedParts) {
+                wanted += (wanted.isEmpty() ? "" : " > ") + norm(p);
+            }
+            const MenuEntry* pick = nullptr;
+            QList<const MenuEntry*> starts;
+            for (const MenuEntry& e : entries) {
+                QString have;
+                for (const QString& p : e.path.split(" > ")) {
+                    have += (have.isEmpty() ? "" : " > ") + norm(p);
+                }
+                if (have == wanted) {
+                    pick = &e;
+                    break;
+                }
+                if (have.startsWith(wanted)) {
+                    starts << &e;
+                }
+            }
+            if (pick == nullptr && starts.size() == 1) {
+                pick = starts.first();
+            }
+            if (pick == nullptr) {
+                QStringList near;
+                const QString last = norm(wantedParts.value(wantedParts.size() - 1));
+                for (const MenuEntry& e : entries) {
+                    if (norm(e.path).contains(last)) {
+                        near << e.path;
+                    }
+                }
+                done(LC_AIToolResult::error(QStringLiteral("No menu entry \"%1\"%2").arg(path,
+                    starts.size() > 1 ? QStringLiteral(" (it matches several)") : QString())
+                    + (near.isEmpty() ? QString() : "\nSimilar: " + near.mid(0, 15).join(" | "))));
+                return;
+            }
+            if (const QString why = menuRefusal(*pick); !why.isEmpty()) {
+                done(LC_AIToolResult::error(QStringLiteral("The AI does not choose \"%1\": %2.").arg(pick->path, why)));
+                return;
+            }
+            if (!pick->action->isEnabled()) {
+                done(LC_AIToolResult::error(QStringLiteral("\"%1\" is disabled right now.").arg(pick->path)));
+                return;
+            }
+            useQtDialogs();
+            auto run = makeRun({}, false, std::move(done));
+            run->action = pick->action;
+            run->wasChecked = pick->action->isChecked();
+            run->header = QStringLiteral("Chose \"%1\".").arg(pick->path);
+            QPointer<QAction> action = pick->action;
+            QTimer::singleShot(0, qApp, [action] {
+                if (action) {
+                    action->trigger();
+                }
+            });
+            run->start(TRIGGER_SETTLE_MS);
+        };
+        return t;
+    }
+
+    // ---- the drawing's right-click menu
+
+    LC_AITool contextMenu() {
+        LC_AITool t;
+        t.name = "context_menu";
+        t.label = "Right-click menu";
+        t.description =
+            "Right-click the drawing at x,y (drawing units) and use the menu that opens, like a person: on an entity it offers "
+            "that entity's commands (Modify Line > Offset, dimension Copy value, Properties...), on empty space the general "
+            "menu, and your custom menus. Without item it lists the menu's entries; with item (\"Modify Line > Offset\") it "
+            "chooses that entry, then answer the tool's prompts with run_command or click_drawing. A running tool is ended "
+            "first (a right click would only go back in it).";
+        t.parameters = schema({{"x", num("X in drawing units")}, {"y", num("Y in drawing units")},
+                               {"item", str("The entry to choose, \"Submenu > Entry\"; without it the entries are listed")},
+                               {"capture", flag("Also return a screenshot afterwards")}},
+                              {"x", "y"});
+        t.executeAsync = [](const QJsonObject& args, Done done) {
+            RS_GraphicView* view = LC_AITools::view();
+            if (view == nullptr) {
+                done(LC_AIToolResult::error(QStringLiteral("No drawing is open.")));
+                return;
+            }
+            QString ended;
+            if (!runningTool(view).isEmpty()) {
+                ended = runningTool(view);
+                view->killAllActions();
+                QApplication::processEvents();
+            }
+            QPointF local;
+            QString error;
+            const double x = args.value("x").toDouble(NAN);
+            const double y = args.value("y").toDouble(NAN);
+            if (!toScreen(view, x, y, local, error)) {
+                done(LC_AIToolResult::error(error));
+                return;
+            }
+            useQtDialogs();
+            const QStringList path = args.value("item").toString().split(" > ", Qt::SkipEmptyParts);
+            auto run = makeRun({}, args.value("capture").toBool(), std::move(done));
+            QStringList header;
+            if (!ended.isEmpty()) {
+                header << QStringLiteral("Ended the running %1 first.").arg(ended);
+            }
+            header << QStringLiteral("Right-clicked %1,%2.").arg(x).arg(y);
+            run->header = header.join('\n');
+            chooseInPopup(path, [run, path](const QString& err, const QStringList& entries) {
+                if (path.isEmpty()) {
+                    run->log << (entries.isEmpty() ? QStringLiteral("no menu opened (with one entry it runs at once)")
+                                                   : "The menu offers: " + entries.join(" | "));
+                }
+                else if (!err.isEmpty()) {
+                    run->log << err + (entries.isEmpty() ? QString() : "; the menu offers: " + entries.join(" | "));
+                    run->failed = true;
+                }
+                else {
+                    run->log << "Chose \"" + path.join(" > ") + "\"";
+                }
+                run->start(TRIGGER_SETTLE_MS);
+            });
+            QPointer<RS_GraphicView> target = view;
+            QTimer::singleShot(0, qApp, [target, x, y] {
+                QString e;
+                if (target) {
+                    clickAt(target, x, y, Qt::RightButton, Qt::NoModifier, false, e);
+                }
+            });
+        };
+        return t;
+    }
+
+    // ---- anywhere in the window
+
+    /** The window the AI looks at: the main window, the open dialog, or a window by its title. */
+    QWidget* appTarget(const QString& wanted) {
+        if (wanted.isEmpty() || norm(wanted) == "main") {
+            return appWindow();
+        }
+        if (norm(wanted) == "dialog") {
+            return currentDialog();
+        }
+        for (QWidget* w : QApplication::topLevelWidgets()) {
+            if (w->isVisible() && norm(w->windowTitle()).contains(norm(wanted))) {
+                return w;
+            }
+        }
+        return nullptr;
+    }
+
+    constexpr int MAX_APP_SHOT = 1600;
+
+    /** How much the screenshot of this window is scaled down (image px * scale = window px). */
+    double shotScale(const QWidget* w) {
+        const int edge = std::max(w->width(), w->height());
+        return edge > MAX_APP_SHOT ? double(edge) / MAX_APP_SHOT : 1.0;
+    }
+
+    bool isAIPart(const QWidget* w) {
+        for (const QWidget* p = w; p != nullptr; p = p->parentWidget()) {
+            const QString cls = p->metaObject()->className();
+            if (cls.startsWith("LC_AI") || p->objectName() == "aiBrowserFloat" || p->objectName() == "aiControlBanner") {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    LC_AITool lookAtApp() {
+        LC_AITool t;
+        t.name = "look_at_app";
+        t.label = "Look at app";
+        t.description =
+            "Take a screenshot of OpenCAD's whole window (menus, toolbars, panels, status bar, the drawing) or of an open "
+            "dialog, to see what a person sees. press_in_app then clicks or types at x,y measured in THIS image. Use it for "
+            "anything the other tools cannot reach.";
+        t.parameters = schema({{"window", str("\"main\" (default), \"dialog\" (the open dialog), or a window title")}});
+        t.execute = [](const QJsonObject& args) {
+            QWidget* w = appTarget(args.value("window").toString().trimmed());
+            if (w == nullptr) {
+                return LC_AIToolResult::error(QStringLiteral("No such window is open."));
+            }
+            QPixmap shot = w->grab();
+            const double scale = shotScale(w);
+            if (scale > 1.0) {
+                shot = shot.scaled(qRound(w->width() / scale), qRound(w->height() / scale), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            }
+            QByteArray png;
+            QBuffer buffer(&png);
+            buffer.open(QIODevice::WriteOnly);
+            shot.save(&buffer, "PNG");
+            QStringList others;
+            for (QWidget* top : QApplication::topLevelWidgets()) {
+                if (top != w && top->isVisible() && qobject_cast<QDialog*>(top) != nullptr && !isAIPart(top)) {
+                    others << "\"" + clean(top->windowTitle()) + "\"";
+                }
+            }
+            LC_AIToolResult result = LC_AIToolResult::text(
+                QStringLiteral("Screenshot of \"%1\": %2 x %3 px (coordinates for press_in_app are in this image).%4")
+                    .arg(clean(w->windowTitle()).isEmpty() ? QStringLiteral("OpenCAD") : clean(w->windowTitle()))
+                    .arg(shot.width()).arg(shot.height())
+                    .arg(others.isEmpty() ? QString() : " Other open windows: " + others.join(", ") + "."));
+            result.content.prepend(LC_AIContent::makeImage(png, QStringLiteral("image/png")));
+            return result;
+        };
+        return t;
+    }
+
+    LC_AITool pressInApp() {
+        LC_AITool t;
+        t.name = "press_in_app";
+        t.label = "Press in app";
+        t.description =
+            "Use any part of OpenCAD's window like a person with mouse and keyboard, at x,y of the latest look_at_app image of "
+            "that window: click, double, right (opens menus; choose an entry with menu), drag (to to_x,to_y), hover, scroll "
+            "(delta: positive up), type (text into the focused field; click the field first) or key (\"Ctrl+S\", \"Return\", "
+            "\"Escape\"). The result says what is under the point, what changed, and any dialog or menu that opened; set "
+            "capture to see the window again. Prefer the specific tools (press_toolbar_button, use_panel, use_menu, "
+            "handle_dialog, click_drawing) when they fit; this reaches everything else.";
+        t.parameters = schema({{"x", num("X in the look_at_app image")}, {"y", num("Y in the look_at_app image")},
+                               {"window", str("The window the image was of: \"main\" (default), \"dialog\" or a title")},
+                               {"action", QJsonObject{{"type", "string"},
+                                                      {"enum", QJsonArray{"click", "double", "right", "drag", "hover", "scroll", "type", "key"}},
+                                                      {"description", "What to do (default click)"}}},
+                               {"to_x", num("For drag: where to release (image X)")}, {"to_y", num("For drag: where to release (image Y)")},
+                               {"text", str("For type: the text; for key: the keys")},
+                               {"menu", str("With right: the menu entry to choose, \"Submenu > Entry\"")},
+                               {"delta", num("For scroll: steps, positive up (default 1)")},
+                               {"capture", flag("Also return a new screenshot of the window afterwards")}});
+        t.executeAsync = [](const QJsonObject& args, Done done) {
+            const QString windowName = args.value("window").toString().trimmed();
+            QWidget* win = appTarget(windowName);
+            if (win == nullptr) {
+                done(LC_AIToolResult::error(QStringLiteral("No such window is open; use look_at_app first.")));
+                return;
+            }
+            const QString action = args.value("action").toString("click").toLower();
+            const double scale = shotScale(win);
+            QPoint at(qRound(args.value("x").toDouble() * scale), qRound(args.value("y").toDouble() * scale));
+            QWidget* target = action == "type" || action == "key" ? QApplication::focusWidget() : win->childAt(at);
+            if (target == nullptr && action != "type" && action != "key") {
+                target = win;
+            }
+            if (target == nullptr) {
+                done(LC_AIToolResult::error(QStringLiteral("Nothing has the keyboard focus: click a field first.")));
+                return;
+            }
+            if (isAIPart(target)) {
+                done(LC_AIToolResult::error(QStringLiteral("That point is on the AI's own panel; the AI does not press there.")));
+                return;
+            }
+            const QString what = QStringLiteral("%1 (%2%3)").arg(target->metaObject()->className(),
+                                                               target->objectName().isEmpty() ? QString() : target->objectName(),
+                                                               target->toolTip().isEmpty() ? QString() : " \"" + clean(QString(target->toolTip()).remove(QRegularExpression(QStringLiteral("<[^>]*>")))).left(40) + "\"");
+            useQtDialogs();
+            const bool capture = args.value("capture").toBool();
+            QPointer<QWidget> shotOf = win;
+            auto run = makeRun({}, false, [done, capture, shotOf, windowName](const LC_AIToolResult& r) {
+                LC_AIToolResult out = r;
+                if (capture) {
+                    QWidget* w = appTarget(windowName);
+                    if (w == nullptr && shotOf) {
+                        w = shotOf;
+                    }
+                    if (w != nullptr) {
+                        QPixmap shot = w->grab();
+                        const double s = shotScale(w);
+                        if (s > 1.0) {
+                            shot = shot.scaled(qRound(w->width() / s), qRound(w->height() / s), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                        }
+                        QByteArray png;
+                        QBuffer buffer(&png);
+                        buffer.open(QIODevice::WriteOnly);
+                        shot.save(&buffer, "PNG");
+                        out.content.prepend(LC_AIContent::makeImage(png, QStringLiteral("image/png")));
+                    }
+                }
+                done(out);
+            });
+            QPointer<QWidget> w = target;
+            const QPoint local = target->mapFrom(win, at);
+            if (action == "type") {
+                typeText(target, args.value("text").toString());
+                run->header = QStringLiteral("Typed \"%1\" into %2.").arg(args.value("text").toString().left(80), what);
+                run->start(STEP_SETTLE_MS);
+                return;
+            }
+            if (action == "key") {
+                QString error;
+                if (!sendKeys(target, args.value("text").toString(), error)) {
+                    run->failed = true;
+                    run->header = error;
+                }
+                else {
+                    run->header = QStringLiteral("Pressed %1 in %2.").arg(args.value("text").toString(), what);
+                }
+                run->start(STEP_SETTLE_MS * 2);
+                return;
+            }
+            run->header = QStringLiteral("%1 at %2,%3 on %4.").arg(action == "click" ? "Clicked" : action == "double" ? "Double-clicked"
+                                                                 : action == "right" ? "Right-clicked" : action == "drag" ? "Dragged from"
+                                                                 : action == "hover" ? "Hovered" : "Scrolled")
+                              .arg(args.value("x").toDouble()).arg(args.value("y").toDouble()).arg(what);
+            const QPoint toAt(qRound(args.value("to_x").toDouble() * scale), qRound(args.value("to_y").toDouble() * scale));
+            const int delta = args.contains("delta") ? qRound(args.value("delta").toDouble()) : 1;
+            const QStringList menuPath = args.value("menu").toString().split(" > ", Qt::SkipEmptyParts);
+            QPointer<QWidget> window = win;
+            auto menuDone = std::make_shared<bool>(false);
+            if (action == "right") {
+                chooseInPopup(menuPath, [run, menuPath, menuDone](const QString& err, const QStringList& entries) {
+                    *menuDone = true;
+                    if (!entries.isEmpty() && menuPath.isEmpty()) {
+                        run->log << "The menu offers: " + entries.join(" | ");
+                    }
+                    else if (!err.isEmpty() && !menuPath.isEmpty()) {
+                        run->log << err + (entries.isEmpty() ? QString() : "; the menu offers: " + entries.join(" | "));
+                        run->failed = true;
+                    }
+                    else if (!menuPath.isEmpty()) {
+                        run->log << "Chose \"" + menuPath.join(" > ") + "\"";
+                    }
+                    run->start(TRIGGER_SETTLE_MS);
+                }, 0, 12);
+            }
+            QTimer::singleShot(0, qApp, [w, window, action, local, toAt, delta, menuDone] {
+                if (!w || !window) {
+                    return;
+                }
+                const LC_AIControl::AIInput aiInput;
+                const QPointF p(local);
+                const QPointF g = w->mapToGlobal(p);
+                if (action == "hover") {
+                    QMouseEvent move(QEvent::MouseMove, p, g, Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+                    QApplication::sendEvent(w, &move);
+                    QHelpEvent help(QEvent::ToolTip, local, g.toPoint());
+                    QApplication::sendEvent(w, &help);
+                    return;
+                }
+                if (action == "scroll") {
+                    QWheelEvent wheel(p, g, QPoint(), QPoint(0, 120 * delta), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+                    QApplication::sendEvent(w, &wheel);
+                    return;
+                }
+                const Qt::MouseButton button = action == "right" ? Qt::RightButton : Qt::LeftButton;
+                QMouseEvent move(QEvent::MouseMove, p, g, Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+                QApplication::sendEvent(w, &move);
+                QMouseEvent press(QEvent::MouseButtonPress, p, g, button, button, Qt::NoModifier);
+                QApplication::sendEvent(w, &press);
+                if (action == "drag") {
+                    const QPointF end(w->mapFrom(window, toAt));
+                    for (int i = 1; i <= 10; ++i) {
+                        const QPointF q = p + (end - p) * (i / 10.0);
+                        QMouseEvent m(QEvent::MouseMove, q, w->mapToGlobal(q), Qt::NoButton, button, Qt::NoModifier);
+                        QApplication::sendEvent(w, &m);
+                    }
+                    QMouseEvent release(QEvent::MouseButtonRelease, end, w->mapToGlobal(end), button, Qt::NoButton, Qt::NoModifier);
+                    QApplication::sendEvent(w, &release);
+                    return;
+                }
+                QMouseEvent release(QEvent::MouseButtonRelease, p, g, button, Qt::NoButton, Qt::NoModifier);
+                QApplication::sendEvent(w, &release);
+                if (action == "double") {
+                    QMouseEvent dbl(QEvent::MouseButtonDblClick, p, g, button, button, Qt::NoModifier);
+                    QApplication::sendEvent(w, &dbl);
+                    QMouseEvent release2(QEvent::MouseButtonRelease, p, g, button, Qt::NoButton, Qt::NoModifier);
+                    QApplication::sendEvent(w, &release2);
+                }
+                if (action == "right" && w && !*menuDone && QApplication::activePopupWidget() == nullptr) {
+                    // widgets that open their menu on the context-menu event rather than on the click
+                    QContextMenuEvent menuEvent(QContextMenuEvent::Mouse, local, g.toPoint());
+                    QApplication::sendEvent(w, &menuEvent);
+                }
+            });
+            if (action != "right") {
+                run->start(DIALOG_SETTLE_MS);
+            }
+        };
+        return t;
+    }
+
     LC_AITool setToolbarValue() {
         LC_AITool t;
         t.name = "set_toolbar_value";
@@ -2613,8 +3961,8 @@ namespace {
             QString detail = problems.join("; ");
             if (!problems.isEmpty()) {
                 QString out = outputs.join("\n---\n");
-                if (out.size() > 3000) {
-                    out = out.left(3000) + " ...";
+                if (out.size() > 12000) {
+                    out = out.left(12000) + " ...";
                 }
                 detail += "\n" + out;
             }
@@ -2636,7 +3984,7 @@ namespace {
         }
 
         void fail(const QString& why) {
-            record({recipe.value("id").toString(), "failed", why + "\n" + outputs.join("\n---\n").left(3000), {}});
+            record({recipe.value("id").toString(), "failed", why + "\n" + outputs.join("\n---\n").left(12000), {}});
             cleanup();
         }
 
@@ -3021,7 +4369,8 @@ QJsonArray LC_AIToolbar::inventory() {
 }
 
 QList<LC_AITool> LC_AIToolbar::tools() {
-    return {listButtons(), pressButton(), clickDrawing(), selectEntities(), toolOptions(), handleDialog(), setToolbarValue(), testButtons()};
+    return {listButtons(), pressButton(), clickDrawing(), selectEntities(), toolOptions(), handleDialog(), setToolbarValue(),
+            usePanel(),    useMenu(),     contextMenu(),  lookAtApp(),      pressInApp(),  testButtons()};
 }
 
 QStringList LC_AIToolbar::recipeIds() {
