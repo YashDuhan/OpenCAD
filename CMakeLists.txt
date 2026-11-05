@@ -2017,6 +2017,8 @@ set (SHARED_SOURCES
      librecad/src/ui/dock_widgets/ai_assistant/lc_aitools.cpp
      librecad/src/ui/dock_widgets/ai_assistant/lc_aitoolbar.cpp
      librecad/src/ui/dock_widgets/ai_assistant/lc_aitoolbar.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aiproperties.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aiproperties.h
      librecad/src/ui/dock_widgets/ai_assistant/lc_aiagentprogress.cpp
      librecad/src/ui/dock_widgets/ai_assistant/lc_aiagentprogress.h
      librecad/src/ui/dock_widgets/ai_assistant/lc_aicontrol.cpp
