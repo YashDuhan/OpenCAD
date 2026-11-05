@@ -183,28 +183,37 @@ namespace {
         return nullptr;
     }
 
-    void sendKeys(QWidget* target, const QJsonObject& step) {
+    void sendKeys(QWidget* widget, const QJsonObject& step) {
+        // a key may close or delete the widget it went to (Return in a popup): every event checks it is still there
+        QPointer<QWidget> target = widget;
         if (target == nullptr) {
             return;
         }
         const LC_AIControl::AIInput aiInput;
         if (step.contains("keys")) {
             const QKeySequence seq = QKeySequence::fromString(step.value("keys").toString(), QKeySequence::PortableText);
-            for (int i = 0; i < seq.count(); ++i) {
+            for (int i = 0; i < seq.count() && target; ++i) {
                 QKeyEvent press(QEvent::KeyPress, seq[i].key(), seq[i].keyboardModifiers());
                 QApplication::sendEvent(target, &press);
-                QKeyEvent release(QEvent::KeyRelease, seq[i].key(), seq[i].keyboardModifiers());
-                QApplication::sendEvent(target, &release);
+                if (target) {
+                    QKeyEvent release(QEvent::KeyRelease, seq[i].key(), seq[i].keyboardModifiers());
+                    QApplication::sendEvent(target, &release);
+                }
             }
             return;
         }
         for (const QChar c : step.value("text").toString()) {
+            if (!target) {
+                return;
+            }
             const int key = c == '\n' ? Qt::Key_Return : c == '@' ? Qt::Key_At : c.toUpper().unicode();
             const QString text = c == '\n' ? QStringLiteral("\r") : QString(c);
             QKeyEvent press(QEvent::KeyPress, key, Qt::NoModifier, text);
             QApplication::sendEvent(target, &press);
-            QKeyEvent release(QEvent::KeyRelease, key, Qt::NoModifier, text);
-            QApplication::sendEvent(target, &release);
+            if (target) {
+                QKeyEvent release(QEvent::KeyRelease, key, Qt::NoModifier, text);
+                QApplication::sendEvent(target, &release);
+            }
             QApplication::processEvents();
         }
     }
