@@ -70,6 +70,15 @@ else ()
     set (LC_AI_BROWSER OFF)
     message (STATUS "AI browser tools: off (Qt WebEngine not found)")
 endif ()
+# Optional: voice input in the AI composer records the microphone with Qt Multimedia
+find_package (Qt6 OPTIONAL_COMPONENTS Multimedia QUIET)
+if (TARGET Qt6::Multimedia)
+    set (LC_AI_VOICE ON)
+    message (STATUS "AI voice input: on (Qt Multimedia found)")
+else ()
+    set (LC_AI_VOICE OFF)
+    message (STATUS "AI voice input: off (Qt Multimedia not found)")
+endif ()
 find_package (Qt6 REQUIRED COMPONENTS LinguistTools)
 
 # --- macOS: drop the removed AGL.framework from Qt's link interface ---------
@@ -2036,6 +2045,12 @@ set (SHARED_SOURCES
      librecad/src/ui/dock_widgets/ai_assistant/lc_aicontrol.h
      librecad/src/ui/dock_widgets/ai_assistant/lc_aisidebar.cpp
      librecad/src/ui/dock_widgets/ai_assistant/lc_aisidebar.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aivoice.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aivoice.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aivoiceinput.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aivoiceinput.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aivoicerecorder.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aivoicerecorder.h
      librecad/src/ui/dock_widgets/views_list/lc_dlgnamedviewslistoptions.cpp
      librecad/src/ui/dock_widgets/views_list/lc_dlgnamedviewslistoptions.h
      librecad/src/ui/dock_widgets/views_list/lc_namedviewsbutton.cpp
@@ -2368,6 +2383,10 @@ target_link_libraries (librecad_lib PRIVATE
 if (LC_AI_BROWSER)
     target_link_libraries (librecad_lib PRIVATE Qt6::WebEngineWidgets)
     target_compile_definitions (librecad_lib PRIVATE LC_AI_BROWSER)
+endif ()
+if (LC_AI_VOICE)
+    target_link_libraries (librecad_lib PRIVATE Qt6::Multimedia)
+    target_compile_definitions (librecad_lib PRIVATE LC_AI_VOICE)
 endif ()
 set_property (TARGET librecad_lib PROPERTY AUTOUIC_OPTIONS --connections string)
 

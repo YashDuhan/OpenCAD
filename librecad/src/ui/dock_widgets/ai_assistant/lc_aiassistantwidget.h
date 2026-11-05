@@ -24,6 +24,7 @@ class LC_AIChatTranscript;
 class LC_AIApprovalBox;
 class LC_AIApprovalModeButton;
 class LC_AIChatSession;
+class LC_AIVoiceInput;
 class QPlainTextEdit;
 class QPushButton;
 class QToolButton;
@@ -92,6 +93,7 @@ private:
     LC_AIChatSession* m_chats {nullptr};
     /** Shows a saved chat (or an empty one) in place of the conversation. */
     void showChat(const QList<LC_AIChatMessage>& messages);
+    LC_AIVoiceInput* m_voice {nullptr}; // the mic button and push-to-talk (hidden without Qt Multimedia)
 };
 
 #endif
