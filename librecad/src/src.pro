@@ -29,6 +29,11 @@ CONFIG += qt \
     depend_includepath
 
 QT += widgets printsupport network
+# AI assistant web lookups, when Qt WebEngine is installed
+qtHaveModule(webenginewidgets) {
+    QT += webenginewidgets
+    DEFINES += LC_AI_BROWSER
+}
 CONFIG += c++17
 
 # Native OpenType shaping is available only through an explicit, versioned font
@@ -355,6 +360,7 @@ INCLUDEPATH += \
     ui/dock_widgets/property_sheet/properties/rsvector \
     ui/dock_widgets/property_sheet/properties/string \
     ui/dock_widgets/views_list \
+    ui/dock_widgets/ai_assistant \
     ui/dock_widgets/ucs_list \
     ui/dock_widgets/workspaces \
     ui/dock_widgets/cad \
@@ -760,6 +766,23 @@ HEADERS += \
     ui/dock_widgets/ucs_list/lc_ucslistmodel.h \
     ui/dock_widgets/ucs_list/lc_ucslistoptions.h \
     ui/dock_widgets/ucs_list/lc_ucslistwidget.h \
+    ui/dock_widgets/ai_assistant/lc_aiassistantwidget.h \
+    ui/dock_widgets/ai_assistant/lc_aiapprovals.h \
+    ui/dock_widgets/ai_assistant/lc_aipermissions.h \
+    ui/dock_widgets/ai_assistant/lc_aibrowser.h \
+    ui/dock_widgets/ai_assistant/lc_aichattranscript.h \
+    ui/dock_widgets/ai_assistant/lc_aicredentials.h \
+    ui/dock_widgets/ai_assistant/lc_aiinferencemanager.h \
+    ui/dock_widgets/ai_assistant/lc_aiprovider.h \
+    ui/dock_widgets/ai_assistant/lc_aigenerated.h \
+    ui/dock_widgets/ai_assistant/lc_aiicons.h \
+    ui/dock_widgets/ai_assistant/lc_aimcpdialog.h \
+    ui/dock_widgets/ai_assistant/lc_mcpclient.h \
+    ui/dock_widgets/ai_assistant/lc_mcpmanager.h \
+    ui/dock_widgets/ai_assistant/lc_aimodelpicker.h \
+    ui/dock_widgets/ai_assistant/lc_aiprovidersdialog.h \
+    ui/dock_widgets/ai_assistant/lc_aitool.h \
+    ui/dock_widgets/ai_assistant/lc_aisidebar.h \
     ui/dock_widgets/views_list/lc_dlgnamedviewslistoptions.h \
     ui/dock_widgets/views_list/lc_namedviewsbutton.h \
     ui/dock_widgets/views_list/lc_namedviewslistoptions.h \
@@ -1311,6 +1334,23 @@ SOURCES += \
     ui/dock_widgets/ucs_list/lc_ucslistmodel.cpp \
     ui/dock_widgets/ucs_list/lc_ucslistoptions.cpp \
     ui/dock_widgets/ucs_list/lc_ucslistwidget.cpp \
+    ui/dock_widgets/ai_assistant/lc_aiassistantwidget.cpp \
+    ui/dock_widgets/ai_assistant/lc_aiapprovals.cpp \
+    ui/dock_widgets/ai_assistant/lc_aipermissions.cpp \
+    ui/dock_widgets/ai_assistant/lc_aibrowser.cpp \
+    ui/dock_widgets/ai_assistant/lc_aichattranscript.cpp \
+    ui/dock_widgets/ai_assistant/lc_aicredentials.cpp \
+    ui/dock_widgets/ai_assistant/lc_aiinferencemanager.cpp \
+    ui/dock_widgets/ai_assistant/lc_aiprovider.cpp \
+    ui/dock_widgets/ai_assistant/lc_aigenerated.cpp \
+    ui/dock_widgets/ai_assistant/lc_aiicons.cpp \
+    ui/dock_widgets/ai_assistant/lc_aimcpdialog.cpp \
+    ui/dock_widgets/ai_assistant/lc_mcpclient.cpp \
+    ui/dock_widgets/ai_assistant/lc_mcpmanager.cpp \
+    ui/dock_widgets/ai_assistant/lc_aimodelpicker.cpp \
+    ui/dock_widgets/ai_assistant/lc_aiprovidersdialog.cpp \
+    ui/dock_widgets/ai_assistant/lc_aitools.cpp \
+    ui/dock_widgets/ai_assistant/lc_aisidebar.cpp \
     ui/dock_widgets/views_list/lc_dlgnamedviewslistoptions.cpp \
     ui/dock_widgets/views_list/lc_namedviewsbutton.cpp \
     ui/dock_widgets/views_list/lc_namedviewslistoptions.cpp \

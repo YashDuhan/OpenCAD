@@ -66,6 +66,7 @@ private:
     void initializeRightDockWidgets() const;
     void modifyCommandTitleBar(Qt::DockWidgetArea area) const;
     QDockWidget* createPenWizardWidget();
+    void createAIAssistantPanel() const;
     void initLeftCADSidebar();
     void createCADMegaSidebar(int columns, int iconSize, bool flatButtons);
     void createRightSidebar(QG_ActionHandler *actionHandler);

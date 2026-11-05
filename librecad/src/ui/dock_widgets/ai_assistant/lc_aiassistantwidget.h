@@ -1,0 +1,81 @@
+/* ********************************************************************************
+ * This file is part of the LibreCAD project, a 2D CAD program
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * ********************************************************************************
+ */
+#ifndef LC_AIASSISTANTWIDGET_H
+#define LC_AIASSISTANTWIDGET_H
+
+#include <QHash>
+#include <QSet>
+#include <functional>
+#include <QWidget>
+
+#include "lc_aiinferencemanager.h"
+#include "lc_aiprovidersdialog.h"
+
+class QFrame;
+class QLabel;
+class LC_AIChatTranscript;
+class LC_AIApprovalBox;
+class LC_AIApprovalModeButton;
+class QPlainTextEdit;
+class QPushButton;
+class QToolButton;
+
+/**
+ * Chat panel of the AI sidebar (similar to the Cursor chat panel): sends the conversation
+ * to the selected provider through LC_AIInferenceManager and streams the reply in.
+ */
+class LC_AIAssistantWidget : public QWidget {
+    Q_OBJECT
+public:
+    explicit LC_AIAssistantWidget(QWidget* parent = nullptr);
+    void focusInput();
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
+    void showEvent(QShowEvent* event) override;
+
+private:
+    void onSend();
+    void onStop();
+    void onNewChat();
+    void openSettings();
+    void openMcp();
+    void openToolPermissions();
+    void approve(const LC_AIToolCall& call, const std::function<void(bool, const QString&)>& answer);
+    void openModelPicker();
+    void updateSendButton();
+    void onDelta(const QString& text);
+    void onMessageAdded(const LC_AIChatMessage& message);
+    void onToolStarted(const LC_AIToolCall& call);
+    void onFinished();
+    void onFailed(const QString& error);
+    QString toolLabel(const QString& name) const;
+    void setBusy(bool busy);
+    void updateModelButton();
+
+    QList<LC_AIChatMessage> m_messages;
+    QList<LC_AITool> m_tools;      // built-in tools
+    QList<LC_AITool> m_runTools;   // tools of the current run: built-in + MCP
+    bool m_busy {false};
+    LC_AIInferenceManager* m_inference {nullptr};
+    LC_AITheme m_theme;
+    LC_AIChatTranscript* m_transcript {nullptr};
+    QFrame* m_composer {nullptr};       // Cypher's .composer: the input over the actions row
+    QPlainTextEdit* m_input {nullptr};
+    QPushButton* m_modelSelect {nullptr}; // Cypher's .model-select: logo, model name, chevron
+    QLabel* m_modelIcon {nullptr};
+    QLabel* m_modelName {nullptr};
+    QToolButton* m_sendButton {nullptr};
+    LC_AIApprovalBox* m_approvals {nullptr};
+    LC_AIApprovalModeButton* m_approvalMode {nullptr};
+    QSet<QString> m_sessionAllows; // "Allow for this session" answers, until New Chat
+};
+
+#endif

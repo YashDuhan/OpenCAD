@@ -60,6 +60,7 @@ private:
     QToolBar *createCreatorsToolbar(const QSizePolicy &tbPolicy) const;
     QToolBar *createPreferencesToolbar(const QSizePolicy &tbPolicy) const;
     QToolBar *createInfoCursorToolbar(const QSizePolicy &tbPolicy);
+    QToolBar *createAIToolbar(const QSizePolicy &tbPolicy) const;
     QToolBar *createEntityLayersToolbar(const QSizePolicy &tbPolicy) const;
 
     QToolBar *createCategoriesToolbar();

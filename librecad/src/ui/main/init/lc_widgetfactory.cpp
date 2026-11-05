@@ -28,6 +28,7 @@
 #include <QToolBar>
 
 #include "lc_actiongroupmanager.h"
+#include "lc_aisidebar.h"
 #include "lc_anglesbasiswidget.h"
 #include "lc_caddockwidget.h"
 #include "lc_dockwidget.h"
@@ -76,6 +77,7 @@ void LC_WidgetFactory::updateDockOptions(QC_ApplicationWindow * mainWin, const b
 void LC_WidgetFactory::initWidgets(){
     initStatusBar();
     initLeftCADSidebar();
+    createAIAssistantPanel();
     createRightSidebar(m_appWin->m_actionHandler.get());
 }
 
@@ -431,6 +433,12 @@ void LC_WidgetFactory::addAction(QToolBar* toolbar, const char* actionName) cons
     if (action != nullptr) {
         toolbar->addAction(action);
     }
+}
+
+// The AI sidebar is not a dock: it sits at the extreme right edge of the window, outside the dock areas,
+// so the dock layout fitting and saved dock layouts never hide, move or re-tab it
+void LC_WidgetFactory::createAIAssistantPanel() const {
+    new LC_AISidebar(m_appWin);
 }
 
 QDockWidget* LC_WidgetFactory::createPenWizardWidget(){

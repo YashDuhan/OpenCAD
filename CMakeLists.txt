@@ -61,6 +61,15 @@ find_package(WrapVulkanHeaders QUIET)
 # Explicitly disable Vulkan to avoid warnings
 set(QT_NO_VULKAN 1)
 find_package (Qt6 COMPONENTS Gui Core Widgets PrintSupport Svg Network REQUIRED)
+# Optional: the AI assistant's web lookups (browser_* tools) run in a Qt WebEngine window
+find_package (Qt6 OPTIONAL_COMPONENTS WebEngineWidgets QUIET)
+if (TARGET Qt6::WebEngineWidgets)
+    set (LC_AI_BROWSER ON)
+    message (STATUS "AI browser tools: on (Qt WebEngine found)")
+else ()
+    set (LC_AI_BROWSER OFF)
+    message (STATUS "AI browser tools: off (Qt WebEngine not found)")
+endif ()
 find_package (Qt6 REQUIRED COMPONENTS LinguistTools)
 
 # --- macOS: drop the removed AGL.framework from Qt's link interface ---------
@@ -335,6 +344,7 @@ set (SHARED_INCLUDES
      librecad/src/ui/dialogs/settings/options_widget
      librecad/src/ui/dialogs/settings/shortcuts
      librecad/src/ui/dock_widgets
+     librecad/src/ui/dock_widgets/ai_assistant
      librecad/src/ui/dock_widgets/block_widget
      librecad/src/ui/dock_widgets/cad
      librecad/src/ui/dock_widgets/command_line
@@ -1972,6 +1982,40 @@ set (SHARED_SOURCES
      librecad/src/ui/dock_widgets/ucs_list/lc_ucslistoptions.h
      librecad/src/ui/dock_widgets/ucs_list/lc_ucslistwidget.cpp
      librecad/src/ui/dock_widgets/ucs_list/lc_ucslistwidget.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aiassistantwidget.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aiassistantwidget.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aiapprovals.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aiapprovals.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aipermissions.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aipermissions.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aibrowser.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aibrowser.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aichattranscript.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aichattranscript.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aicredentials.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aicredentials.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aiinferencemanager.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aiinferencemanager.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aiprovider.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aiprovider.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aigenerated.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aigenerated.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aiicons.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aiicons.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aimcpdialog.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aimcpdialog.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_mcpclient.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_mcpclient.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_mcpmanager.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_mcpmanager.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aimodelpicker.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aimodelpicker.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aiprovidersdialog.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aiprovidersdialog.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aitool.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aitools.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aisidebar.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aisidebar.h
      librecad/src/ui/dock_widgets/views_list/lc_dlgnamedviewslistoptions.cpp
      librecad/src/ui/dock_widgets/views_list/lc_dlgnamedviewslistoptions.h
      librecad/src/ui/dock_widgets/views_list/lc_namedviewsbutton.cpp
@@ -2301,6 +2345,10 @@ target_link_libraries (librecad_lib PRIVATE
                        LibreCAD::OpenType
                        Qt6::Core Qt6::Widgets Qt6::Gui Qt6::PrintSupport Qt6::Svg Qt6::Network
 )
+if (LC_AI_BROWSER)
+    target_link_libraries (librecad_lib PRIVATE Qt6::WebEngineWidgets)
+    target_compile_definitions (librecad_lib PRIVATE LC_AI_BROWSER)
+endif ()
 set_property (TARGET librecad_lib PROPERTY AUTOUIC_OPTIONS --connections string)
 
 # Filter work otherwise pulls the complete application library into a compile
@@ -2353,6 +2401,20 @@ set (MAIN_SOURCES
      librecad/src/ui/dialogs/main/qg_dlginitial.h
      ${LIBRECAD_RES}
 )
+
+# Running from the build tree: the program looks for its fonts, hatch patterns and block library in
+# <program folder>/resources/<kind> (RS_System::getDirectoryList). Without them no text is drawn.
+# Link them to librecad/support so a fresh build works without an install step.
+if (UNIX AND NOT APPLE)
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/resources")
+    foreach (_lc_support fonts patterns library)
+        set(_lc_support_link "${CMAKE_CURRENT_BINARY_DIR}/resources/${_lc_support}")
+        if (NOT EXISTS "${_lc_support_link}")
+            file(CREATE_LINK "${CMAKE_CURRENT_SOURCE_DIR}/librecad/support/${_lc_support}" "${_lc_support_link}"
+                 SYMBOLIC COPY_ON_ERROR)
+        endif ()
+    endforeach ()
+endif ()
 
 # Main executable
 qt_add_executable (librecad
@@ -2415,6 +2477,11 @@ target_link_libraries (librecad PRIVATE
                        librecad_lib
                        Qt6::Core Qt6::Widgets Qt6::Gui Qt6::PrintSupport Qt6::Svg Qt6::Network
 )
+if (LC_AI_BROWSER)
+    # the library is static: the program links WebEngine too, and main() prepares it
+    target_link_libraries (librecad PRIVATE Qt6::WebEngineWidgets)
+    target_compile_definitions (librecad PRIVATE LC_AI_BROWSER)
+endif ()
 
 if(APPLE)
     install(TARGETS librecad

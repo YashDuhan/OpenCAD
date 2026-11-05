@@ -415,6 +415,18 @@ int main(int argc, char** argv) {
 
     const auto versionStr = XSTR(LC_VERSION);
 
+#ifdef LC_AI_BROWSER
+    // Qt WebEngine (the AI assistant's browser) needs shared GL contexts set before the application exists
+    QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+    // Compose the window through OpenGL from the start. Otherwise the first web page shown inside the
+    // main window makes Qt destroy and recreate the native window to switch it to OpenGL, which on
+    // Wayland looks like the app closing and reopening.
+    if (!qEnvironmentVariableIsSet("QT_WIDGETS_RHI")) {
+        qputenv("QT_WIDGETS_RHI", "1");
+        if (!qEnvironmentVariableIsSet("QT_WIDGETS_RHI_BACKEND"))
+            qputenv("QT_WIDGETS_RHI_BACKEND", "opengl");
+    }
+#endif
     LC_Application app(argc, argv);
     QCoreApplication::setOrganizationName("LibreCAD");
     // Application name is "LibreCAD-<schemaMajor>" so each major release

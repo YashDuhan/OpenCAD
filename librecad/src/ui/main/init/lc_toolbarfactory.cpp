@@ -22,10 +22,12 @@
 #include "lc_toolbarfactory.h"
 
 #include <QMenu>
+#include <QToolButton>
 #include <QSettings>
 
 #include "lc_actionfactory.h"
 #include "lc_actiongroupmanager.h"
+#include "lc_aisidebar.h"
 #include "lc_creatorinvoker.h"
 #include "lc_infocursorsettingsmanager.h"
 #include "lc_namedviewslistwidget.h"
@@ -262,6 +264,9 @@ void LC_ToolbarFactory::createStandardToolbars(){
     addToTop(viewsList);
     addToTop(ucsList);
     addToTop(preferences);
+    if (QToolBar* ai = createAIToolbar(tbPolicy)) {
+        addToTop(ai);
+    }
     m_appWin->addToolBarBreak();
     addToTop(pen);
     addToTop(entityLayers);
@@ -275,6 +280,30 @@ void LC_ToolbarFactory::createStandardToolbars(){
 #endif
     addToBottom(dockareas);
     addToBottom(creators);
+}
+
+// Toolbar with the "AI" button that opens / closes the AI assistant sidebar on the right
+QToolBar* LC_ToolbarFactory::createAIToolbar(const QSizePolicy &tbPolicy) const {
+    auto* sidebar = m_appWin->findChild<LC_AISidebar*>("ai_assistant_sidebar");
+    if (sidebar == nullptr) {
+        return nullptr;
+    }
+    QToolBar* result = doCreateToolBar(tr("AI"), "AI", tbPolicy, 0);
+    auto* toggle = new QAction(tr("AI"), result);
+    toggle->setObjectName("AIAssistantToggle");
+    toggle->setCheckable(true);
+    toggle->setChecked(false);
+    toggle->setToolTip(tr("Open / close the AI assistant sidebar (Ctrl+L)"));
+    toggle->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_L));
+    connect(toggle, &QAction::toggled, sidebar, &LC_AISidebar::setOpen);
+    result->setToolButtonStyle(Qt::ToolButtonTextOnly);
+    result->addAction(toggle);
+    if (auto* button = qobject_cast<QToolButton*>(result->widgetForAction(toggle))) {
+        QFont font = button->font();
+        font.setBold(true);
+        button->setFont(font);
+    }
+    return result;
 }
 
 QToolBar* LC_ToolbarFactory::createInfoCursorToolbar(const QSizePolicy &tbPolicy) {
