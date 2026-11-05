@@ -29,6 +29,7 @@
 #include <QVBoxLayout>
 
 #include "lc_aiassistantwidget.h"
+#include "lc_aidrawingchecker.h"
 #include "lc_aipermissions.h"
 #include "lc_aiprovidersdialog.h"
 #include "lc_aitool.h"
@@ -159,6 +160,7 @@ QMenu* LC_AIAgentProgress::menu(QMainWindow* window) {
     g_menu = menu;
     QAction* open = menu->addAction(QObject::tr("Open Agent Progress..."));
     QObject::connect(open, &QAction::triggered, window, [window] { LC_AIAgentProgressDialog::showFor(window); });
+    menu->addAction(LC_AIDrawingChecker::action(window)); // the drawing checker: issues in the AI chat, with Fix all
     return menu;
 }
 

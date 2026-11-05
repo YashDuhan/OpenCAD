@@ -23,6 +23,7 @@
 
 #include "lc_menufactory_main.h"
 #include "lc_aiagentprogress.h"
+#include "lc_aidrawingchecker.h"
 
 #include <QDesktopServices>
 #include <QDockWidget>
@@ -245,6 +246,8 @@ void LC_MenuFactoryMain::createToolsMenuExpanded(QMenuBar* menuBar, QList<QMenu*
 
     const auto info = menu(tr("&Info"), "info", menuBar);
     info->addActions(m_actionFactory->infoActions);
+    info->addSeparator();
+    info->addAction(LC_AIDrawingChecker::action(m_appWin)); // AI drawing checker (no Tools menu in this layout)
     topMenuMenus << info;
 }
 
@@ -276,6 +279,8 @@ void LC_MenuFactoryMain::createToolsMenuCombined(QMenuBar* menuBar, QList<QMenu*
                        m_actionFactory->modifyActions);
     subMenuWithActions(menuToolsCombined, tr("&Info"), "info", ":/icons/measure.lci", m_actionFactory->infoActions);
     subMenuWithActions(menuToolsCombined, tr("&Order"), "order", ":/icons/order.lci", m_actionFactory->orderActions);
+    menuToolsCombined->addSeparator();
+    menuToolsCombined->addAction(LC_AIDrawingChecker::action(m_appWin)); // AI drawing checker
 
     topMenuMenus << menuToolsCombined;
 }

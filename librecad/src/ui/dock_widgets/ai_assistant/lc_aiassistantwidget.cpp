@@ -43,6 +43,7 @@
 #include "lc_aicontrol.h"
 #include "lc_aichattranscript.h"
 #include "lc_aicredentials.h"
+#include "lc_aidrawingchecker.h"
 #include "lc_aiicons.h"
 #include "lc_aimcpdialog.h"
 #include "lc_aimodelpicker.h"
@@ -115,6 +116,13 @@ LC_AIAssistantWidget::LC_AIAssistantWidget(QWidget* parent)
     newChat->setAutoRaise(true);
     header->addWidget(title);
     header->addStretch(1);
+    // drawing checker: lists the drawing's problems here, with "Fix all"
+    auto* checkDrawing = new QToolButton(this);
+    checkDrawing->setIcon(LC_AIIcons::lucideIcon("shield-check", 14, palette().color(QPalette::ButtonText)));
+    checkDrawing->setToolTip(tr("Check drawing: duplicates, gaps, open polylines, layers, pens..."));
+    checkDrawing->setAutoRaise(true);
+    connect(checkDrawing, &QToolButton::clicked, this, [this] { LC_AIDrawingChecker::showInChat(this); });
+    header->addWidget(checkDrawing);
     auto* mcp = new QToolButton(this);
     mcp->setIcon(LC_AIIcons::lucideIcon("plug", 14, palette().color(QPalette::ButtonText)));
     mcp->setToolTip(tr("MCP servers: more tools for the AI"));

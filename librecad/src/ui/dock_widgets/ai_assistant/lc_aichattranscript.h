@@ -173,6 +173,8 @@ public:
     void showRetry(const QString& text);
     void finishRun();
     void clear();
+    /** A card of its own in the conversation (e.g. the drawing check's issues); the transcript takes it. */
+    void addCard(QWidget* card);
 
 private:
     void add(QWidget* widget);

@@ -22,6 +22,7 @@
 #include <cmath>
 
 #include "lc_aicontrol.h"
+#include "lc_aidrawingchecker.h"
 #include "lc_graphicviewport.h"
 #include "lc_printviewportrenderer.h"
 #include "rs_painter.h"
@@ -953,6 +954,7 @@ void LC_AITools::setViewForTests(RS_GraphicView* view) {
 }
 
 QList<LC_AITool> LC_AITools::all() {
-    return {captureView(), getView(), zoomToFit(), zoomToArea(), zoom(), pan(),
-            drawingInfo(), listEntities(), listCommands(), runCommand(), addText(), openDrawing(), viewImageFile()};
+    return QList<LC_AITool>{captureView(), getView(), zoomToFit(), zoomToArea(), zoom(), pan(),
+            drawingInfo(), listEntities(), listCommands(), runCommand(), addText(), openDrawing(), viewImageFile()}
+           + LC_AIDrawingChecker::tools(); // check_drawing, fix_drawing_issues
 }

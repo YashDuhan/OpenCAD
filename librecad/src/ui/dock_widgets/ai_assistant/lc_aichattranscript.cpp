@@ -1082,6 +1082,12 @@ void LC_AIChatTranscript::add(QWidget* widget) {
     stickToBottom();
 }
 
+void LC_AIChatTranscript::addCard(QWidget* card) {
+    closeGroup(); // the card ends the block of tool calls before it
+    m_follow = true; // the user asked for it: show it
+    add(card);
+}
+
 void LC_AIChatTranscript::stickToBottom() {
     // the growth itself is followed in rangeChanged; this only catches up when following
     if (m_follow) {
