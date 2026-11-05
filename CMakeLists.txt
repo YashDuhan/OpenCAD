@@ -70,6 +70,15 @@ else ()
     set (LC_AI_BROWSER OFF)
     message (STATUS "AI browser tools: off (Qt WebEngine not found)")
 endif ()
+# Optional: PDFs attached to the AI chat get a preview, and go as page images to providers that cannot read PDFs
+find_package (Qt6 OPTIONAL_COMPONENTS Pdf QUIET)
+if (TARGET Qt6::Pdf)
+    set (LC_AI_PDF ON)
+    message (STATUS "AI PDF pages: on (Qt Pdf found)")
+else ()
+    set (LC_AI_PDF OFF)
+    message (STATUS "AI PDF pages: off (Qt Pdf not found)")
+endif ()
 find_package (Qt6 REQUIRED COMPONENTS LinguistTools)
 
 # --- macOS: drop the removed AGL.framework from Qt's link interface ---------
@@ -2023,6 +2032,12 @@ set (SHARED_SOURCES
      librecad/src/ui/dock_widgets/ai_assistant/lc_aicontrol.h
      librecad/src/ui/dock_widgets/ai_assistant/lc_aisidebar.cpp
      librecad/src/ui/dock_widgets/ai_assistant/lc_aisidebar.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aiattachments.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aiattachments.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aimentions.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aimentions.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aicomposerextras.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aicomposerextras.h
      librecad/src/ui/dock_widgets/views_list/lc_dlgnamedviewslistoptions.cpp
      librecad/src/ui/dock_widgets/views_list/lc_dlgnamedviewslistoptions.h
      librecad/src/ui/dock_widgets/views_list/lc_namedviewsbutton.cpp
@@ -2356,6 +2371,10 @@ if (LC_AI_BROWSER)
     target_link_libraries (librecad_lib PRIVATE Qt6::WebEngineWidgets)
     target_compile_definitions (librecad_lib PRIVATE LC_AI_BROWSER)
 endif ()
+if (LC_AI_PDF)
+    target_link_libraries (librecad_lib PRIVATE Qt6::Pdf)
+    target_compile_definitions (librecad_lib PRIVATE LC_AI_PDF)
+endif ()
 set_property (TARGET librecad_lib PROPERTY AUTOUIC_OPTIONS --connections string)
 
 # Filter work otherwise pulls the complete application library into a compile
@@ -2488,6 +2507,9 @@ if (LC_AI_BROWSER)
     # the library is static: the program links WebEngine too, and main() prepares it
     target_link_libraries (librecad PRIVATE Qt6::WebEngineWidgets)
     target_compile_definitions (librecad PRIVATE LC_AI_BROWSER)
+endif ()
+if (LC_AI_PDF)
+    target_link_libraries (librecad PRIVATE Qt6::Pdf) # the static library's Qt Pdf
 endif ()
 
 if(APPLE)

@@ -159,7 +159,8 @@ public:
     explicit LC_AIChatTranscript(const LC_AITheme& theme, QWidget* parent = nullptr);
 
     void setLabelLookup(std::function<QString(const QString&)> lookup) { m_labelFor = std::move(lookup); }
-    void addUser(const QString& text);
+    /** Your message: its files above the bubble, its @-mentions as pills in it. */
+    void addUser(const QString& text, const QList<LC_AIAttachment>& attachments = {});
     void appendDelta(const QString& text);
     void addAssistant(const LC_AIChatMessage& message);
     void toolStarted(const LC_AIToolCall& call);

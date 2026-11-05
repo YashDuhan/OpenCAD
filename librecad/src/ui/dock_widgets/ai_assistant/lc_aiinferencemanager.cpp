@@ -350,8 +350,8 @@ QJsonObject LC_AIInferenceManager::buildOpenAI() const {
             flushImages();
         }
         switch (m.role) {
-            case LC_AIChatMessage::Role::User:
-                messages.append(QJsonObject{{"role", "user"}, {"content", m.text}});
+            case LC_AIChatMessage::Role::User: // with its attachments and @-mention context (lc_aiattachments)
+                messages.append(QJsonObject{{"role", "user"}, {"content", LC_AIAttachments::openAIContent(m, m_target.provider->id)}});
                 break;
             case LC_AIChatMessage::Role::Assistant: {
                 if (m.text.isEmpty() && m.toolCalls.isEmpty()) {
@@ -411,8 +411,8 @@ QJsonObject LC_AIInferenceManager::buildAnthropic() const {
             flushResults();
         }
         switch (m.role) {
-            case LC_AIChatMessage::Role::User:
-                messages.append(QJsonObject{{"role", "user"}, {"content", m.text}});
+            case LC_AIChatMessage::Role::User: // with its attachments and @-mention context (lc_aiattachments)
+                messages.append(QJsonObject{{"role", "user"}, {"content", LC_AIAttachments::anthropicContent(m, m_target.provider->id)}});
                 break;
             case LC_AIChatMessage::Role::Assistant: {
                 QJsonArray content;
@@ -499,8 +499,8 @@ QJsonObject LC_AIInferenceManager::buildGoogle() const {
             flush();
         }
         switch (m.role) {
-            case LC_AIChatMessage::Role::User:
-                contents.append(QJsonObject{{"role", "user"}, {"parts", QJsonArray{QJsonObject{{"text", m.text}}}}});
+            case LC_AIChatMessage::Role::User: // with its attachments and @-mention context (lc_aiattachments)
+                contents.append(QJsonObject{{"role", "user"}, {"parts", LC_AIAttachments::geminiParts(m)}});
                 break;
             case LC_AIChatMessage::Role::Assistant: {
                 QJsonArray parts;
