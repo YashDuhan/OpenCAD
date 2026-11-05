@@ -267,6 +267,14 @@ namespace {
         if (name == "click_drawing") {
             return QStringLiteral("%1, %2").arg(args.value("x").toDouble()).arg(args.value("y").toDouble());
         }
+        if (name == "update_plan") { // plan mode: "step 2 · done · note"
+            QStringList parts{QStringLiteral("step %1").arg(args.value("step").toVariant().toString()),
+                              args.value("status").toString().replace('_', ' ')};
+            if (!args.value("note").toString().isEmpty()) {
+                parts << args.value("note").toString();
+            }
+            return parts.join("  ·  ");
+        }
         if (name == "handle_dialog" || name == "tool_options") {
             QStringList parts;
             for (const QJsonValue& v : args.value("fields").toArray()) {
@@ -509,7 +517,8 @@ void LC_AIToolCallWidget::setResult(const LC_AIToolResult& result) {
     const qint64 ms = m_timer.isValid() ? m_timer.elapsed() : 0;
     const QString time = ms < 1000 ? QStringLiteral("%1ms").arg(ms) : QStringLiteral("%1s").arg(ms / 1000.0, 0, 'f', 1);
     const QString shownTime = m_timer.isValid() ? time : QString(); // a call restored from the chat history was not timed
-    static const QRegularExpression blocked(QStringLiteral("user denied this tool call|denied by the user's tool permissions"));
+    static const QRegularExpression blocked(QStringLiteral("user denied this tool call|denied by the user's tool permissions"
+                                                           "|^Plan mode:")); // plan mode holds changes back until approval
     if (result.isError && blocked.match(result.joinedText()).hasMatch()) {
         setStatus("shield-alert", tr("Blocked"), STATUS_ERROR); // Cypher marks denied calls as Blocked
     }
@@ -1080,6 +1089,11 @@ QScrollBar::add-line, QScrollBar::sub-line, QScrollBar::add-page, QScrollBar::su
 }
 
 void LC_AIChatTranscript::add(QWidget* widget) {
+    if (m_sectionBody != nullptr) { // an open section (the Debugger's) holds what its run writes and does
+        m_sectionBody->layout()->addWidget(widget);
+        stickToBottom();
+        return;
+    }
     // everything goes above the "Thinking..." line and the bottom stretch
     m_layout->insertWidget(m_layout->indexOf(m_thinking), widget);
     stickToBottom();
@@ -1227,6 +1241,11 @@ void LC_AIChatTranscript::addAssistant(const LC_AIChatMessage& message) {
             add(card);
             continue;
         }
+        if (QWidget* card = m_cardFor ? m_cardFor(call) : nullptr) { // e.g. plan mode's plan card
+            closeGroup();
+            add(card);
+            continue;
+        }
         auto* widget = new LC_AIToolCallWidget(call, m_labelFor ? m_labelFor(call.name) : call.name, m_theme, m_content);
         m_tools.insert(call.id, widget);
         if (m_group == nullptr) {
@@ -1327,8 +1346,21 @@ void LC_AIChatTranscript::finishRun() {
     setThinking(false);
 }
 
+void LC_AIChatTranscript::openSection(QWidget* section, QWidget* body) {
+    closeGroup(); // the section's tool calls are a block of their own
+    m_sectionBody = nullptr;
+    add(section);
+    m_sectionBody = body;
+}
+
+void LC_AIChatTranscript::closeSection() {
+    closeGroup();
+    m_sectionBody = nullptr;
+}
+
 void LC_AIChatTranscript::clear() {
     finishRun();
+    m_sectionBody = nullptr;
     m_bubbles.clear();
     while (m_layout->count() > 0) {
         QLayoutItem* item = m_layout->takeAt(0);

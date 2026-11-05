@@ -44,6 +44,7 @@ LUCIDE_ICONS += ["mic", "mic-off", "loader-circle"]  # voice input in the compos
 # the composer's attachments and @-mentions (selection, view, drawing, layer, block, entity) and "Ask AI about this"
 LUCIDE_ICONS += ["paperclip", "file-text", "at-sign", "mouse-pointer-2", "scan", "drafting-compass", "layers", "box",
                  "hash"]
+LUCIDE_ICONS += ["list-checks", "bug", "circle", "circle-check", "circle-slash"]  # plan mode and the debugger
 CATALOG_PROVIDERS = ["anthropic", "openai", "google", "openrouter", "xai", "deepseek", "mistral", "groq",
                      "cerebras", "together", "fireworks", "nvidia", "huggingface", "moonshotai", "zai", "minimax",
                      "vercel-ai-gateway"]

@@ -784,6 +784,7 @@ HEADERS += \
     ui/dock_widgets/ai_assistant/lc_aiagentprogress.h \
     ui/dock_widgets/ai_assistant/lc_aicontrol.h \
     ui/dock_widgets/ai_assistant/lc_aipermissions.h \
+    ui/dock_widgets/ai_assistant/lc_aiplanmode.h \
     ui/dock_widgets/ai_assistant/lc_aibrowser.h \
     ui/dock_widgets/ai_assistant/lc_aichattranscript.h \
     ui/dock_widgets/ai_assistant/lc_aicheckpoints.h \
@@ -791,6 +792,7 @@ HEADERS += \
     ui/dock_widgets/ai_assistant/lc_aichatstore.h \
     ui/dock_widgets/ai_assistant/lc_aichatsession.h \
     ui/dock_widgets/ai_assistant/lc_aichathistorypopup.h \
+    ui/dock_widgets/ai_assistant/lc_aidebugger.h \
     ui/dock_widgets/ai_assistant/lc_aiinferencemanager.h \
     ui/dock_widgets/ai_assistant/lc_aiprovider.h \
     ui/dock_widgets/ai_assistant/lc_aigenerated.h \
@@ -1363,6 +1365,7 @@ SOURCES += \
     ui/dock_widgets/ai_assistant/lc_aiassistantwidget.cpp \
     ui/dock_widgets/ai_assistant/lc_aiapprovals.cpp \
     ui/dock_widgets/ai_assistant/lc_aipermissions.cpp \
+    ui/dock_widgets/ai_assistant/lc_aiplanmode.cpp \
     ui/dock_widgets/ai_assistant/lc_aibrowser.cpp \
     ui/dock_widgets/ai_assistant/lc_aichattranscript.cpp \
     ui/dock_widgets/ai_assistant/lc_aicheckpoints.cpp \
@@ -1370,6 +1373,7 @@ SOURCES += \
     ui/dock_widgets/ai_assistant/lc_aichatstore.cpp \
     ui/dock_widgets/ai_assistant/lc_aichatsession.cpp \
     ui/dock_widgets/ai_assistant/lc_aichathistorypopup.cpp \
+    ui/dock_widgets/ai_assistant/lc_aidebugger.cpp \
     ui/dock_widgets/ai_assistant/lc_aiinferencemanager.cpp \
     ui/dock_widgets/ai_assistant/lc_aiprovider.cpp \
     ui/dock_widgets/ai_assistant/lc_aigenerated.cpp \

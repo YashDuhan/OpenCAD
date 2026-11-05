@@ -52,6 +52,8 @@
 #include "lc_aiprovidersdialog.h"
 #include "lc_airevertbar.h"
 #include "lc_aivoiceinput.h"
+#include "lc_aidebugger.h"
+#include "lc_aiplanmode.h"
 
 namespace {
     constexpr int MIN_INPUT_HEIGHT = 64; // about two lines
@@ -265,6 +267,15 @@ LC_AIAssistantWidget::LC_AIAssistantWidget(QWidget* parent)
     connect(m_inference, &LC_AIInferenceManager::finished, this, &LC_AIAssistantWidget::onFinished);
     connect(m_inference, &LC_AIInferenceManager::failed, this, &LC_AIAssistantWidget::onFailed);
 
+    // plan mode: "Plan first" next to the approval mode, its plan cards in the conversation and its checklist
+    // pinned above it; the debugger checks a run afterwards (lc_aiplanmode, lc_aidebugger)
+    m_plan = new LC_AIPlanMode(m_theme, this);
+    actions->insertWidget(actions->indexOf(m_approvalMode) + 1, m_plan->toggle());
+    layout->insertWidget(layout->indexOf(m_transcript), m_plan->tracker());
+    m_transcript->setCardFactory([this](const LC_AIToolCall& call) { return m_plan->cardFor(call); });
+    m_debugger = new LC_AIDebugger(m_theme, this);
+    connect(m_debugger, &LC_AIDebugger::checkRequested, this, &LC_AIAssistantWidget::startDebugger);
+
     updateModelButton();
     updateSendButton();
 }
@@ -309,7 +320,8 @@ void LC_AIAssistantWidget::fitModelButton() {
     const int room = m_composer->width() - margins.left() - margins.right() - m_approvalMode->sizeHint().width()
                      - m_sendButton->sizeHint().width() - 3 * 8
                      - (m_voice->isHidden() ? 0 : m_voice->sizeHint().width() + 8)
-                     - (m_extras != nullptr ? m_extras->buttons()->sizeHint().width() + 8 : 0);
+                     - (m_extras != nullptr ? m_extras->buttons()->sizeHint().width() + 8 : 0)
+                     - (m_plan != nullptr ? m_plan->toggle()->sizeHint().width() + 8 : 0); // "Plan first"
     m_modelSelect->setFixedWidth(qBound(80, qMin(wanted, room > 0 ? room : wanted), 260));
 }
 
@@ -399,6 +411,9 @@ void LC_AIAssistantWidget::openToolPermissions() {
 
 /** Cypher's tool_call hook: allow, deny, or ask in the approval box and wait for the answer. */
 void LC_AIAssistantWidget::approve(const LC_AIToolCall& call, const std::function<void(bool, const QString&)>& answer) {
+    if (m_plan->gate(call, answer)) { // plan mode: its own tools run at once, changes wait for an approved plan
+        return;
+    }
     const LC_AIPermissions::Decision decision = LC_AIPermissions::decide(call.name, call.arguments, m_sessionAllows);
     const QString name = call.name;
     // an allowed call waits while the user has taken over the drawing
@@ -493,6 +508,7 @@ void LC_AIAssistantWidget::onSend() {
     m_messages.append(question);
     m_runTools = LC_AIControl::withControl(m_tools + LC_MCPManager::instance().aiTools());
     m_inference->setTools(m_runTools);
+    prepareRun();
     m_transcript->addUser(text, question.attachments);
     // when the request cannot start, onFailed has already taken the question back out of the history
     // and the text stays in the box, so it can be re-sent after fixing the settings
@@ -518,6 +534,8 @@ void LC_AIAssistantWidget::onNewChat() {
     m_transcript->clear();
     m_approvals->clear();
     m_sessionAllows.clear(); // "Allow for this session" lasts until a new chat
+    m_plan->reset();
+    m_runStart = -1;
     m_input->clear();
     m_extras->clear();
     focusInput();
@@ -552,6 +570,7 @@ void LC_AIAssistantWidget::onFinished() {
     m_transcript->finishRun();
     setBusy(false);
     LC_AIControl::instance().end();
+    afterRun(m_inference->wasCancelled());
 }
 
 QString LC_AIAssistantWidget::toolLabel(const QString& name) const {
@@ -564,6 +583,9 @@ QString LC_AIAssistantWidget::toolLabel(const QString& name) const {
 }
 
 void LC_AIAssistantWidget::onFailed(const QString& error) {
+    if (m_debugging && !m_messages.isEmpty() && m_messages.last().role == LC_AIChatMessage::Role::User) {
+        m_messages.removeLast(); // the debugger's request is not the user's text: it does not go back in the box
+    }
     // the question stays visible, but is not sent again as an unanswered turn
     if (!m_messages.isEmpty() && m_messages.last().role == LC_AIChatMessage::Role::User) {
         const LC_AIChatMessage failed = m_messages.takeLast();
@@ -580,6 +602,7 @@ void LC_AIAssistantWidget::onFailed(const QString& error) {
     setBusy(false);
     LC_AIControl::instance().end();
     updateModelButton();
+    afterRun(true, true);
 }
 
 void LC_AIAssistantWidget::setBusy(const bool busy) {
@@ -595,4 +618,52 @@ void LC_AIAssistantWidget::showChat(const QList<LC_AIChatMessage>& messages) {
     m_sessionAllows.clear(); // "Allow for this session" answers belong to the chat they were given in
     m_transcript->clear();
     LC_AIChatSession::replay(m_transcript, messages);
+    m_plan->reset(); // a plan belongs to the chat it was made in
+    m_runStart = -1; // a run of another chat cannot be checked from here
+}
+
+// ------------------------------------------------------------------------------------------------ plan mode and debugger
+
+void LC_AIAssistantWidget::prepareRun() {
+    m_runStart = int(m_messages.size()) - 1; // the request just added
+    m_plan->newRequest();
+    m_runTools += m_plan->tools();
+    m_inference->setTools(m_runTools);
+    m_inference->setPromptAddition(m_plan->promptAddition());
+    m_debugger->clearOffer();
+}
+
+void LC_AIAssistantWidget::startDebugger(const QString& reason) {
+    if (m_busy || m_runStart < 0 || m_runStart >= m_messages.size()) {
+        return;
+    }
+    // the pass goes on in the same conversation, so it sees the request and every call and screenshot of the run
+    LC_AIChatMessage review;
+    review.role = LC_AIChatMessage::Role::User;
+    review.text = LC_AIDebugger::reviewRequest(m_messages, m_runStart, reason);
+    m_messages.append(review);
+    m_runTools = LC_AIControl::withControl(m_tools + LC_MCPManager::instance().aiTools());
+    m_runTools += m_plan->tools();
+    m_inference->setTools(m_runTools);
+    m_inference->setPromptAddition(LC_AIDebugger::reviewerPrompt(m_runTools));
+    m_plan->setReviewing(true);
+    m_debugging = true;
+    m_debugger->beginPass(m_transcript, reason);
+    if (m_inference->send(m_messages)) {
+        setBusy(true);
+        m_transcript->setThinking(true);
+        LC_AIControl::instance().begin(qobject_cast<QMainWindow*>(window()));
+    }
+}
+
+void LC_AIAssistantWidget::afterRun(const bool stopped, const bool failed) {
+    const bool pass = m_debugging;
+    m_debugging = false;
+    m_plan->setReviewing(false);
+    m_plan->runEnded(stopped);
+    m_inference->setPromptAddition(QString());
+    const LC_AIDebugger::End end = failed ? LC_AIDebugger::End::Failed
+                                   : stopped ? LC_AIDebugger::End::Stopped
+                                             : LC_AIDebugger::End::Finished;
+    m_debugger->runEnded(m_transcript, m_messages, m_runStart, pass, end);
 }
