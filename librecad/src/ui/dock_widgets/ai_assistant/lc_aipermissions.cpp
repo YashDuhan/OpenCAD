@@ -25,10 +25,12 @@ namespace {
                                      "open_drawing", "request_clarification", "list_toolbar_buttons",
                                      // follow-ups of a button the user already let the AI press; a modal dialog
                                      // would also block the approval box
-                                     "handle_dialog", "select_entities", "look_at_app"};
+                                     "handle_dialog", "select_entities", "look_at_app",
+                                     "check_drawing"}; // the drawing checker only reads
     // tools that change the drawing: asked by default, approved by "Auto-accept edits"
     const QSet<QString> EDIT_TOOLS = {"run_command", "add_text", "press_toolbar_button", "click_drawing", "set_toolbar_value",
-                                      "tool_options", "use_panel", "use_menu", "context_menu", "press_in_app", "use_properties"};
+                                      "tool_options", "use_panel", "use_menu", "context_menu", "press_in_app", "use_properties",
+                                      "fix_drawing_issues"}; // the drawing checker's safe fixes
 
     /** Calls of edit tools that only read (describe a panel, list the menus): they need no approval. */
     bool onlyReads(const QString& toolName, const QJsonObject& arguments) {

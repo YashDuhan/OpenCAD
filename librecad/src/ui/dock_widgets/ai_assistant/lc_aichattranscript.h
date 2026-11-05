@@ -178,6 +178,8 @@ public:
     void showRetry(const QString& text);
     void finishRun();
     void clear();
+    /** A card of its own in the conversation (e.g. the drawing check's issues); the transcript takes it. */
+    void addCard(QWidget* card);
 
     // other parts of the chat in the conversation (plan mode, the debugger)
     /** A card for a tool call instead of its tool row (plan mode's plan card); the factory returns nullptr for a row. */

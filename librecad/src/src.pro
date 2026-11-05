@@ -811,6 +811,7 @@ HEADERS += \
     ui/dock_widgets/ai_assistant/lc_aiattachments.h \
     ui/dock_widgets/ai_assistant/lc_aimentions.h \
     ui/dock_widgets/ai_assistant/lc_aicomposerextras.h \
+    ui/dock_widgets/ai_assistant/lc_aidrawingchecker.h \
     ui/dock_widgets/views_list/lc_dlgnamedviewslistoptions.h \
     ui/dock_widgets/views_list/lc_namedviewsbutton.h \
     ui/dock_widgets/views_list/lc_namedviewslistoptions.h \
@@ -1397,6 +1398,7 @@ SOURCES += \
     ui/dock_widgets/ai_assistant/lc_aiattachments.cpp \
     ui/dock_widgets/ai_assistant/lc_aimentions.cpp \
     ui/dock_widgets/ai_assistant/lc_aicomposerextras.cpp \
+    ui/dock_widgets/ai_assistant/lc_aidrawingchecker.cpp \
     ui/dock_widgets/views_list/lc_dlgnamedviewslistoptions.cpp \
     ui/dock_widgets/views_list/lc_namedviewsbutton.cpp \
     ui/dock_widgets/views_list/lc_namedviewslistoptions.cpp \

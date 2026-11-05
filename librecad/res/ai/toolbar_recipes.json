@@ -11171,6 +11171,531 @@
   }
  },
  {
+  "id": "tool:check_drawing",
+  "note": "Setup draws one problem of each kind next to the fixture: a line made zero-length in its Properties dialog, a line drawn twice, two collinear lines overlapping 140..160, two lines whose ends miss by 0.14, a polyline whose end stops 0.07 short of its start, a 0.2 sliver, a red line, texts 2.5/2.5/2.5/2.45 high, the block insert I1 mirrored, a stray line at 100000,100000, and layers Walls, WALLS (both empty, look alike) and 'Door Frames!' (space, '!'). Every rule must report it; nothing is changed.",
+  "before": [
+   {
+    "tool": "run_command",
+    "args": {
+     "commands": [
+      "line",
+      "460,150",
+      "520,150",
+      "ESC",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "tool": "press_toolbar_button",
+    "args": {
+     "id": "ModifyEntity",
+     "steps": [
+      {
+       "type": "click",
+       "x": 490,
+       "y": 150
+      }
+     ]
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "leEndX",
+       "value": "460"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "run_command",
+    "args": {
+     "commands": [
+      "ESC",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "tool": "run_command",
+    "args": {
+     "commands": [
+      "line",
+      "20,-150",
+      "80,-150",
+      "ESC",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "tool": "run_command",
+    "args": {
+     "commands": [
+      "line",
+      "20,-150",
+      "80,-150",
+      "ESC",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "tool": "run_command",
+    "args": {
+     "commands": [
+      "line",
+      "100,-150",
+      "160,-150",
+      "ESC",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "tool": "run_command",
+    "args": {
+     "commands": [
+      "line",
+      "140,-150",
+      "200,-150",
+      "ESC",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "tool": "run_command",
+    "args": {
+     "commands": [
+      "line",
+      "220,-150",
+      "260,-150",
+      "ESC",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "tool": "run_command",
+    "args": {
+     "commands": [
+      "line",
+      "260.1,-150.1",
+      "300,-120",
+      "ESC",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "tool": "run_command",
+    "args": {
+     "commands": [
+      "polyline",
+      "320,-180",
+      "380,-180",
+      "380,-130",
+      "320.05,-179.95",
+      "ESC",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "tool": "run_command",
+    "args": {
+     "commands": [
+      "line",
+      "400,-150",
+      "400.2,-150",
+      "ESC",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "tool": "set_toolbar_value",
+    "args": {
+     "id": "list:pen_toolbar/colorbox",
+     "value": "Red"
+    }
+   },
+   {
+    "tool": "run_command",
+    "args": {
+     "commands": [
+      "line",
+      "450,-150",
+      "500,-150",
+      "ESC",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "tool": "set_toolbar_value",
+    "args": {
+     "id": "list:pen_toolbar/colorbox",
+     "value": "By Layer"
+    }
+   },
+   {
+    "tool": "add_text",
+    "args": {
+     "labels": [
+      {
+       "text": "A",
+       "x": 20,
+       "y": -200,
+       "height": 2.5
+      },
+      {
+       "text": "B",
+       "x": 60,
+       "y": -200,
+       "height": 2.5
+      },
+      {
+       "text": "C",
+       "x": 100,
+       "y": -200,
+       "height": 2.5
+      },
+      {
+       "text": "D",
+       "x": 140,
+       "y": -200,
+       "height": 2.45
+      }
+     ]
+    }
+   },
+   {
+    "tool": "press_toolbar_button",
+    "args": {
+     "id": "ModifyMirror",
+     "steps": [
+      {
+       "type": "click",
+       "x": 610,
+       "y": 50
+      },
+      {
+       "type": "key",
+       "text": "Enter"
+      },
+      {
+       "type": "type",
+       "text": "700,0"
+      },
+      {
+       "type": "type",
+       "text": "700,100"
+      }
+     ]
+    }
+   },
+   {
+    "tool": "run_command",
+    "args": {
+     "commands": [
+      "line",
+      "100000,100000",
+      "100010,100000",
+      "ESC",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "tool": "press_toolbar_button",
+    "args": {
+     "id": "LayersAdd"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "Layer Name",
+       "value": "Walls"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "press_toolbar_button",
+    "args": {
+     "id": "LayersAdd"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "Layer Name",
+       "value": "WALLS"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "press_toolbar_button",
+    "args": {
+     "id": "LayersAdd"
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "Layer Name",
+       "value": "Door Frames!"
+      }
+     ],
+     "button": "OK"
+    }
+   }
+  ],
+  "then": [
+   {
+    "tool": "check_drawing",
+    "args": {}
+   }
+  ],
+  "expect": {
+   "text": "(?s)(?=.*\\[zero_length\\][^\\n]*\\n- error: #\\d+ line at \\(460, 150\\) has zero length)(?=.*\\[duplicate\\][^\\n]*\\n- error: #\\d+ line at \\(50, -150\\) is an exact copy of #\\d+)(?=.*\\[overlap\\][^\\n]*\\n- warning: #\\d+ line and #\\d+ line overlap for 20 along the same line, from \\(140, -150\\) to \\(160, -150\\))(?=.*\\[endpoint_gap\\][^\\n]*\\n- warning: #\\d+ line start \\(260\\.1, -150\\.1\\) is 0\\.1414 from #\\d+ line end \\(260, -150\\))(?=.*\\[nearly_closed\\][^\\n]*\\n- warning: #\\d+ polyline is open with a gap of 0\\.0707)(?=.*\\[tiny_segment\\][^\\n]*\\n- warning: #\\d+ line \\(400, -150\\) -> \\(400\\.2, -150\\) is only 0\\.2 long)(?=.*\\[outlier\\][^\\n]*\\n- warning: #\\d+ line at \\(100005, 100000\\) is )(?=.*\\[block_insert\\][^\\n]*\\n- note: #\\d+ insert \\\"FixtureBlock\\\" at \\(800, 50\\) is mirrored)(?=.*\\[text_height\\][^\\n]*\\n- note: #\\d+ text \\\"D\\\" is 2\\.45 high, next to 3 texts at 2\\.5)(?=.*\\[layer0\\][^\\n]*\\n- note: \\d+ entities \\()(?=.*\\[empty_layer\\][^\\n]*: 2\\n)(?=.*- note: layer \\\"Walls\\\" has no entities)(?=.*- note: layer \\\"WALLS\\\" has no entities)(?=.*layer \\\"Door Frames!\\\" has spaces and has special characters \\(!\\)\\. Fix: rename it to \\\"Door_Frames\\\")(?=.*layers \\\"(Walls|WALLS)\\\", \\\"(Walls|WALLS)\\\" look like the same layer)(?=.*\\[bylayer\\][^\\n]*\\n- note: #\\d+ line on layer 0 has its own colour red)(?=.*Found 15 issue\\(s\\): 2 error\\(s\\), 5 warning\\(s\\), 8 note\\(s\\); 6 can be fixed)",
+   "no_error": true
+  }
+ },
+ {
+  "id": "tool:fix_drawing_issues",
+  "note": "The same problem geometry as tool:check_drawing (without texts, layers, mirror and stray). fix_drawing_issues deletes the zero-length line and the copy, merges the overlapping lines into 100..200, closes the polyline, moves the loose line's start onto 260,-150 and sets the red line ByLayer; the 0.2 sliver is left (it needs a decision). A second check of the fixable rules finds nothing; one Undo brings all six issues back (one undo step).",
+  "before": [
+   {
+    "tool": "run_command",
+    "args": {
+     "commands": [
+      "line",
+      "460,150",
+      "520,150",
+      "ESC",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "tool": "press_toolbar_button",
+    "args": {
+     "id": "ModifyEntity",
+     "steps": [
+      {
+       "type": "click",
+       "x": 490,
+       "y": 150
+      }
+     ]
+    }
+   },
+   {
+    "tool": "handle_dialog",
+    "args": {
+     "fields": [
+      {
+       "field": "leEndX",
+       "value": "460"
+      }
+     ],
+     "button": "OK"
+    }
+   },
+   {
+    "tool": "run_command",
+    "args": {
+     "commands": [
+      "ESC",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "tool": "run_command",
+    "args": {
+     "commands": [
+      "line",
+      "20,-150",
+      "80,-150",
+      "ESC",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "tool": "run_command",
+    "args": {
+     "commands": [
+      "line",
+      "20,-150",
+      "80,-150",
+      "ESC",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "tool": "run_command",
+    "args": {
+     "commands": [
+      "line",
+      "100,-150",
+      "160,-150",
+      "ESC",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "tool": "run_command",
+    "args": {
+     "commands": [
+      "line",
+      "140,-150",
+      "200,-150",
+      "ESC",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "tool": "run_command",
+    "args": {
+     "commands": [
+      "line",
+      "220,-150",
+      "260,-150",
+      "ESC",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "tool": "run_command",
+    "args": {
+     "commands": [
+      "line",
+      "260.1,-150.1",
+      "300,-120",
+      "ESC",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "tool": "run_command",
+    "args": {
+     "commands": [
+      "polyline",
+      "320,-180",
+      "380,-180",
+      "380,-130",
+      "320.05,-179.95",
+      "ESC",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "tool": "run_command",
+    "args": {
+     "commands": [
+      "line",
+      "400,-150",
+      "400.2,-150",
+      "ESC",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "tool": "set_toolbar_value",
+    "args": {
+     "id": "list:pen_toolbar/colorbox",
+     "value": "Red"
+    }
+   },
+   {
+    "tool": "run_command",
+    "args": {
+     "commands": [
+      "line",
+      "450,-150",
+      "500,-150",
+      "ESC",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "tool": "set_toolbar_value",
+    "args": {
+     "id": "list:pen_toolbar/colorbox",
+     "value": "By Layer"
+    }
+   }
+  ],
+  "then": [
+   {
+    "tool": "fix_drawing_issues",
+    "args": {}
+   },
+   {
+    "tool": "list_entities",
+    "args": {
+     "x1": 0,
+     "y1": -200,
+     "x2": 520,
+     "y2": -100
+    }
+   },
+   {
+    "tool": "check_drawing",
+    "args": {
+     "rules": [
+      "fixable"
+     ]
+    }
+   },
+   {
+    "tool": "press_toolbar_button",
+    "args": {
+     "id": "EditUndo"
+    }
+   },
+   {
+    "tool": "check_drawing",
+    "args": {
+     "rules": [
+      "fixable"
+     ]
+    }
+   }
+  ],
+  "expect": {
+   "text": "(?s)(?=.*Fixed 6 issue\\(s\\) in the whole drawing as one undo step)(?=.*- deleted zero-length #\\d+ line)(?=.*- deleted #\\d+ line \\(a copy of #\\d+\\))(?=.*- merged #\\d+ line and #\\d+ line into #\\d+ line)(?=.*- closed #\\d+ polyline, its ends were 0\\.0707 apart)(?=.*- moved the start of #\\d+ line from \\(260\\.1, -150\\.1\\) onto #\\d+ at \\(260, -150\\))(?=.*- set #\\d+ line ByLayer \\(was colour red)(?=.*Still in the whole drawing: 1 tiny_segment)(?=.*line layer=0 \\(100, -150\\) -> \\(200, -150\\) length=100 )(?=.*line layer=0 \\(260, -150\\) -> \\(300, -120\\))(?=.*polyline layer=0 bounds=\\(320, -180\\)\\.\\.\\(380, -130\\) length=188\\.1025)(?=.*No issues found \\(rules: zero_length, duplicate, overlap, endpoint_gap, nearly_closed, bylayer\\)[\\s\\S]*Found 6 issue\\(s\\))",
+   "no_error": true
+  }
+ },
+ {
   "id": "tool:open_drawing",
   "before": [
    {

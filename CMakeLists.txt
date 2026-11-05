@@ -2071,6 +2071,8 @@ set (SHARED_SOURCES
      librecad/src/ui/dock_widgets/ai_assistant/lc_aimentions.h
      librecad/src/ui/dock_widgets/ai_assistant/lc_aicomposerextras.cpp
      librecad/src/ui/dock_widgets/ai_assistant/lc_aicomposerextras.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aidrawingchecker.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aidrawingchecker.h
      librecad/src/ui/dock_widgets/views_list/lc_dlgnamedviewslistoptions.cpp
      librecad/src/ui/dock_widgets/views_list/lc_dlgnamedviewslistoptions.h
      librecad/src/ui/dock_widgets/views_list/lc_namedviewsbutton.cpp
