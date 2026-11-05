@@ -13,6 +13,7 @@
 #include <QElapsedTimer>
 #include <QFrame>
 #include <QHash>
+#include <QPixmap>
 #include <QScrollArea>
 #include <functional>
 
@@ -41,6 +42,15 @@ public:
     void setResult(const LC_AIToolResult& result);
     void setStopped();
     bool isDone() const { return m_done; }
+    /** Running or waiting for the user's approval: its block stays open. */
+    bool isActive() const { return m_active; }
+    bool failed() const { return m_failed; }
+    const QList<QPixmap>& images() const { return m_pixmaps; }
+    /** Shows or hides the screenshots under the row (the small thumbnail on the row toggles it). */
+    void setPreviewOpen(bool open);
+
+signals:
+    void changed();
 
 protected:
     void mouseReleaseEvent(QMouseEvent* event) override;
@@ -56,12 +66,48 @@ private:
     QLabel* m_chevron {nullptr};
     QLabel* m_statusIcon {nullptr};
     QLabel* m_statusText {nullptr};
-    QWidget* m_images {nullptr};
+    QWidget* m_thumbs {nullptr};  // tiny thumbnails on the row: there is an image
+    QWidget* m_images {nullptr};  // the screenshots, shown on demand
     QWidget* m_body {nullptr};
+    QList<QPixmap> m_pixmaps;
     LC_AIToolResult m_result;
     QElapsedTimer m_timer;
     bool m_open {false};
     bool m_done {false};
+    bool m_active {false};
+    bool m_failed {false};
+};
+
+/**
+ * Consecutive tool calls as one block, like Claude Code's "Ran 4 commands": open with a small row per call while
+ * they run, folded into one line once the AI answers. Screenshots show as tiny thumbnails on the right.
+ */
+class LC_AIToolGroup : public QFrame {
+    Q_OBJECT
+public:
+    explicit LC_AIToolGroup(const LC_AITheme& theme, QWidget* parent = nullptr);
+    void addTool(LC_AIToolCallWidget* tool);
+    /** No more calls join it (the AI wrote text, asked something, or the run ended): fold it when nothing runs. */
+    void close();
+    void setExpanded(bool expanded);
+
+protected:
+    void mouseReleaseEvent(QMouseEvent* event) override;
+
+private:
+    void updateHeader();
+
+    LC_AITheme m_theme;
+    QWidget* m_header {nullptr};
+    QLabel* m_statusIcon {nullptr};
+    QLabel* m_title {nullptr};
+    QLabel* m_chevron {nullptr};
+    QWidget* m_thumbs {nullptr};
+    QFrame* m_box {nullptr};
+    QList<LC_AIToolCallWidget*> m_tools;
+    bool m_expanded {true};
+    bool m_closed {false};
+    bool m_userChose {false}; // the user opened or folded it: leave it so
 };
 
 /**
@@ -134,6 +180,8 @@ private:
     void stickToBottom();
     /** Shows the streamed text: at most every RENDER_MS, and only its unfinished tail is laid out again. */
     void renderStream();
+    /** Text, a question or the end of the run ends the current block of tool calls. */
+    void closeGroup();
     void updateBubbleWidths();
 
 protected:
@@ -156,6 +204,7 @@ private:
     QTimer* m_renderTimer {nullptr};
     bool m_follow {true};              // keep the newest output in view (off once you scroll up)
     QHash<QString, LC_AIToolCallWidget*> m_tools; // by tool call id, for the current run
+    LC_AIToolGroup* m_group {nullptr};            // the block new tool calls join, until the AI writes text
     QList<LC_AIClarificationCard*> m_cards;       // questions of the current run, in order
     std::function<QString(const QString&)> m_labelFor;
 };

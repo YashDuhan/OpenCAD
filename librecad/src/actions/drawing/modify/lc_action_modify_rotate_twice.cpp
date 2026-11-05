@@ -76,7 +76,7 @@ void LC_ActionModifyRotateTwice::doLoadOptions() {
     setMirrorAngles(mirrorAngles);
 
     const double angle2 = loadDouble("Angle2", 0.0);
-    setAngle1(angle2);
+    setAngle2(angle2);
 
     const double angle1 = loadDouble("Angle1", 0.0);
     setAngle1(angle1);

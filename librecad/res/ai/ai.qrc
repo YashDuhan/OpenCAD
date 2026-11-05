@@ -1,0 +1,7 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/ai">
+        <file>toolbar_recipes.json</file>
+        <file>toolbar_test_report.json</file>
+    </qresource>
+</RCC>

@@ -74,9 +74,14 @@ void LC_WorkspacesInvoker::removeWorkspace([[maybe_unused]]bool on) const {
     }
 }
 
-void LC_WorkspacesInvoker::restoreWorkspace([[maybe_unused]]bool on) const {
-    const auto invocationSender = sender();
-    const auto *action = qobject_cast<QAction*>(invocationSender);
+void LC_WorkspacesInvoker::restoreWorkspace(const bool on) const {
+    restoreWorkspaceFrom(sender(), on);
+}
+
+void LC_WorkspacesInvoker::restoreWorkspaceFrom(QObject* source, [[maybe_unused]] bool on) const {
+    // the action that asked; QC_ApplicationWindow forwards its own sender here, since calling a slot
+    // directly leaves sender() empty
+    const auto *action = qobject_cast<QAction*>(source);
     if (action != nullptr) {
         const QVariant variant = action->property("_WSPS_IDX");
         if (variant.isValid()){

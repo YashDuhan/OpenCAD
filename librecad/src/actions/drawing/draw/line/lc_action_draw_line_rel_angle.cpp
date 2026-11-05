@@ -198,11 +198,13 @@ bool LC_ActionDrawLineRelAngle::doProcessCommand(const int status, const QString
         case SetPos: {
             if (!m_fixedAngle && checkCommand("angle", command)) {
                 deletePreview();
+                m_statusBeforeValue = status;
                 setStatus(SetAngle);
                 accept = true;
             }
             else if (checkCommand("length", command)) {
                 deletePreview();
+                m_statusBeforeValue = status;
                 setStatus(SetLength);
                 accept = true;
             }
@@ -219,7 +221,7 @@ bool LC_ActionDrawLineRelAngle::doProcessCommand(const int status, const QString
                 commandMessage(tr("Not a valid expression"));
             }
             updateOptions();
-            setStatus(SetPos);
+            setStatus(m_statusBeforeValue); // back to picking the base entity if none was picked yet
             break;
         }
         case SetLength: {
@@ -233,7 +235,7 @@ bool LC_ActionDrawLineRelAngle::doProcessCommand(const int status, const QString
                 commandMessage(tr("Not a valid expression"));
             }
             updateOptions();
-            setStatus(SetPos);
+            setStatus(m_statusBeforeValue);
             break;
         }
         default:

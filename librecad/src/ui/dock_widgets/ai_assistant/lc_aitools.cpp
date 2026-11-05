@@ -21,7 +21,10 @@
 #include <QTextEdit>
 #include <cmath>
 
+#include "lc_aicontrol.h"
 #include "lc_graphicviewport.h"
+#include "lc_printviewportrenderer.h"
+#include "rs_painter.h"
 #include "qc_applicationwindow.h"
 #include "qg_commandwidget.h"
 #include "rs_arc.h"
@@ -114,6 +117,15 @@ namespace {
         if (vp == nullptr) {
             return false;
         }
+        int ox = 0;
+        int oy = 0;
+        double f = 0;
+        if (LC_AIControl::instance().aiView(view, ox, oy, f) && f > 0) {
+            // the AI's own view while the user looks elsewhere
+            min = RS_Vector(-ox / f, -oy / f);
+            max = RS_Vector((vp->getWidth() - ox) / f, (vp->getHeight() - oy) / f);
+            return true;
+        }
         const RS_Vector lb = vp->getUCSViewLeftBottom();
         const RS_Vector rt = vp->getUCSViewRightTop();
         min = RS_Vector(std::numeric_limits<double>::max(), std::numeric_limits<double>::max());
@@ -153,10 +165,46 @@ namespace {
         return lines.join('\n');
     }
 
+    /** The drawing as the AI last saw it, drawn off-screen (the user has moved the visible view). */
+    QPixmap renderAIView(RS_GraphicView* view, const int ox, const int oy, const double factor) {
+        // the drawing area itself (the view widget also holds its scroll bars)
+        const int width = view->getViewPort()->getWidth() > 0 ? view->getViewPort()->getWidth() : view->width();
+        const int height = view->getViewPort()->getHeight() > 0 ? view->getViewPort()->getHeight() : view->height();
+        QPixmap pixmap(width, height);
+        pixmap.fill(Qt::black);
+        RS_Painter painter(&pixmap);
+        if (!painter.isActive() || view->getGraphic() == nullptr) {
+            return pixmap;
+        }
+        painter.setBackground(Qt::black);
+        painter.eraseRect(0, 0, pixmap.width(), pixmap.height());
+        LC_GraphicViewport viewport;
+        viewport.setSize(width, height);
+        viewport.setDocument(view->getGraphic());
+        viewport.loadSettings();
+        viewport.justSetOffsetAndFactor(ox, oy, factor);
+        LC_PrintViewportRenderer renderer(&viewport, &painter);
+        renderer.loadSettings();
+        renderer.setBackground(Qt::black);
+        renderer.setDrawingMode(RS2::ModeAuto);
+        renderer.render();
+        painter.end();
+        return pixmap;
+    }
+
     LC_AIContent screenshot(RS_GraphicView* view) {
-        view->redraw(RS2::RedrawAll, true);
-        QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
-        QPixmap pixmap = view->grab();
+        QPixmap pixmap;
+        int ox = 0;
+        int oy = 0;
+        double factor = 0;
+        if (LC_AIControl::instance().aiView(view, ox, oy, factor)) {
+            pixmap = renderAIView(view, ox, oy, factor);
+        }
+        else {
+            view->redraw(RS2::RedrawAll, true);
+            QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+            pixmap = view->grab();
+        }
         if (pixmap.width() > MAX_SCREENSHOT_EDGE || pixmap.height() > MAX_SCREENSHOT_EDGE) {
             pixmap = pixmap.scaled(MAX_SCREENSHOT_EDGE, MAX_SCREENSHOT_EDGE, Qt::KeepAspectRatio, Qt::SmoothTransformation);
         }
@@ -246,7 +294,13 @@ namespace {
             }
             default:
                 if (auto* d = dynamic_cast<RS_Dimension*>(e)) {
-                    line += QStringLiteral(" value=%1").arg(fmt(d->getMeasurement()));
+                    // the measured value each dimension type computes (arc length for an arc dimension)
+                    if (const std::optional<double> v = d->getMeasuredValue(); v.has_value()) {
+                        line += QStringLiteral(" value=%1").arg(fmt(*v));
+                    }
+                    else if (e->rtti() != RS2::EntityDimLeader) {
+                        line += QStringLiteral(" value=%1").arg(fmt(d->getMeasurement()));
+                    }
                 }
                 if (e->getMin().valid && e->getMax().valid) {
                     line += QStringLiteral(" bounds=%1..%2").arg(fmt(e->getMin()), fmt(e->getMax()));
@@ -473,6 +527,12 @@ namespace {
                 }
                 if (layer->isLocked()) {
                     flags << "locked";
+                }
+                if (!layer->isPrint()) {
+                    flags << "not printed";
+                }
+                if (layer->isConstruction()) {
+                    flags << "construction";
                 }
                 if (layer == graphic->getLayerList()->getActive()) {
                     flags << "current";
@@ -866,6 +926,26 @@ namespace {
         };
         return t;
     }
+}
+
+RS_GraphicView* LC_AITools::view() {
+    return currentView();
+}
+
+LC_AIContent LC_AITools::screenshot(RS_GraphicView* view) {
+    return ::screenshot(view);
+}
+
+QString LC_AITools::describeEntity(RS_Entity* entity) {
+    return ::describeEntity(entity);
+}
+
+QString LC_AITools::describeView(RS_GraphicView* view) {
+    return ::describeView(view);
+}
+
+QString LC_AITools::typeName(const RS_Entity* entity) {
+    return entity != nullptr ? ::typeName(entity->rtti()) : QString();
 }
 
 void LC_AITools::setViewForTests(RS_GraphicView* view) {

@@ -238,7 +238,58 @@ namespace {
             for (const QJsonValue& v : args.value("commands").toArray()) {
                 lines << v.toString();
             }
+            if (lines.isEmpty()) {
+                lines << args.value("commands").toString(); // a single line given as a string
+            }
             return lines.join("  ·  ");
+        }
+        if (name == "press_toolbar_button") {
+            // the button, then what was typed or clicked for it
+            QStringList parts{args.value("id").toString()};
+            for (const QJsonValue& v : args.value("steps").toArray()) {
+                const QJsonObject step = v.toObject();
+                const QString type = step.value("type").toString();
+                if (type == "type" || type == "key") {
+                    parts << step.value("text").toString();
+                }
+                else if (type == "click" || type == "move") {
+                    parts << QStringLiteral("%1 %2,%3").arg(type).arg(step.value("x").toDouble()).arg(step.value("y").toDouble());
+                }
+                else if (type == "drag") {
+                    parts << QStringLiteral("drag %1,%2→%3,%4").arg(step.value("x").toDouble()).arg(step.value("y").toDouble())
+                                 .arg(step.value("x2").toDouble()).arg(step.value("y2").toDouble());
+                }
+            }
+            return parts.join("  ·  ");
+        }
+        if (name == "click_drawing") {
+            return QStringLiteral("%1, %2").arg(args.value("x").toDouble()).arg(args.value("y").toDouble());
+        }
+        if (name == "handle_dialog" || name == "tool_options") {
+            QStringList parts;
+            for (const QJsonValue& v : args.value("fields").toArray()) {
+                parts << QStringLiteral("%1 = %2").arg(v.toObject().value("field").toString(),
+                                                      v.toObject().value("value").toVariant().toString());
+            }
+            if (!args.value("file_path").toString().isEmpty()) {
+                parts << args.value("file_path").toString();
+            }
+            if (!args.value("button").toString().isEmpty()) {
+                parts << args.value("button").toString();
+            }
+            return parts.join("  ·  ");
+        }
+        if (name == "select_entities") {
+            if (args.value("all").toBool()) {
+                return QStringLiteral("all");
+            }
+            if (args.value("ids").isArray()) {
+                QStringList ids;
+                for (const QJsonValue& v : args.value("ids").toArray()) {
+                    ids << "#" + QString::number(v.toInteger());
+                }
+                return ids.join(" ");
+            }
         }
         if (name == "zoom_to_area" || name == "list_entities") {
             if (args.contains("x1")) {
@@ -252,8 +303,8 @@ namespace {
         if (name == "pan") {
             return QStringLiteral("dx %1, dy %2").arg(args.value("dx").toDouble()).arg(args.value("dy").toDouble());
         }
-        QString first = pick({"description", "prompt", "query", "path", "file_path", "url", "command", "pattern", "task",
-                              "project_id", "name", "type", "layer", "prefix"});
+        QString first = pick({"description", "prompt", "query", "path", "file_path", "url", "command", "id", "pattern", "task",
+                              "project_id", "name", "type", "layer", "prefix", "toolbar", "search", "value"});
         if (args.value("kinds").isArray()) {
             QStringList kinds;
             for (const QJsonValue& v : args.value("kinds").toArray()) {
@@ -313,6 +364,38 @@ namespace {
         dialog->show();
     }
 
+    constexpr int TINY_THUMB_HEIGHT = 18; // the small image on a tool row: there is a screenshot
+
+    /** A very small thumbnail on a row's right side; a click shows or hides the screenshots. */
+    class TinyThumb : public QLabel {
+    public:
+        TinyThumb(const QPixmap& full, std::function<void()> onClick, QWidget* parent)
+            : QLabel(parent), m_onClick(std::move(onClick)) {
+            const qreal dpr = devicePixelRatioF();
+            QPixmap thumb = full.scaledToHeight(qRound(TINY_THUMB_HEIGHT * dpr), Qt::SmoothTransformation);
+            if (thumb.width() > qRound(32 * dpr)) {
+                thumb = thumb.copy((thumb.width() - qRound(32 * dpr)) / 2, 0, qRound(32 * dpr), thumb.height());
+            }
+            thumb.setDevicePixelRatio(dpr);
+            setPixmap(thumb);
+            setObjectName("toolThumb");
+            setCursor(Qt::PointingHandCursor);
+            setToolTip(QObject::tr("Show or hide the screenshot"));
+        }
+
+    protected:
+        void mouseReleaseEvent(QMouseEvent* event) override {
+            if (event->button() == Qt::LeftButton && m_onClick) {
+                m_onClick();
+            }
+            event->accept(); // not a click on the row
+        }
+        void mousePressEvent(QMouseEvent* event) override { event->accept(); }
+
+    private:
+        std::function<void()> m_onClick;
+    };
+
     /** A clickable thumbnail (.tool-image) that opens the full image. */
     class Thumbnail : public QLabel {
     public:
@@ -356,9 +439,7 @@ LC_AIToolCallWidget::LC_AIToolCallWidget(const LC_AIToolCall& call, const QStrin
     row->setSpacing(7);
     const qreal dpr = devicePixelRatioF();
     m_chevron = new QLabel(m_row);
-    m_chevron->setPixmap(LC_AIIcons::lucide("chevron-right", 13, theme.textSecondary, dpr));
-    auto* wrench = new QLabel(m_row);
-    wrench->setPixmap(LC_AIIcons::lucide("wrench", 13, theme.textSecondary, dpr));
+    m_chevron->setPixmap(LC_AIIcons::lucide("chevron-right", 12, theme.textFaint, dpr));
     auto* name = new QLabel(label, m_row);
     name->setObjectName("toolName");
     auto* summary = new ElidedLabel(m_row);
@@ -368,17 +449,22 @@ LC_AIToolCallWidget::LC_AIToolCallWidget(const LC_AIToolCall& call, const QStrin
     m_statusIcon = new QLabel(m_row);
     m_statusText = new QLabel(m_row);
     m_statusText->setObjectName("toolStatus");
-    row->addWidget(m_chevron);
-    row->addWidget(wrench);
+    m_thumbs = new QWidget(m_row);
+    auto* thumbs = new QHBoxLayout(m_thumbs);
+    thumbs->setContentsMargins(0, 0, 0, 0);
+    thumbs->setSpacing(3);
+    m_thumbs->hide();
     row->addWidget(name);
     row->addWidget(summary, 1);
+    row->addWidget(m_thumbs);
     row->addWidget(m_statusIcon);
     row->addWidget(m_statusText);
+    row->addWidget(m_chevron);
     layout->addWidget(m_row);
 
     m_images = new QWidget(this);
     auto* images = new QHBoxLayout(m_images);
-    images->setContentsMargins(28, 4, 8, 8);
+    images->setContentsMargins(10, 2, 8, 8);
     images->setSpacing(8);
     m_images->hide();
     layout->addWidget(m_images);
@@ -399,20 +485,25 @@ void LC_AIToolCallWidget::setStatus(const QString& icon, const QString& text, co
     }
     m_statusText->setText(text);
     m_statusText->setStyleSheet(QStringLiteral("color: %1;").arg(color.name()));
+    emit changed();
 }
 
 void LC_AIToolCallWidget::setRunning() {
     m_timer.start();
+    m_active = true;
     setStatus("loader", tr("Running"), STATUS_RUNNING);
 }
 
 void LC_AIToolCallWidget::setAwaitingApproval() {
+    m_active = true;
     setStatus("hourglass", tr("Awaiting approval"), QColor("#fbbf24"));
 }
 
 void LC_AIToolCallWidget::setResult(const LC_AIToolResult& result) {
     m_result = result;
     m_done = true;
+    m_active = false;
+    m_failed = result.isError;
     const qint64 ms = m_timer.isValid() ? m_timer.elapsed() : 0;
     const QString time = ms < 1000 ? QStringLiteral("%1ms").arg(ms) : QStringLiteral("%1s").arg(ms / 1000.0, 0, 'f', 1);
     static const QRegularExpression blocked(QStringLiteral("user denied this tool call|denied by the user's tool permissions"));
@@ -425,26 +516,44 @@ void LC_AIToolCallWidget::setResult(const LC_AIToolResult& result) {
     else {
         setStatus("check", time, STATUS_DONE);
     }
-    // screenshots are what the user wants to see: thumbnails under the row (like show: true in Cypher)
+    // screenshots: a tiny thumbnail on the row says there is one; a click on it shows them under the row
     auto* images = static_cast<QHBoxLayout*>(m_images->layout());
+    auto* thumbs = static_cast<QHBoxLayout*>(m_thumbs->layout());
     for (const LC_AIContent& c : result.content) {
         if (c.type == LC_AIContent::Type::Image) {
             QPixmap pixmap;
             if (pixmap.loadFromData(c.data)) {
+                m_pixmaps << pixmap;
                 images->addWidget(new Thumbnail(pixmap, m_images));
+                if (m_pixmaps.size() <= 2) {
+                    thumbs->addWidget(new TinyThumb(pixmap, [this] { setPreviewOpen(m_images->isHidden()); }, m_thumbs));
+                }
             }
         }
     }
-    if (images->count() > 0) {
+    if (!m_pixmaps.isEmpty()) {
         images->addStretch(1);
-        m_images->show();
+        if (m_pixmaps.size() > 2) {
+            auto* more = new QLabel(QStringLiteral("+%1").arg(m_pixmaps.size() - 2), m_thumbs);
+            more->setObjectName("toolSummary");
+            thumbs->addWidget(more);
+        }
+        m_thumbs->show();
     }
     if (m_open) {
         buildBody();
     }
+    emit changed();
+}
+
+void LC_AIToolCallWidget::setPreviewOpen(const bool open) {
+    if (!m_pixmaps.isEmpty()) {
+        m_images->setVisible(open);
+    }
 }
 
 void LC_AIToolCallWidget::setStopped() {
+    m_active = false;
     if (!m_done) {
         m_done = true;
         setStatus(QString(), tr("Stopped"), m_theme.textFaint);
@@ -460,7 +569,7 @@ void LC_AIToolCallWidget::mouseReleaseEvent(QMouseEvent* event) {
 
 void LC_AIToolCallWidget::setOpen(const bool open) {
     m_open = open;
-    m_chevron->setPixmap(LC_AIIcons::lucide(open ? "chevron-down" : "chevron-right", 13, m_theme.textSecondary, devicePixelRatioF()));
+    m_chevron->setPixmap(LC_AIIcons::lucide(open ? "chevron-down" : "chevron-right", 12, m_theme.textFaint, devicePixelRatioF()));
     setProperty("open", open);
     style()->unpolish(this);
     style()->polish(this);
@@ -502,6 +611,140 @@ void LC_AIToolCallWidget::buildBody() {
         if (!text.isEmpty()) {
             section(tr("Result"), text, m_result.isError);
         }
+    }
+}
+
+// ------------------------------------------------------------------------------------------------ tool block
+
+LC_AIToolGroup::LC_AIToolGroup(const LC_AITheme& theme, QWidget* parent)
+    : QFrame(parent), m_theme(theme) {
+    setObjectName("toolGroup");
+    auto* layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0, 2, 0, 2);
+    layout->setSpacing(3);
+
+    m_header = new QWidget(this);
+    m_header->setObjectName("toolGroupHeader");
+    m_header->setAttribute(Qt::WA_Hover);
+    m_header->setCursor(Qt::PointingHandCursor);
+    auto* row = new QHBoxLayout(m_header);
+    row->setContentsMargins(6, 3, 6, 3);
+    row->setSpacing(6);
+    m_statusIcon = new QLabel(m_header);
+    m_title = new QLabel(m_header);
+    m_title->setObjectName("toolGroupTitle");
+    m_chevron = new QLabel(m_header);
+    m_thumbs = new QWidget(m_header);
+    auto* thumbs = new QHBoxLayout(m_thumbs);
+    thumbs->setContentsMargins(0, 0, 0, 0);
+    thumbs->setSpacing(3);
+    row->addWidget(m_statusIcon);
+    row->addWidget(m_title);
+    row->addWidget(m_chevron);
+    row->addStretch(1);
+    row->addWidget(m_thumbs);
+    layout->addWidget(m_header);
+
+    m_box = new QFrame(this);
+    m_box->setObjectName("toolGroupBox");
+    auto* box = new QVBoxLayout(m_box);
+    box->setContentsMargins(4, 3, 4, 3);
+    box->setSpacing(0);
+    layout->addWidget(m_box);
+    updateHeader();
+}
+
+void LC_AIToolGroup::addTool(LC_AIToolCallWidget* tool) {
+    auto* box = static_cast<QVBoxLayout*>(m_box->layout());
+    if (!m_tools.isEmpty()) {
+        auto* line = new QFrame(m_box);
+        line->setObjectName("toolGroupLine");
+        line->setFixedHeight(1);
+        box->addWidget(line);
+    }
+    tool->setParent(m_box);
+    box->addWidget(tool);
+    m_tools << tool;
+    connect(tool, &LC_AIToolCallWidget::changed, this, &LC_AIToolGroup::updateHeader);
+    if (!m_userChose) {
+        setExpanded(true); // open while the AI works
+    }
+    updateHeader();
+}
+
+void LC_AIToolGroup::close() {
+    m_closed = true;
+    updateHeader();
+}
+
+void LC_AIToolGroup::setExpanded(const bool expanded) {
+    m_expanded = expanded;
+    m_box->setVisible(expanded);
+    m_chevron->setPixmap(LC_AIIcons::lucide(expanded ? "chevron-down" : "chevron-right", 13, m_theme.textMuted, devicePixelRatioF()));
+    m_thumbs->setVisible(!expanded); // the rows show their own thumbnails
+}
+
+void LC_AIToolGroup::mouseReleaseEvent(QMouseEvent* event) {
+    if (event->button() == Qt::LeftButton && m_header->geometry().contains(event->position().toPoint())) {
+        m_userChose = true;
+        setExpanded(!m_expanded);
+    }
+    QFrame::mouseReleaseEvent(event);
+}
+
+void LC_AIToolGroup::updateHeader() {
+    int active = 0;
+    int failed = 0;
+    QList<QPixmap> images;
+    for (LC_AIToolCallWidget* t : std::as_const(m_tools)) {
+        active += t->isActive() ? 1 : 0;
+        failed += t->failed() ? 1 : 0;
+        images << t->images();
+    }
+    const int n = m_tools.size();
+    const qreal dpr = devicePixelRatioF();
+    QString title;
+    if (active > 0) {
+        title = n == 1 ? tr("Running a command") : tr("Running %1 commands").arg(n);
+        m_statusIcon->setPixmap(LC_AIIcons::lucide("loader", 13, STATUS_RUNNING, dpr));
+        m_statusIcon->show();
+    }
+    else {
+        title = n == 1 ? tr("Ran a command") : tr("Ran %1 commands").arg(n);
+        if (failed > 0) {
+            title += tr(", %1 failed").arg(failed);
+            m_statusIcon->setPixmap(LC_AIIcons::lucide("circle-alert", 13, STATUS_ERROR, dpr));
+            m_statusIcon->show();
+        }
+        else {
+            m_statusIcon->hide();
+        }
+    }
+    m_title->setText(title);
+    // the last screenshots as tiny thumbnails on the right of the folded block
+    auto* thumbs = static_cast<QHBoxLayout*>(m_thumbs->layout());
+    while (QLayoutItem* item = thumbs->takeAt(0)) {
+        delete item->widget();
+        delete item;
+    }
+    const int shown = qMin(3, static_cast<int>(images.size()));
+    for (int i = images.size() - shown; i < images.size(); ++i) {
+        thumbs->addWidget(new TinyThumb(images[i], [this] { m_userChose = true; setExpanded(true); }, m_thumbs));
+    }
+    if (images.size() > shown) {
+        auto* more = new QLabel(QStringLiteral("+%1").arg(images.size() - shown), m_thumbs);
+        more->setObjectName("toolSummary");
+        thumbs->addWidget(more);
+    }
+    // folded once the AI has moved on and nothing runs or waits for approval
+    if (m_closed && active == 0 && !m_userChose && m_expanded) {
+        setExpanded(false);
+    }
+    else if (active > 0 && !m_expanded && !m_userChose) {
+        setExpanded(true);
+    }
+    else {
+        m_thumbs->setVisible(!m_expanded && !images.isEmpty());
     }
 }
 
@@ -758,12 +1001,18 @@ LC_AIChatTranscript::LC_AIChatTranscript(const LC_AITheme& theme, QWidget* paren
 #aiTranscript, #aiTranscriptContent { background: transparent; }
 #userBubble { border: 1px solid %8; border-radius: 12px; background: %9; padding: 8px 14px; }
 #aiThinkingText { font-size: 12.5px; color: %5; }
-#tool { border: 1px solid transparent; border-radius: 10px; background: transparent; }
-#tool[open="true"] { border-color: %1; background: %2; }
-#toolRow { border-radius: 8px; background: transparent; }
+#toolGroup { background: transparent; }
+#toolGroupHeader { border-radius: 7px; background: transparent; }
+#toolGroupHeader:hover { background: %3; }
+#toolGroupTitle { font-size: 13px; color: %5; }
+#toolGroupBox { border: 1px solid %1; border-radius: 10px; background: %2; }
+#toolGroupLine { background: %1; border: none; margin: 0 6px; }
+#tool { border: none; border-radius: 8px; background: transparent; }
+#toolRow { border-radius: 7px; background: transparent; }
 #toolRow:hover { background: %3; }
-#toolName { font-size: 13px; font-weight: 500; }
-#toolSummary { font-family: %4; font-size: 12px; color: %5; }
+#toolName { font-size: 12.5px; font-weight: 500; }
+#toolSummary { font-family: %4; font-size: 11.5px; color: %5; }
+#toolThumb { border: 1px solid %7; border-radius: 3px; }
 #toolStatus { font-size: 12px; }
 #toolSectionLabel { font-size: 11.5px; font-weight: 500; color: %5; }
 #toolPre, #toolPreError { font-family: %4; font-size: 12px; background: %6; border-radius: 6px; padding: 8px 10px; }
@@ -882,8 +1131,16 @@ void LC_AIChatTranscript::resizeEvent(QResizeEvent* event) {
     updateBubbleWidths();
 }
 
+void LC_AIChatTranscript::closeGroup() {
+    if (m_group != nullptr) {
+        m_group->close();
+        m_group = nullptr;
+    }
+}
+
 void LC_AIChatTranscript::appendDelta(const QString& text) {
     if (m_streaming == nullptr) {
+        closeGroup(); // the AI is writing: the commands before it fold away
         m_streamText.clear();
         m_streamFrozen = 0;
         m_streamLabels.clear();
@@ -939,6 +1196,7 @@ void LC_AIChatTranscript::addAssistant(const LC_AIChatMessage& message) {
         m_streamLabels.clear();
     }
     else if (!message.text.isEmpty()) {
+        closeGroup();
         add(textBlock(message.text));
     }
     for (const LC_AIToolCall& call : message.toolCalls) {
@@ -951,12 +1209,18 @@ void LC_AIChatTranscript::addAssistant(const LC_AIChatMessage& message) {
             }
             auto* card = new LC_AIClarificationCard(call.arguments.value("question").toString(), choices.mid(0, 8), m_theme, m_content);
             m_cards << card;
+            closeGroup();
             add(card);
             continue;
         }
         auto* widget = new LC_AIToolCallWidget(call, m_labelFor ? m_labelFor(call.name) : call.name, m_theme, m_content);
         m_tools.insert(call.id, widget);
-        add(widget);
+        if (m_group == nullptr) {
+            m_group = new LC_AIToolGroup(m_theme, m_content);
+            add(m_group);
+        }
+        m_group->addTool(widget);
+        stickToBottom();
     }
 }
 
@@ -1031,6 +1295,7 @@ void LC_AIChatTranscript::finishRun() {
         w->setStopped(); // calls that never ran (the run was stopped)
     }
     m_tools.clear();
+    closeGroup();
     for (LC_AIClarificationCard* card : std::as_const(m_cards)) {
         card->setStopped(); // questions left unanswered
     }

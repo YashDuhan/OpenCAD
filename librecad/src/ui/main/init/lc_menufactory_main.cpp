@@ -22,6 +22,7 @@
  */
 
 #include "lc_menufactory_main.h"
+#include "lc_aiagentprogress.h"
 
 #include <QDesktopServices>
 #include <QDockWidget>
@@ -81,6 +82,7 @@ void LC_MenuFactoryMain::doCreateMenus(QMenuBar* menuBar, const bool firstCreati
         createToolsMenu(menuBar, topMenuMenus);
         createWorkspaceMenu(menuBar, topMenuMenus);
         prepareWorkspaceMenuComponents();
+        topMenuMenus << LC_AIAgentProgress::menu(m_appWin); // the AI: every button and tool, tested and ready for tasks
         createHelpMenu(menuBar, topMenuMenus);
     }
     else {
@@ -111,6 +113,7 @@ void LC_MenuFactoryMain::doCreateMenus(QMenuBar* menuBar, const bool firstCreati
             }
         }
         topMenuMenus << m_menusHolder->m_menuWorkspace;
+        topMenuMenus << LC_AIAgentProgress::menu(m_appWin);
         topMenuMenus << m_menusHolder->m_menuHelp;
     }
 

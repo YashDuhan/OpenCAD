@@ -258,9 +258,10 @@ void LC_ActionDrawCenterLine::onMouseRightButtonRelease([[maybe_unused]] const i
 
 bool LC_ActionDrawCenterLine::doProcessCommand(const int status, const QString &command) {
     bool accept = false;
-    if (checkCommand(command, "offset")){
+    if (checkCommand("offset", command)){
         m_mainStatus = status;
         setStatus(SetOffset);
+        accept = true; // the option word itself; otherwise the command line runs the global Offset tool
     }
     else{
         bool ok = false;

@@ -2710,7 +2710,7 @@ void QC_ApplicationWindow::removeWorkspace(const bool on) {
 }
 
 void QC_ApplicationWindow::restoreWorkspace(const bool on) {
-    m_workspacesInvoker->restoreWorkspace(on);
+    m_workspacesInvoker->restoreWorkspaceFrom(sender(), on);
 }
 
 void QC_ApplicationWindow::restoreNamedView1() {

@@ -21,6 +21,8 @@
  ******************************************************************************/
 #include "lc_toolbarfactory.h"
 
+#include <QTimer>
+
 #include <QMenu>
 #include <QToolButton>
 #include <QSettings>
@@ -296,6 +298,8 @@ QToolBar* LC_ToolbarFactory::createAIToolbar(const QSizePolicy &tbPolicy) const 
     toggle->setToolTip(tr("Open / close the AI assistant sidebar (Ctrl+L)"));
     toggle->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_L));
     connect(toggle, &QAction::toggled, sidebar, &LC_AISidebar::setOpen);
+    // the AI chat is open whenever OpenCAD starts (Ctrl+L or the AI button closes it)
+    QTimer::singleShot(0, toggle, [toggle] { toggle->setChecked(true); });
     result->setToolButtonStyle(Qt::ToolButtonTextOnly);
     result->addAction(toggle);
     if (auto* button = qobject_cast<QToolButton*>(result->widgetForAction(toggle))) {

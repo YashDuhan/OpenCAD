@@ -36,10 +36,17 @@ class LC_AIAssistantWidget : public QWidget {
 public:
     explicit LC_AIAssistantWidget(QWidget* parent = nullptr);
     void focusInput();
+    /** Puts a task in the message box (sent at once when send is true), ready for the user to finish. */
+    void startTask(const QString& prompt, bool send = false);
+    /** The tools the AI can use now: OpenCAD's own and those of connected MCP servers. */
+    QList<LC_AITool> availableTools() const;
+    /** Opens the AI sidebar of this window and starts a task in it. */
+    static void openWithTask(QWidget* window, const QString& prompt, bool send = false);
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
     void showEvent(QShowEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
 
 private:
     void onSend();
@@ -51,6 +58,9 @@ private:
     void approve(const LC_AIToolCall& call, const std::function<void(bool, const QString&)>& answer);
     void openModelPicker();
     void updateSendButton();
+    void fitModelButton();
+    /** The message box grows with its text, up to almost half the panel, then scrolls. */
+    void fitInputHeight();
     void onDelta(const QString& text);
     void onMessageAdded(const LC_AIChatMessage& message);
     void onToolStarted(const LC_AIToolCall& call);

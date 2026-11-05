@@ -22,9 +22,13 @@ namespace {
     // tools that only look at the drawing or move the view: allowed by default
     const QSet<QString> READ_ONLY = {"capture_view", "get_view", "zoom_to_fit", "zoom_to_area", "zoom", "pan",
                                      "get_drawing_info", "list_entities", "list_commands", "view_image_file",
-                                     "open_drawing", "request_clarification"};
+                                     "open_drawing", "request_clarification", "list_toolbar_buttons",
+                                     // follow-ups of a button the user already let the AI press; a modal dialog
+                                     // would also block the approval box
+                                     "handle_dialog", "select_entities"};
     // tools that change the drawing: asked by default, approved by "Auto-accept edits"
-    const QSet<QString> EDIT_TOOLS = {"run_command", "add_text"};
+    const QSet<QString> EDIT_TOOLS = {"run_command", "add_text", "press_toolbar_button", "click_drawing", "set_toolbar_value",
+                                      "tool_options"};
 
     QString permissionText(const LC_AIPermissions::Permission p) {
         switch (p) {
@@ -40,6 +44,18 @@ namespace {
 
     /** Built-in safety rule: deleting entities asks even in Auto mode (Cypher's "ask" guardrails). */
     QString safetyRule(const QString& toolName, const QJsonObject& arguments) {
+        if (toolName == "press_toolbar_button") {
+            // buttons that delete entities, or close, write or print files, ask even in Auto mode
+            static const QRegularExpression risky(QStringLiteral("^(ModifyDelete\\w*|ModifyDeleteQuick|EditCut|LayersRemove|"
+                                                                 "BlocksRemove|FileClose\\w*|FileSave\\w*|FileExport\\w*|"
+                                                                 "FilePrint|FilePrintPDF|BlocksSave)$"),
+                                                  QRegularExpression::CaseInsensitiveOption);
+            const QString id = arguments.value("id").toString().trimmed();
+            if (risky.match(id).hasMatch()) {
+                return QStringLiteral("Safety rule: \"%1\" deletes, closes or writes files").arg(id);
+            }
+            return {};
+        }
         if (toolName != "run_command") {
             return {};
         }
@@ -194,7 +210,7 @@ LC_AIPermissions::Decision LC_AIPermissions::decide(const QString& toolName, con
         d.permission = Permission::Ask;
         d.reason = rule;
         d.ruleAsked = true;
-        d.key = "rule:delete";
+        d.key = toolName == "press_toolbar_button" ? "rule:button:" + arguments.value("id").toString() : QStringLiteral("rule:delete");
     }
     else {
         d.permission = p;

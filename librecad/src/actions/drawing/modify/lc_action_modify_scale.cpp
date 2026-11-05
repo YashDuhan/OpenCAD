@@ -92,7 +92,7 @@ void LC_ActionModifyScale::doLoadOptions() {
     setFactorX(factorX);
 
     const double factorY = loadDouble("FactorY", 1.0);
-    setFactorX(factorY);
+    setFactorY(factorY);
 
     const bool isotrophic = loadBool("Isotropic", true);
     setIsotropicScaling(isotrophic);

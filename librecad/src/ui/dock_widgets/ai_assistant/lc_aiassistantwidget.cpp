@@ -9,6 +9,16 @@
  */
 #include "lc_aiassistantwidget.h"
 
+#include <QResizeEvent>
+#include <QTimer>
+#include <QFontMetrics>
+#include <QAbstractTextDocumentLayout>
+#include <QTextBlock>
+#include <QtMath>
+#include <QAction>
+#include <QMainWindow>
+#include <QTextCursor>
+
 #include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QImage>
@@ -29,6 +39,8 @@
 
 #include "lc_aiapprovals.h"
 #include "lc_aibrowser.h"
+#include "lc_aitoolbar.h"
+#include "lc_aicontrol.h"
 #include "lc_aichattranscript.h"
 #include "lc_aicredentials.h"
 #include "lc_aiicons.h"
@@ -37,9 +49,30 @@
 #include "lc_mcpmanager.h"
 #include "lc_aiprovidersdialog.h"
 
+namespace {
+    constexpr int MIN_INPUT_HEIGHT = 64; // about two lines
+    constexpr int MAX_INPUT_LINES = 12;  // then it scrolls (and never more than a third of the panel)
+
+    /** The model's name, shortened with "…" only when the row has no room for all of it. */
+    class ElidingLabel : public QLabel {
+    public:
+        using QLabel::QLabel;
+        QSize sizeHint() const override { return {fontMetrics().horizontalAdvance(text()) + 2, QLabel::sizeHint().height()}; }
+        QSize minimumSizeHint() const override { return {fontMetrics().horizontalAdvance(QStringLiteral("Gem…")), QLabel::sizeHint().height()}; }
+
+    protected:
+        void paintEvent(QPaintEvent*) override {
+            QPainter p(this);
+            p.setPen(palette().color(foregroundRole()));
+            p.drawText(rect(), Qt::AlignLeft | Qt::AlignVCenter, fontMetrics().elidedText(text(), Qt::ElideRight, width()));
+        }
+    };
+}
+
 LC_AIAssistantWidget::LC_AIAssistantWidget(QWidget* parent)
     : QWidget(parent), m_inference(new LC_AIInferenceManager(this)), m_theme(LC_AITheme::current()) {
     m_tools = LC_AITools::all();
+    m_tools << LC_AIToolbar::tools(); // every toolbar button, its dialogs, clicks and selection
     // ZeroDrive's requestClarification: the AI asks you one question and waits for the answer
     LC_AITool ask;
     ask.name = "request_clarification";
@@ -111,6 +144,11 @@ LC_AIAssistantWidget::LC_AIAssistantWidget(QWidget* parent)
     m_inference->setApprover([this](const LC_AIToolCall& call, std::function<void(bool, const QString&)> answer) {
         approve(call, answer);
     });
+    connect(&LC_AIControl::instance(), &LC_AIControl::stopRequested, this, [this] {
+        if (m_busy) {
+            onStop();
+        }
+    });
 
     // composer, as in Cypher: the input on top, the model select and the send button below it
     const LC_AITheme& t = m_theme;
@@ -119,6 +157,9 @@ LC_AIAssistantWidget::LC_AIAssistantWidget(QWidget* parent)
     m_composer->setStyleSheet(QStringLiteral(R"(
 #composer { background: %1; border: 1px solid %2; border-radius: 14px; }
 #composer QPlainTextEdit { background: transparent; border: none; color: %3; font-size: 13.5px; padding: 0; }
+#composer QScrollBar:vertical { background: transparent; width: 8px; margin: 2px; }
+#composer QScrollBar::handle:vertical { background: %2; border-radius: 3px; min-height: 30px; }
+#composer QScrollBar::add-line, #composer QScrollBar::sub-line, #composer QScrollBar::add-page, #composer QScrollBar::sub-page { background: none; height: 0; width: 0; }
 #modelSelect { border: none; border-radius: 8px; background: transparent; padding: 0 9px; min-height: 32px; max-height: 32px; text-align: left; }
 #modelSelect:hover { background: %4; }
 #modelSelect QLabel { background: transparent; color: %3; font-size: 12px; }
@@ -138,9 +179,10 @@ LC_AIAssistantWidget::LC_AIAssistantWidget(QWidget* parent)
     inputPalette.setColor(QPalette::PlaceholderText, t.textPlaceholder);
     inputPalette.setColor(QPalette::Text, t.textPrimary);
     m_input->setPalette(inputPalette);
-    m_input->setFixedHeight(64);
+    m_input->setFixedHeight(MIN_INPUT_HEIGHT);
     m_input->installEventFilter(this);
     connect(m_input, &QPlainTextEdit::textChanged, this, &LC_AIAssistantWidget::updateSendButton);
+    connect(m_input, &QPlainTextEdit::textChanged, this, &LC_AIAssistantWidget::fitInputHeight);
     composerLayout->addWidget(m_input);
 
     auto* actions = new QHBoxLayout();
@@ -152,15 +194,13 @@ LC_AIAssistantWidget::LC_AIAssistantWidget(QWidget* parent)
     actions->addStretch(1);
     m_modelSelect = new QPushButton(m_composer);
     m_modelSelect->setObjectName("modelSelect");
-    m_modelSelect->setMinimumWidth(96);
-    m_modelSelect->setMaximumWidth(160);
-    m_modelSelect->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    m_modelSelect->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed); // as wide as the model's name (fitModelButton)
     m_modelSelect->setCursor(Qt::PointingHandCursor);
     auto* selectLayout = new QHBoxLayout(m_modelSelect);
     selectLayout->setContentsMargins(9, 0, 9, 0);
     selectLayout->setSpacing(8);
     m_modelIcon = new QLabel(m_modelSelect);
-    m_modelName = new QLabel(m_modelSelect);
+    m_modelName = new ElidingLabel(m_modelSelect);
     auto* chevron = new QLabel(m_modelSelect);
     QColor chevronColor = t.textPrimary;
     chevronColor.setAlphaF(0.4);
@@ -207,6 +247,44 @@ void LC_AIAssistantWidget::focusInput() {
     m_input->setFocus();
 }
 
+void LC_AIAssistantWidget::startTask(const QString& prompt, const bool send) {
+    m_input->setPlainText(prompt);
+    QTextCursor cursor = m_input->textCursor();
+    cursor.movePosition(QTextCursor::End);
+    m_input->setTextCursor(cursor);
+    m_input->setFocus();
+    if (send) {
+        onSend();
+    }
+}
+
+QList<LC_AITool> LC_AIAssistantWidget::availableTools() const {
+    return m_tools + LC_MCPManager::instance().aiTools();
+}
+
+void LC_AIAssistantWidget::openWithTask(QWidget* window, const QString& prompt, const bool send) {
+    QWidget* top = window != nullptr ? window->window() : nullptr;
+    if (top == nullptr) {
+        return;
+    }
+    if (auto* toggle = top->findChild<QAction*>("AIAssistantToggle"); toggle != nullptr && !toggle->isChecked()) {
+        toggle->setChecked(true); // opens the sidebar
+    }
+    if (auto* chat = top->findChild<LC_AIAssistantWidget*>()) {
+        chat->startTask(prompt, send);
+    }
+}
+
+void LC_AIAssistantWidget::fitModelButton() {
+    // a push button sizes itself by its own text, not by the labels laid out inside it: give it their width,
+    // as far as the row has room next to the approval mode and send buttons (the name is shortened then)
+    const int wanted = m_modelSelect->layout()->sizeHint().width();
+    const QMargins margins = m_composer->layout()->contentsMargins();
+    const int room = m_composer->width() - margins.left() - margins.right() - m_approvalMode->sizeHint().width()
+                     - m_sendButton->sizeHint().width() - 3 * 8;
+    m_modelSelect->setFixedWidth(qBound(80, qMin(wanted, room > 0 ? room : wanted), 260));
+}
+
 void LC_AIAssistantWidget::updateModelButton() {
     LC_AICredentials& creds = LC_AICredentials::instance();
     const QString id = creds.selectedProvider();
@@ -223,6 +301,7 @@ void LC_AIAssistantWidget::updateModelButton() {
         painter.end();
         m_modelIcon->setPixmap(dot);
         m_modelName->setText(tr("Select"));
+        fitModelButton();
         m_modelName->setStyleSheet(QStringLiteral("color: %1;").arg(m_theme.textFaint.name()));
         m_modelSelect->setToolTip(tr("Choose a model"));
         return;
@@ -237,7 +316,8 @@ void LC_AIAssistantWidget::updateModelButton() {
     }
     m_modelIcon->setPixmap(LC_AIIcons::provider(id, 13, m_theme.textPrimary, dpr));
     m_modelName->setStyleSheet(QString());
-    m_modelName->setText(m_modelName->fontMetrics().elidedText(name, Qt::ElideRight, 105));
+    m_modelName->setText(name); // shortened with "…" only when there is no room
+    fitModelButton();
     m_modelSelect->setToolTip(id + "/" + model);
 }
 
@@ -292,8 +372,11 @@ void LC_AIAssistantWidget::openToolPermissions() {
 /** Cypher's tool_call hook: allow, deny, or ask in the approval box and wait for the answer. */
 void LC_AIAssistantWidget::approve(const LC_AIToolCall& call, const std::function<void(bool, const QString&)>& answer) {
     const LC_AIPermissions::Decision decision = LC_AIPermissions::decide(call.name, call.arguments, m_sessionAllows);
+    const QString name = call.name;
+    // an allowed call waits while the user has taken over the drawing
+    const auto run = [name, answer] { LC_AIControl::instance().beforeTool(name, [answer] { answer(true, QString()); }); };
     if (decision.permission == LC_AIPermissions::Permission::Allow) {
-        answer(true, QString());
+        run();
         return;
     }
     if (decision.permission == LC_AIPermissions::Permission::Deny) {
@@ -304,7 +387,7 @@ void LC_AIAssistantWidget::approve(const LC_AIToolCall& call, const std::functio
     const QString key = decision.key;
     const QString toolName = call.name;
     const QString callId = call.id;
-    m_approvals->add(call, toolLabel(call.name), decision, [this, answer, key, toolName, callId](const LC_AIApprovalBox::Choice choice) {
+    m_approvals->add(call, toolLabel(call.name), decision, [this, answer, key, toolName, callId, run](const LC_AIApprovalBox::Choice choice) {
         switch (choice) {
             case LC_AIApprovalBox::Choice::Session:
                 m_sessionAllows.insert(key);
@@ -319,8 +402,14 @@ void LC_AIAssistantWidget::approve(const LC_AIToolCall& call, const std::functio
                 break;
         }
         m_transcript->toolStarted({callId, toolName, {}, {}});
-        answer(true, QString());
+        run();
     });
+}
+
+void LC_AIAssistantWidget::resizeEvent(QResizeEvent* event) {
+    QWidget::resizeEvent(event);
+    fitInputHeight(); // the limit is a share of the panel's height
+    fitModelButton(); // the model's name gets the room the row has
 }
 
 void LC_AIAssistantWidget::showEvent(QShowEvent* event) {
@@ -329,7 +418,28 @@ void LC_AIAssistantWidget::showEvent(QShowEvent* event) {
     LC_MCPManager::instance().connectAll();
 }
 
+void LC_AIAssistantWidget::fitInputHeight() {
+    // the height the box's own layout gives its lines (wrapped at the box's width), plus its frame and margins
+    QTextDocument* doc = m_input->document();
+    QAbstractTextDocumentLayout* layout = doc->documentLayout();
+    qreal textHeight = 0;
+    for (QTextBlock block = doc->begin(); block.isValid(); block = block.next()) {
+        textHeight += layout->blockBoundingRect(block).height();
+    }
+    const int chrome = m_input->height() - m_input->viewport()->height() + qRound(2 * doc->documentMargin()) + 2;
+    const int lines = m_input->fontMetrics().lineSpacing();
+    const int maxHeight = qMax(MIN_INPUT_HEIGHT, qMin(MAX_INPUT_LINES * lines + chrome, int(height() * 0.35)));
+    const int target = qBound(MIN_INPUT_HEIGHT, qCeil(textHeight) + chrome, maxHeight);
+    if (target != m_input->height()) {
+        m_input->setFixedHeight(target);
+    }
+}
+
 bool LC_AIAssistantWidget::eventFilter(QObject* watched, QEvent* event) {
+    if (watched == m_input && event->type() == QEvent::Resize
+        && static_cast<QResizeEvent*>(event)->oldSize().width() != static_cast<QResizeEvent*>(event)->size().width()) {
+        QTimer::singleShot(0, this, &LC_AIAssistantWidget::fitInputHeight); // the text wraps differently
+    }
     if (watched == m_input && event->type() == QEvent::KeyPress) {
         const auto* keyEvent = static_cast<QKeyEvent*>(event);
         if ((keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter)
@@ -352,7 +462,7 @@ void LC_AIAssistantWidget::onSend() {
     question.role = LC_AIChatMessage::Role::User;
     question.text = text;
     m_messages.append(question);
-    m_runTools = m_tools + LC_MCPManager::instance().aiTools();
+    m_runTools = LC_AIControl::withControl(m_tools + LC_MCPManager::instance().aiTools());
     m_inference->setTools(m_runTools);
     m_transcript->addUser(text);
     // when the request cannot start, onFailed has already taken the question back out of the history
@@ -361,6 +471,8 @@ void LC_AIAssistantWidget::onSend() {
         m_input->clear();
         setBusy(true);
         m_transcript->setThinking(true);
+        // the AI drives the drawing now; the user can look around, take over or stop
+        LC_AIControl::instance().begin(qobject_cast<QMainWindow*>(window()));
     }
 }
 
@@ -404,6 +516,7 @@ void LC_AIAssistantWidget::onFinished() {
     }
     m_transcript->finishRun();
     setBusy(false);
+    LC_AIControl::instance().end();
 }
 
 QString LC_AIAssistantWidget::toolLabel(const QString& name) const {
@@ -427,6 +540,7 @@ void LC_AIAssistantWidget::onFailed(const QString& error) {
     m_transcript->finishRun();
     m_transcript->addError(error);
     setBusy(false);
+    LC_AIControl::instance().end();
     updateModelButton();
 }
 

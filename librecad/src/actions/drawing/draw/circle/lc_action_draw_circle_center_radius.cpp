@@ -137,9 +137,11 @@ bool LC_ActionDrawCircleCenterRadius::doProcessCommand(const int status, const Q
             // fixme - review processing and add more messages if needed
             const double r = RS_Math::eval(command, &ok);
             if (ok && r > RS_TOLERANCE) {
-               m_radius = r;
+                m_radius = r;
                 accept = true;
-                trigger();
+                // like LibreCAD's original Center, Radius: keep the radius and ask for the centre; drawing here
+                // would place a circle wherever the cursor happened to be (for typed input: the origin)
+                setStatus(SetCenter);
             }
             else {
                 commandMessage(tr("Not a valid expression"));

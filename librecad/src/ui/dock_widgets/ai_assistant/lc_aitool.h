@@ -64,11 +64,24 @@ struct LC_AITool {
 };
 
 /** The CAD tools (view, drawing, command line) that act on OpenCAD's current drawing. */
+class RS_Entity;
 class RS_GraphicView;
 namespace LC_AITools {
     QList<LC_AITool> all();
     /** Tests only: act on this view instead of the main window's current one (nullptr: back to normal). */
     void setViewForTests(RS_GraphicView* view);
+
+    // shared with the other tool sets
+    /** The view of the drawing the tools act on, or nullptr when no drawing is open. */
+    RS_GraphicView* view();
+    /** A PNG screenshot of the view, at most 1280 px on its longer edge. */
+    LC_AIContent screenshot(RS_GraphicView* view);
+    /** One line with the entity's id, type, layer and exact geometry, as list_entities prints it. */
+    QString describeEntity(RS_Entity* entity);
+    /** The visible area and the drawing extents. */
+    QString describeView(RS_GraphicView* view);
+    /** The type name list_entities uses ("line", "circle", "dim_linear", ...). */
+    QString typeName(const RS_Entity* entity);
 }
 
 #endif

@@ -1,0 +1,1445 @@
+{
+ "when": "2026-11-06T01:24",
+ "results": [
+  {
+   "id": "DrawLine",
+   "status": "passed",
+   "detail": "+3 entities"
+  },
+  {
+   "id": "DrawLineAngle",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawLineHorizontal",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawLineVertical",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawLineParallelThrough",
+   "status": "passed",
+   "detail": "+2 entities"
+  },
+  {
+   "id": "DrawLineParallel",
+   "status": "passed",
+   "detail": "+2 entities"
+  },
+  {
+   "id": "DrawLineBisector",
+   "status": "passed",
+   "detail": "+2 entities"
+  },
+  {
+   "id": "DrawLineTangent1",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawLineTangent2",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawLineOrthTan",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawLineOrthogonal",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawLineRelAngle",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawLineRel",
+   "status": "passed",
+   "detail": "+3 entities"
+  },
+  {
+   "id": "DrawLineRelX",
+   "status": "passed",
+   "detail": "+2 entities"
+  },
+  {
+   "id": "DrawLineRelY",
+   "status": "passed",
+   "detail": "+2 entities"
+  },
+  {
+   "id": "DrawLineDirect",
+   "status": "passed",
+   "detail": "+2 entities"
+  },
+  {
+   "id": "DrawLineAngleRel",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawLineOrthogonalRel",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawLineFromPointToLine",
+   "status": "passed",
+   "detail": "+2 entities"
+  },
+  {
+   "id": "DrawSliceDivideLine",
+   "status": "passed",
+   "detail": "+2 entities"
+  },
+  {
+   "id": "DrawSliceDivideCircle",
+   "status": "passed",
+   "detail": "+5 entities"
+  },
+  {
+   "id": "DrawCross",
+   "status": "passed",
+   "detail": "+6 entities"
+  },
+  {
+   "id": "DrawLineMiddle",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawLineRadiant",
+   "status": "passed",
+   "detail": "+2 entities"
+  },
+  {
+   "id": "DrawPoint",
+   "status": "passed",
+   "detail": "+3 entities"
+  },
+  {
+   "id": "DrawLinePoints",
+   "status": "passed",
+   "detail": "+4 entities"
+  },
+  {
+   "id": "DrawPointsMiddle",
+   "status": "passed",
+   "detail": "+3 entities"
+  },
+  {
+   "id": "DrawPointLattice",
+   "status": "passed",
+   "detail": "+6 entities"
+  },
+  {
+   "id": "SelectPoints",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "PasteToPoints",
+   "status": "passed",
+   "detail": "+2 entities, -2 entities"
+  },
+  {
+   "id": "DrawLineRectangle",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawLineRectangle1Point",
+   "status": "passed",
+   "detail": "+4 entities"
+  },
+  {
+   "id": "DrawLineRectangle2Points",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawLineRectangle3Points",
+   "status": "passed",
+   "detail": "+4 entities"
+  },
+  {
+   "id": "DrawLinePolygonCenCor",
+   "status": "passed",
+   "detail": "+6 entities"
+  },
+  {
+   "id": "DrawLinePolygonCenTan",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawLinePolygonCorCor",
+   "status": "passed",
+   "detail": "+6 entities"
+  },
+  {
+   "id": "DrawLinePolygonSideSide",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawStar",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawCircle",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawCircle2P",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawCircle2PR",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawCircle3P",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawCircleCR",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawCircleTan2_1P",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawCircleTan1_2P",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawCircleTan2",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawCircleTan3",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawCircleInscribe",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawCircleParallel",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawCircleByArc",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "DrawArc",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawArcChord",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawArcAngleLen",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawArc3P",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawArc2PAngle",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawArc2PRadius",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawArc2PLength",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawArc2PHeight",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawArcTangential",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawEllipseArcAxis",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawEllipseArc1Point",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawEllipse1Point",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawEllipseAxis",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawEllipseFociPoint",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawEllipse4Points",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawEllipseCenter3Points",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawEllipseInscribe",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawPolyline",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "PolylineAdd",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "PolylineAppend",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "PolylineDel",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "PolylineDelBetween",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "PolylineTrim",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "PolylineEquidistant",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "PolylineSegment",
+   "status": "passed",
+   "detail": "+1 entities, -2 entities"
+  },
+  {
+   "id": "PolylineArcToLines",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "PolylineSegmentType",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "DeselectAll",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "SelectAll",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "SelectSingle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "SelectContour",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "SelectWindow",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "DeselectWindow",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "SelectIntersected",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "DeselectIntersected",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "SelectLayer",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "SelectInvert",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "SelectQuick",
+   "status": "passed",
+   "detail": "dialog Quick Select, Quick Select"
+  },
+  {
+   "id": "DimAligned",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DimLinear",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DimLinearHor",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DimLinearVer",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DimBaseline",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DimContinue",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DimRadial",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DimDiametric",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DimAngular",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DimArc",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DimLeader",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DimOrdinate",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DimOrdinateForBase",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "DimOrdinateReBase",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "DimPickApply",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "DimRegenerate",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "DimStyles",
+   "status": "passed",
+   "detail": "+1 entities, dialog Drawing Preferences, Dimension style editing - Standard, Drawing Preferences, Dimension style editing - Standard"
+  },
+  {
+   "id": "DrawText",
+   "status": "passed",
+   "detail": "+1 entities, dialog Text"
+  },
+  {
+   "id": "DrawMText",
+   "status": "passed",
+   "detail": "+1 entities, dialog MText"
+  },
+  {
+   "id": "DrawHatch",
+   "status": "passed",
+   "detail": "+1 entities, dialog Choose Hatch Attributes"
+  },
+  {
+   "id": "DrawImage",
+   "status": "passed",
+   "detail": "+1 entities, dialog Open Image"
+  },
+  {
+   "id": "DrawBoundingBox",
+   "status": "passed",
+   "detail": "+4 entities"
+  },
+  {
+   "id": "ModifyMove",
+   "status": "passed",
+   "detail": "+2 entities, -1 entities"
+  },
+  {
+   "id": "ModifyDuplicate",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "ModifyAlign",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "ModifyAlignOne",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "ModifyAlignRef",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "ModifyRotate",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "ModifyScale",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "ModifyMirror",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "ModifyMoveRotate",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "ModifyRotate2",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "ModifyRevertDirection",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "ModifyTrim",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "ModifyTrim2",
+   "status": "passed",
+   "detail": "+2 entities, -2 entities"
+  },
+  {
+   "id": "ModifyTrimAmount",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "ModifyLineJoin",
+   "status": "passed",
+   "detail": "+2 entities, -2 entities"
+  },
+  {
+   "id": "ModifyCut",
+   "status": "passed",
+   "detail": "+2 entities, -1 entities"
+  },
+  {
+   "id": "ModifyBreakDivide",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "ModifyLineGap",
+   "status": "passed",
+   "detail": "+2 entities, -1 entities"
+  },
+  {
+   "id": "ModifyOffset",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "ModifyBevel",
+   "status": "passed",
+   "detail": "+3 entities, -2 entities"
+  },
+  {
+   "id": "ModifyRound",
+   "status": "passed",
+   "detail": "+3 entities, -2 entities"
+  },
+  {
+   "id": "ModifyStretch",
+   "status": "passed",
+   "detail": "+2 entities, -2 entities"
+  },
+  {
+   "id": "ModifyEntity",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities, dialog Circle Properties"
+  },
+  {
+   "id": "ModifyAttributes",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities, dialog Attributes, Line Properties"
+  },
+  {
+   "id": "ModifyExplodeText",
+   "status": "passed",
+   "detail": "+5 entities, -1 entities"
+  },
+  {
+   "id": "BlocksExplode",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "ModifyDelete",
+   "status": "passed",
+   "detail": "-1 entities"
+  },
+  {
+   "id": "InfoPoint",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "InfoDist",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "InfoDist2",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "InfoDist3",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "InfoAngle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "InfoAngle3Points",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "InfoTotalLength",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "InfoArea",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "EntityInfo",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "DrawSpline",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawSplinePoints",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawSplineFromPolyline",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "DrawSplinePointsAppend",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "DrawSplinePointsAdd",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "DrawSplinePointsRemove",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "DrawSplinePointsDelTwo",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "DrawSplineExplode",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawLineFree",
+   "status": "passed",
+   "detail": "+2 entities"
+  },
+  {
+   "id": "DrawParabola4Points",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawParabolaFD",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "DrawHyperbolaFP",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "OrderTop",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "OrderBottom",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "OrderRaise",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "OrderLower",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "FileNew",
+   "status": "passed",
+   "detail": "-13 entities"
+  },
+  {
+   "id": "FileNewTemplate",
+   "status": "passed",
+   "detail": "+13 entities, -13 entities, dialog Open Drawing"
+  },
+  {
+   "id": "FileOpen",
+   "status": "passed",
+   "detail": "+13 entities, dialog Open Drawing"
+  },
+  {
+   "id": "FileSave",
+   "status": "passed",
+   "detail": "+14 entities, -14 entities"
+  },
+  {
+   "id": "FileSaveAs",
+   "status": "passed",
+   "detail": "+13 entities, -13 entities, dialog Save Drawing as"
+  },
+  {
+   "id": "FileSaveAll",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities, dialog Save Drawing as"
+  },
+  {
+   "id": "FilePrint",
+   "status": "passed",
+   "detail": "dialog Print"
+  },
+  {
+   "id": "FilePrintPreview",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "EditKillAllActions",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "SelectionModeToggle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "EntityDescriptionInfo",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "EditUndo",
+   "status": "passed",
+   "detail": "-1 entities"
+  },
+  {
+   "id": "EditRedo",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "EditCut",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "EditCopy",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "EditPaste",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "EditPasteTransform",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "ViewGrid",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "ViewDraft",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "ViewLinesDraft",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "ViewAntialiasing",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "ZoomRedraw",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "ZoomIn",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "ZoomOut",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "ZoomAuto",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "ZoomPrevious",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "ZoomWindow",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "ZoomPan",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "ZoomViewSave",
+   "status": "passed",
+   "detail": "dialog New View"
+  },
+  {
+   "id": "ZoomViewRestore",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "list:views_toolbar/NamedViews",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "UCSCreate",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "UCSSetWCS",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "list:ucs_toolbar/UCSList",
+   "status": "passed",
+   "detail": "+3 entities"
+  },
+  {
+   "id": "WorkspaceCreate",
+   "status": "passed",
+   "detail": "dialog New Workspace, Remove Workspace"
+  },
+  {
+   "id": "WorkspaceRemove",
+   "status": "passed",
+   "detail": "dialog Remove Workspace, Remove Workspace"
+  },
+  {
+   "id": "WorkspaceRestore",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "list:workspaces_toolbar/WorkspaceList",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "SnapVisual",
+   "status": "passed",
+   "detail": "+2 entities"
+  },
+  {
+   "id": "SnapVisualLock",
+   "status": "passed",
+   "detail": "+2 entities"
+  },
+  {
+   "id": "SnapVisualAutoAddSnap",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "SnapVisualAutoAddSnapLast",
+   "status": "passed",
+   "detail": "+4 entities"
+  },
+  {
+   "id": "SnapVisualAngleSnap",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "SnapVisualRelAngleSnap",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "SnapVisualDynDistance",
+   "status": "passed",
+   "detail": "+16 entities, -13 entities"
+  },
+  {
+   "id": "SnapVisualDistanceTan",
+   "status": "passed",
+   "detail": "+16 entities, -13 entities"
+  },
+  {
+   "id": "SnapVisualShowFarGuides",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "ExclusiveSnapMode",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "SnapMiddleManual",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "SnapFree",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "SnapAngle",
+   "status": "passed",
+   "detail": "+2 entities"
+  },
+  {
+   "id": "SnapGrid",
+   "status": "passed",
+   "detail": "+2 entities"
+  },
+  {
+   "id": "SnapEnd",
+   "status": "passed",
+   "detail": "+2 entities"
+  },
+  {
+   "id": "SnapEntity",
+   "status": "passed",
+   "detail": "+2 entities"
+  },
+  {
+   "id": "SnapCenter",
+   "status": "passed",
+   "detail": "+2 entities"
+  },
+  {
+   "id": "SnapMiddle",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "SnapDistance",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "SnapIntersection",
+   "status": "passed",
+   "detail": "+2 entities"
+  },
+  {
+   "id": "RestrictHorizontal",
+   "status": "passed",
+   "detail": "+2 entities"
+  },
+  {
+   "id": "RestrictVertical",
+   "status": "passed",
+   "detail": "+2 entities"
+  },
+  {
+   "id": "RestrictOrthogonal",
+   "status": "passed",
+   "detail": "+3 entities"
+  },
+  {
+   "id": "RestrictNothing",
+   "status": "skipped",
+   "detail": "The app hides this button (QG_SnapToolBar calls setVisible(false) on it, see qg_snaptoolbar.cpp:119), and a hidden QAction is always disabled in Qt, so neither a person nor press_toolbar_button can press it (the press is refused: \"Restrict Nothing\" is disabled right now). Clearing the restrictions i"
+  },
+  {
+   "id": "SetRelativeZero",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "LockRelativeZero",
+   "status": "passed",
+   "detail": "+2 entities"
+  },
+  {
+   "id": "list:pen_toolbar/colorbox",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "list:pen_toolbar/widthbox",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "list:pen_toolbar/lineTypebox",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "PenSyncFromLayer",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "PenPick",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "PenPickResolved",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "PenApply",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "PenCopy",
+   "status": "passed",
+   "detail": "+1 entities, -1 entities"
+  },
+  {
+   "id": "EntityLayerActivate",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "EntityLayerView",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "EntityLayerHideOthers",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "EntityLayerLock",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "EntityLayerConstruction",
+   "status": "passed",
+   "detail": "dialog Layer Settings"
+  },
+  {
+   "id": "EntityLayerPrint",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "LayersDefreezeAll",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "InfoCursorEnable",
+   "status": "passed",
+   "detail": "dialog Application Preferences"
+  },
+  {
+   "id": "InfoCursorAbs",
+   "status": "passed",
+   "detail": "dialog Application Preferences"
+  },
+  {
+   "id": "InfoCursorSnap",
+   "status": "passed",
+   "detail": "dialog Application Preferences"
+  },
+  {
+   "id": "InfoCursorRel",
+   "status": "passed",
+   "detail": "dialog Application Preferences"
+  },
+  {
+   "id": "InfoCursorPrompt",
+   "status": "passed",
+   "detail": "dialog Application Preferences"
+  },
+  {
+   "id": "InfoCursorCatchedEntity",
+   "status": "passed",
+   "detail": "dialog Application Preferences"
+  },
+  {
+   "id": "LeftDockAreaToggle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "RightDockAreaToggle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "TopDockAreaToggle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "BottomDockAreaToggle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "FloatingDockwidgetsToggle",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "InvokeMenuCreator",
+   "status": "passed",
+   "detail": "dialog Custom Menu Creator, Menu Assignment - , Custom Menu Creator, Menu Assignment - , Custom Menu Creator"
+  },
+  {
+   "id": "InvokeToolbarCreator",
+   "status": "passed",
+   "detail": "dialog Custom Toolbar Creator, Custom Toolbar Creator, Custom Toolbar Creator, Custom Toolbar Creator, Export custom toolbars, Custom Toolbars Export"
+  },
+  {
+   "id": "OptionsGeneral",
+   "status": "passed",
+   "detail": "-13 entities, dialog Application Preferences, Application Preferences"
+  },
+  {
+   "id": "OptionsDrawing",
+   "status": "passed",
+   "detail": "dialog Drawing Preferences"
+  },
+  {
+   "id": "AIAssistantToggle",
+   "status": "skipped",
+   "detail": "the AI's own sidebar button: the AI does not press it"
+  },
+  {
+   "id": "tool:capture_view",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "tool:get_view",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "tool:zoom_to_fit",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "tool:zoom_to_area",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "tool:zoom",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "tool:pan",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "tool:get_drawing_info",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "tool:list_entities",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "tool:list_commands",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "tool:run_command",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "tool:add_text",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "tool:open_drawing",
+   "status": "passed",
+   "detail": "+13 entities"
+  },
+  {
+   "id": "tool:view_image_file",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "tool:list_toolbar_buttons",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "tool:press_toolbar_button",
+   "status": "passed",
+   "detail": "+1 entities"
+  },
+  {
+   "id": "tool:click_drawing",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "tool:select_entities",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "tool:tool_options",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "tool:handle_dialog",
+   "status": "passed",
+   "detail": "dialog Drawing Preferences, Drawing Preferences"
+  },
+  {
+   "id": "tool:set_toolbar_value",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "tool:test_toolbar_buttons",
+   "status": "skipped",
+   "detail": "it is the button test runner itself (it runs every test on this page)"
+  },
+  {
+   "id": "tool:request_clarification",
+   "status": "skipped",
+   "detail": "asks you a question in the chat and waits for your answer; try it from the chat"
+  },
+  {
+   "id": "tool:browser_search",
+   "status": "skipped",
+   "detail": "needs the internet; try it from the chat"
+  },
+  {
+   "id": "tool:browser_navigate",
+   "status": "skipped",
+   "detail": "needs the internet; try it from the chat"
+  },
+  {
+   "id": "tool:browser_read",
+   "status": "skipped",
+   "detail": "needs a page opened from the internet; try it from the chat"
+  },
+  {
+   "id": "tool:browser_snapshot",
+   "status": "skipped",
+   "detail": "needs a page opened from the internet; try it from the chat"
+  },
+  {
+   "id": "tool:browser_click",
+   "status": "skipped",
+   "detail": "needs a page opened from the internet; try it from the chat"
+  },
+  {
+   "id": "tool:browser_scroll",
+   "status": "skipped",
+   "detail": "needs a page opened from the internet; try it from the chat"
+  },
+  {
+   "id": "tool:browser_back",
+   "status": "skipped",
+   "detail": "needs pages opened from the internet; try it from the chat"
+  },
+  {
+   "id": "tool:browser_screenshot",
+   "status": "skipped",
+   "detail": "needs a page opened from the internet; try it from the chat"
+  }
+ ]
+}

@@ -38,6 +38,7 @@ public:
      void applyWorkspaceById(int id) const;
      void removeWorkspace(bool on) const;
      void restoreWorkspace(bool on) const;
+     void restoreWorkspaceFrom(QObject* source, bool on) const;
      void init() const;
      void persist() const;
      bool hasWorkspaces() const;

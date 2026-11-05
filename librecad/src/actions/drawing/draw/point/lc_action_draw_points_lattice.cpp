@@ -227,7 +227,7 @@ void LC_ActionDrawPointsLattice::onCoordinateEvent(const int status, [[maybe_unu
 
 bool LC_ActionDrawPointsLattice::doProcessCommand(const int status, const QString &command) {
     bool accept = false;
-    if (checkCommand("cols", command)){
+    if (checkCommand("columns", command)){
         m_majorStatus = status;
         setStatus(SetNumXPoints);
         accept = true;
@@ -270,7 +270,7 @@ bool LC_ActionDrawPointsLattice::doProcessCommand(const int status, const QStrin
 }
 
 QStringList LC_ActionDrawPointsLattice::getAvailableCommands() {
-    return {command("cols"), command("rows"),command("p4off"), command("p4on")};
+    return {command("columns"), command("rows"),command("p4off"), command("p4on")};
 }
 
 void LC_ActionDrawPointsLattice::updateActionPrompt() {

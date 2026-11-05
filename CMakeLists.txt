@@ -399,6 +399,7 @@ set (LIBRECAD_RES
      librecad/res/icons/icons.qrc
      librecad/res/images/images.qrc
      licenses/licenses.qrc
+     librecad/res/ai/ai.qrc
 )
 
 include("${CMAKE_CURRENT_SOURCE_DIR}/libraries/libdxfrw/libdxfrw_sources.cmake")
@@ -2014,6 +2015,12 @@ set (SHARED_SOURCES
      librecad/src/ui/dock_widgets/ai_assistant/lc_aiprovidersdialog.h
      librecad/src/ui/dock_widgets/ai_assistant/lc_aitool.h
      librecad/src/ui/dock_widgets/ai_assistant/lc_aitools.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aitoolbar.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aitoolbar.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aiagentprogress.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aiagentprogress.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aicontrol.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aicontrol.h
      librecad/src/ui/dock_widgets/ai_assistant/lc_aisidebar.cpp
      librecad/src/ui/dock_widgets/ai_assistant/lc_aisidebar.h
      librecad/src/ui/dock_widgets/views_list/lc_dlgnamedviewslistoptions.cpp

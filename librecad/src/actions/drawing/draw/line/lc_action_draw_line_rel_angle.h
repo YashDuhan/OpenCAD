@@ -75,6 +75,7 @@ protected:
      * Is the angle fixed?
      */
     bool m_fixedAngle = false;
+    int m_statusBeforeValue = 0; // where typing "angle" or "length" came from (SetEntity or SetPos)
 
     void doInitWithContextEntity(RS_Entity* contextEntity, const RS_Vector& clickPos) override;
     LC_ActionOptionsWidget* createOptionsWidget() override;

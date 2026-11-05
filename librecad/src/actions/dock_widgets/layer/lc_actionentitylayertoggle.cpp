@@ -92,11 +92,11 @@ void LC_ActionLayerToggle::updateActionPromptForSelection() {
             break;
         }
         case RS2::ActionLayerEntityToggleConstruction: {
-            updatePromptTRCancel("Select entity to toggle layer print");
+            updatePromptTRCancel("Select entity to toggle layer construction");
             break;
         }
         case RS2::ActionLayerEntityTogglePrint: {
-            updatePromptTRCancel("Select entity to toggle layer construction");
+            updatePromptTRCancel("Select entity to toggle layer print");
             break;
         }
         default:

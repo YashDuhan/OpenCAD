@@ -1119,6 +1119,27 @@ const LC_CommandItem g_commandList[] = {
 
     // translations
 inline std::vector<std::pair<LC_CommandText, LC_CommandText>> g_transList={
+        // option words the tools offer that had no entry, so they were shown blank and could not be typed
+        {"altpoint",LC_CommandText(QT_TRANSLATE_NOOP("QObject", "altpoint"), true)},
+        {"normpoint",LC_CommandText(QT_TRANSLATE_NOOP("QObject", "normpoint"), true)},
+        {"edge_both",LC_CommandText(QT_TRANSLATE_NOOP("QObject", "edge_both"), true)},
+        {"edge_end",LC_CommandText(QT_TRANSLATE_NOOP("QObject", "edge_end"), true)},
+        {"edge_none",LC_CommandText(QT_TRANSLATE_NOOP("QObject", "edge_none"), true)},
+        {"edge_start",LC_CommandText(QT_TRANSLATE_NOOP("QObject", "edge_start"), true)},
+        {"fix",LC_CommandText(QT_TRANSLATE_NOOP("QObject", "fix"), true)},
+        {"nofix",LC_CommandText(QT_TRANSLATE_NOOP("QObject", "nofix"), true)},
+        {"exit",LC_CommandText(QT_TRANSLATE_NOOP("QObject", "exit"), true)},
+        {"p4off",LC_CommandText(QT_TRANSLATE_NOOP("QObject", "p4off"), true)},
+        {"p4on",LC_CommandText(QT_TRANSLATE_NOOP("QObject", "p4on"), true)},
+        {"taa",LC_CommandText(QT_TRANSLATE_NOOP("QObject", "taa"), true)},
+        {"tan",LC_CommandText(QT_TRANSLATE_NOOP("QObject", "tan"), true)},
+        {"tar",LC_CommandText(QT_TRANSLATE_NOOP("QObject", "tar"), true)},
+        {"aa",LC_CommandText(QT_TRANSLATE_NOOP("QObject", "aa"), true)},
+        {"li",LC_CommandText(QT_TRANSLATE_NOOP("QObject", "li"), true)},
+        {"kill",LC_CommandText(QT_TRANSLATE_NOOP("QObject", "kill"), true)},
+        {"pl",LC_CommandText(QT_TRANSLATE_NOOP("QObject", "pl"), true)},
+        {"point",LC_CommandText(QT_TRANSLATE_NOOP("QObject", "point"), true)},
+        {"polyline",LC_CommandText(QT_TRANSLATE_NOOP("QObject", "polyline"), true)},
         {"angle",LC_CommandText(QT_TRANSLATE_NOOP("QObject", "angle"), true)},
         {"angle1",LC_CommandText(QT_TRANSLATE_NOOP("QObject", "angle1"), true)},
         {"angle2",LC_CommandText(QT_TRANSLATE_NOOP("QObject", "angle2"), true)},
@@ -1294,10 +1315,10 @@ inline std::vector<std::pair<LC_CommandText, LC_CommandText>> g_transList={
         {LC_CommandText(QT_TRANSLATE_NOOP("QObject", "through"), true),"through"},
         {LC_CommandText QT_TRANSLATE_NOOP3("QObject", "t", "through"),"through"},
 
-        {LC_CommandText(QT_TRANSLATE_NOOP("QObject", "undo"), true),"undo cycle"},
+        {LC_CommandText(QT_TRANSLATE_NOOP("QObject", "undo"), true),"undo"}, // the tool option "undo" (was "undo cycle", which no tool accepts)
         {LC_CommandText QT_TRANSLATE_NOOP3("QObject", "u", "undo cycle"),"undo"},
 
-        {LC_CommandText(QT_TRANSLATE_NOOP("QObject", "redo"), true),"redo cycle"},
+        {LC_CommandText(QT_TRANSLATE_NOOP("QObject", "redo"), true),"redo"}, // the tool option "redo" (was "redo cycle", which no tool accepts)
         {LC_CommandText QT_TRANSLATE_NOOP3("QObject", "r", "redo redo cycle"),"redo"},
 
         {LC_CommandText(QT_TRANSLATE_NOOP("QObject", "back"), true),"back"},

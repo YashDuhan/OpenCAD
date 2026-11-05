@@ -392,6 +392,7 @@ RESOURCES += ../res/gdt/gdt.qrc
 RESOURCES += ../res/icons/icons.qrc
 RESOURCES += ../res/images/images.qrc
 RESOURCES += ../../licenses/licenses.qrc
+RESOURCES += ../res/ai/ai.qrc
 
 
 # ################################################################################
@@ -768,6 +769,9 @@ HEADERS += \
     ui/dock_widgets/ucs_list/lc_ucslistwidget.h \
     ui/dock_widgets/ai_assistant/lc_aiassistantwidget.h \
     ui/dock_widgets/ai_assistant/lc_aiapprovals.h \
+    ui/dock_widgets/ai_assistant/lc_aitoolbar.h \
+    ui/dock_widgets/ai_assistant/lc_aiagentprogress.h \
+    ui/dock_widgets/ai_assistant/lc_aicontrol.h \
     ui/dock_widgets/ai_assistant/lc_aipermissions.h \
     ui/dock_widgets/ai_assistant/lc_aibrowser.h \
     ui/dock_widgets/ai_assistant/lc_aichattranscript.h \
@@ -1350,6 +1354,9 @@ SOURCES += \
     ui/dock_widgets/ai_assistant/lc_aimodelpicker.cpp \
     ui/dock_widgets/ai_assistant/lc_aiprovidersdialog.cpp \
     ui/dock_widgets/ai_assistant/lc_aitools.cpp \
+    ui/dock_widgets/ai_assistant/lc_aitoolbar.cpp \
+    ui/dock_widgets/ai_assistant/lc_aiagentprogress.cpp \
+    ui/dock_widgets/ai_assistant/lc_aicontrol.cpp \
     ui/dock_widgets/ai_assistant/lc_aisidebar.cpp \
     ui/dock_widgets/views_list/lc_dlgnamedviewslistoptions.cpp \
     ui/dock_widgets/views_list/lc_namedviewsbutton.cpp \

@@ -297,10 +297,12 @@ void LC_ActionSplineFromPolyline::fillControlPointsListFromPolyline(const RS_Pol
                 RS_Vector dvp(line->getEndpoint() - startPoint);
                 // todo - move collection of mid points (actually, points that divide the entity to specific values to common entity interface or util
 
-                const double segmentMiddlePoints = m_segmentMiddlePoints;
+                // m points divide the line into m + 1 parts (as for arcs above); dividing by m put the last
+                // "middle" point on the line's end, so every corner came out twice
+                const double parts = m_segmentMiddlePoints + 1;
                 for (int i = 1; i < m_segmentMiddlePoints + 1; i++) {
                     const double doubleI = i;
-                    RS_Vector midPoint = startPoint + dvp * (doubleI / segmentMiddlePoints);
+                    RS_Vector midPoint = startPoint + dvp * (doubleI / parts);
                     controlPoints.push_back(midPoint);
                 }
                 controlPoints.emplace_back(line->getEndpoint());
