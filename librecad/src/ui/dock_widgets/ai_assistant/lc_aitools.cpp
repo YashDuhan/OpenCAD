@@ -205,7 +205,11 @@ namespace {
         else {
             view->redraw(RS2::RedrawAll, true);
             QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
-            pixmap = view->grab();
+            // the drawing area only, without the view's scroll bars
+            const LC_GraphicViewport* vp = view->getViewPort();
+            const QRect area = vp != nullptr && vp->getWidth() > 0 && vp->getHeight() > 0 ? QRect(0, 0, vp->getWidth(), vp->getHeight())
+                                                                                         : QRect(QPoint(0, 0), view->size());
+            pixmap = view->grab(area);
         }
         if (pixmap.width() > MAX_SCREENSHOT_EDGE || pixmap.height() > MAX_SCREENSHOT_EDGE) {
             pixmap = pixmap.scaled(MAX_SCREENSHOT_EDGE, MAX_SCREENSHOT_EDGE, Qt::KeepAspectRatio, Qt::SmoothTransformation);

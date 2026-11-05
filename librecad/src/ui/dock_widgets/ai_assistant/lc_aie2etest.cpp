@@ -22,7 +22,8 @@
  *   drop {files: [...]}       drops files on the message box       paste_image {file}  pastes an image into it
  *   shot {file, of: ai|main|dialog|popup}                          dump {file}  the chat's text (and any popup's)
  *   expect {regex, in: ai|popup|file:<path>, not: true}            a check: recorded as passed or failed
- *   tool {name, args, out}    calls one of the AI's tools directly (set up the drawing, save it, read it back)
+ *   tool {name, args, out, image_out}  calls one of the AI's tools directly (set up the drawing, save it, read it back);
+ *                             image_out saves the first picture it returns
  *   choose {text}             picks the entry with this text in an open list popup (the @-mention completions)
  *   invoke {class | name, method, args: [strings]}  calls a slot or Q_INVOKABLE of the first widget of that class or name
  *   setting {key, value}      sets one of the AI's stored settings (LC_AICredentials::setSetting)
@@ -421,6 +422,17 @@ namespace {
                 }
                 auto finished = [self, step](const LC_AIToolResult& r) {
                     const QString text = r.joinedText();
+                    if (const QString file = step.value("image_out").toString(); !file.isEmpty()) {
+                        for (const LC_AIContent& c : r.content) { // the first picture the tool gives the AI
+                            if (c.type == LC_AIContent::Type::Image) {
+                                QFile f(file);
+                                if (f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+                                    f.write(c.data);
+                                }
+                                break;
+                            }
+                        }
+                    }
                     if (const QString file = step.value("out").toString(); !file.isEmpty()) {
                         QFile f(file);
                         if (f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
