@@ -1,0 +1,45 @@
+[
+ {
+  "do": "type",
+  "text": "draw a circle radius 25 at 100,100"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 30000
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {
+   "type": "circle"
+  },
+  "out": "${OUT}/entities.txt"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/entities.txt",
+  "regex": "centre=\\(100, 100\\) radius=25"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "drew a \\*\\*circle\\*\\* of radius 25",
+  "label": "answer shown"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/chat.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/chat.txt",
+  "in": "ai"
+ },
+ {
+  "do": "quit"
+ }
+]

@@ -1,0 +1,8 @@
+[{"do":"type","text":"Draw a circle with radius 25 centred at 100,100 in the current drawing, then tell me in one sentence what you drew."},
+ {"do":"send"},
+ {"do":"wait_idle","timeout":150000},
+ {"do":"tool","name":"list_entities","args":{"type":"circle"},"out":"${OUT}/entities.txt"},
+ {"do":"expect","in":"file:${OUT}/entities.txt","regex":"centre=\\(100, 100\\) radius=25(?![.\\d])","label":"a circle r25 at 100,100 exists"},
+ {"do":"shot","file":"${OUT}/chat.png","of":"ai"},
+ {"do":"dump","file":"${OUT}/chat.txt","in":"ai"},
+ {"do":"quit"}]

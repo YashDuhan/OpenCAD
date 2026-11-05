@@ -1,0 +1,2 @@
+[{"text":"Drawing it now.","tool_calls":[{"name":"run_command","arguments":{"commands":["circle","100,100","25"]}}]},
+ {"text":"I drew a **circle** of radius 25 at (100, 100)."}]

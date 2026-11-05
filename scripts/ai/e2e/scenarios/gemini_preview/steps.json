@@ -1,0 +1,13 @@
+[{"do":"type","text":"Draw a rectangle 100 wide and 50 high with its lower-left corner at 0,0. Keep your answer to one sentence."},
+ {"do":"send"},
+ {"do":"wait_idle","timeout":180000},
+ {"do":"tool","name":"list_entities","args":{},"out":"${OUT}/before_reject.txt"},
+ {"do":"expect","in":"ai","regex":"Review the AI's changes","label":"review opened after a real run"},
+ {"do":"shot","file":"${OUT}/review_main.png","of":"main"},
+ {"do":"shot","file":"${OUT}/review_ai.png","of":"ai"},
+ {"do":"click","text":"Reject"},
+ {"do":"wait","ms":800},
+ {"do":"tool","name":"get_drawing_info","args":{},"out":"${OUT}/after_reject.txt"},
+ {"do":"expect","in":"file:${OUT}/after_reject.txt","regex":"Entities: 0","label":"Reject took the rectangle back"},
+ {"do":"shot","file":"${OUT}/after_reject_ai.png","of":"ai"},
+ {"do":"quit"}]

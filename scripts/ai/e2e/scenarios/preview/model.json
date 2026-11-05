@@ -1,0 +1,6 @@
+[{"text":"Adding a line and removing the circle.","tool_calls":[{"name":"run_command","arguments":{"commands":["line","0,50","200,50","ESC","ESC"]}},{"name":"select_entities","arguments":{"type":"circle"}},{"name":"press_toolbar_button","arguments":{"id":"ModifyDelete"}}]},
+ {"text":"Done: a new line at y=50, and the circle is gone."},
+ {"text":"Drawing a vertical line.","tool_calls":[{"name":"run_command","arguments":{"commands":["line","100,-50","100,150","ESC","ESC"]}}]},
+ {"text":"Added the vertical line."},
+ {"text":"One more.","tool_calls":[{"name":"run_command","arguments":{"commands":["line","0,-50","200,-50","ESC","ESC"]}}]},
+ {"text":"Added it."}]

@@ -1,0 +1,234 @@
+[
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "0,0",
+    "200,0",
+    "ESC",
+    "ESC"
+   ]
+  }
+ },
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "circle",
+    "300,100",
+    "40"
+   ]
+  }
+ },
+ {
+  "do": "tool",
+  "name": "zoom_to_fit",
+  "args": {}
+ },
+ {
+  "do": "type",
+  "text": "add a line above the first one and delete the circle"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait",
+  "ms": 2500
+ },
+ {
+  "do": "click",
+  "text": "Allow",
+  "in": "ai"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 30000
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Review the AI's changes",
+  "label": "review bar opened by itself"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "1 added[\\s\\S]*1 removed",
+  "label": "legend counts"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/1_review_ai.png",
+  "of": "ai"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/1_review_main.png",
+  "of": "main"
+ },
+ {
+  "do": "click",
+  "text": "Hide the highlight"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/2_hidden_main.png",
+  "of": "main"
+ },
+ {
+  "do": "click",
+  "text": "Show the highlight"
+ },
+ {
+  "do": "click",
+  "text": "Zoom to the changes"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/3_zoomed_main.png",
+  "of": "main"
+ },
+ {
+  "do": "click",
+  "text": "Reject"
+ },
+ {
+  "do": "wait",
+  "ms": 800
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/after_reject.txt"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/after_reject.txt",
+  "regex": "circle layer=0 centre=\\(300, 100\\)",
+  "label": "circle back after Reject"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/after_reject.txt",
+  "regex": "\\(0, 50\\) -> \\(200, 50\\)",
+  "not": true,
+  "label": "new line gone after Reject"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Review the AI's changes",
+  "not": true,
+  "label": "bar closed after Reject"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/4_after_reject_ai.png",
+  "of": "ai"
+ },
+ {
+  "do": "type",
+  "text": "draw a vertical line"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 30000
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Review the AI's changes",
+  "label": "second review opened"
+ },
+ {
+  "do": "click",
+  "text": "Accept"
+ },
+ {
+  "do": "wait",
+  "ms": 500
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Review the AI's changes",
+  "not": true,
+  "label": "bar closed after Accept"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {
+   "type": "line"
+  },
+  "out": "${OUT}/after_accept.txt"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/after_accept.txt",
+  "regex": "\\(100, -50\\) -> \\(100, 150\\)",
+  "label": "accepted line stays"
+ },
+ {
+  "do": "click",
+  "text": "Review",
+  "index": 0
+ },
+ {
+  "do": "wait",
+  "ms": 500
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Review the AI's changes",
+  "label": "Review button reopens a review"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/5_review_again_ai.png",
+  "of": "ai"
+ },
+ {
+  "do": "click",
+  "text": "Review after every run"
+ },
+ {
+  "do": "click",
+  "text": "Accept"
+ },
+ {
+  "do": "type",
+  "text": "one more line"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 30000
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Review the AI's changes",
+  "not": true,
+  "label": "no review when the setting is off"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/6_setting_off_ai.png",
+  "of": "ai"
+ },
+ {
+  "do": "quit"
+ }
+]

@@ -1,0 +1,7 @@
+[{"do":"tool","name":"run_command","args":{"commands":["line","0,0","100,0","100,50","0,50","close"]}},
+ {"do":"tool","name":"run_command","args":{"commands":["circle","50,25","15"]}},
+ {"do":"tool","name":"zoom_to_fit","args":{}},
+ {"do":"tool","name":"capture_view","args":{},"image_out":"${OUT}/capture.png"},
+ {"do":"tool","name":"zoom","args":{"factor":3},"out":"${OUT}/zoom.txt"},
+ {"do":"tool","name":"capture_view","args":{},"image_out":"${OUT}/capture_zoomed.png"},
+ {"do":"quit"}]
