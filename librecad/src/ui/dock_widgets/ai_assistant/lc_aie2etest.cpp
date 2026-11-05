@@ -23,6 +23,9 @@
  *   shot {file, of: ai|main|dialog|popup}                          dump {file}  the chat's text (and any popup's)
  *   expect {regex, in: ai|popup|file:<path>, not: true}            a check: recorded as passed or failed
  *   tool {name, args, out}    calls one of the AI's tools directly (set up the drawing, save it, read it back)
+ *   choose {text}             picks the entry with this text in an open list popup (the @-mention completions)
+ *   invoke {class | name, method, args: [strings]}  calls a slot or Q_INVOKABLE of the first widget of that class or name
+ *   setting {key, value}      sets one of the AI's stored settings (LC_AICredentials::setSetting)
  *   new_drawing | activate {index} | quit
  * Results: a JSON list {step, do, ok, detail}; the app quits after the last step (or a step times out).
  */
@@ -425,6 +428,83 @@ namespace {
                 else {
                     finished(tool->execute(args));
                 }
+            }
+            else if (what == "choose") {
+                const QString wanted = norm(step.value("text").toString());
+                QAbstractItemView* found = nullptr;
+                QModelIndex index;
+                QList<QWidget*> roots;
+                roots << QApplication::activePopupWidget();
+                for (QWidget* w : QApplication::topLevelWidgets()) {
+                    if (w->isVisible() && (w->windowFlags() & (Qt::Popup | Qt::ToolTip | Qt::Tool | Qt::FramelessWindowHint))) {
+                        roots << w;
+                    }
+                }
+                if (LC_AIAssistantWidget* c = chat()) {
+                    roots << c;
+                }
+                for (QWidget* root : roots) {
+                    if (root == nullptr || found != nullptr) {
+                        continue;
+                    }
+                    QList<QAbstractItemView*> views = root->findChildren<QAbstractItemView*>();
+                    if (auto* v = qobject_cast<QAbstractItemView*>(root)) {
+                        views.prepend(v);
+                    }
+                    for (QAbstractItemView* v : views) {
+                        if (!v->isVisible() || v->model() == nullptr) {
+                            continue;
+                        }
+                        for (int r = 0; r < v->model()->rowCount() && found == nullptr; ++r) {
+                            const QModelIndex i = v->model()->index(r, 0);
+                            if (norm(i.data().toString()).contains(wanted)) {
+                                found = v;
+                                index = i;
+                            }
+                        }
+                    }
+                }
+                if (found != nullptr) {
+                    const LC_AIControl::AIInput aiInput;
+                    found->setCurrentIndex(index);
+                    QKeyEvent press(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier, QStringLiteral("\r"));
+                    QApplication::sendEvent(found, &press);
+                    emit found->activated(index);
+                    emit found->clicked(index);
+                }
+                record(step, found != nullptr, found != nullptr ? "chose " + index.data().toString() : QString("no list entry like that"));
+                go(400);
+            }
+            else if (what == "invoke") {
+                QWidget* target = nullptr;
+                for (QWidget* w : QApplication::allWidgets()) {
+                    if ((step.contains("class") && w->inherits(qPrintable(step.value("class").toString())))
+                        || (step.contains("name") && w->objectName() == step.value("name").toString())) {
+                        target = w;
+                        break;
+                    }
+                }
+                bool ok = false;
+                if (target != nullptr) {
+                    const QJsonArray a = step.value("args").toArray();
+                    const QByteArray method = step.value("method").toString().toUtf8();
+                    if (a.isEmpty()) {
+                        ok = QMetaObject::invokeMethod(target, method.constData());
+                    }
+                    else if (a.size() == 1) {
+                        ok = QMetaObject::invokeMethod(target, method.constData(), Q_ARG(QString, a[0].toString()));
+                    }
+                    else {
+                        ok = QMetaObject::invokeMethod(target, method.constData(), Q_ARG(QString, a[0].toString()), Q_ARG(QString, a[1].toString()));
+                    }
+                }
+                record(step, ok, target == nullptr ? QString("no such widget") : ok ? QString("called") : QString("no such slot"));
+                go(step.value("then_ms").toInt(400));
+            }
+            else if (what == "setting") {
+                LC_AICredentials::instance().setSetting(step.value("key").toString(), step.value("value"));
+                record(step, true, {});
+                go();
             }
             else if (what == "new_drawing") {
                 if (QC_ApplicationWindow* app = appWin()) {
