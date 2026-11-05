@@ -51,6 +51,7 @@ private:
     QLabel* m_text {nullptr};
     QLabel* m_count {nullptr};
     QPushButton* m_restore {nullptr};
+    QPushButton* m_review {nullptr};  // shows the run's changes in the drawing (lc_aichangepreview.cpp)
     QFrame* m_card {nullptr};         // why it cannot simply undo, and what it can do instead
     QLabel* m_cardText {nullptr};
     QPushButton* m_own {nullptr};

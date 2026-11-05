@@ -53,6 +53,7 @@ LUCIDE_ICONS += ["undo-2", "redo-2"]
 
 # the chat history list of the AI sidebar (lc_aichathistorypopup.cpp)
 LUCIDE_ICONS += ["history", "file", "message-square"]
+LUCIDE_ICONS += ["eye", "eye-off"]  # the change preview (lc_aichangepreview.cpp)
 
 
 def svg_from_react_icon(pack: str, name: str) -> str:

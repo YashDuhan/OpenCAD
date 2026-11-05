@@ -51,6 +51,7 @@
 #include "lc_aimodelpicker.h"
 #include "lc_mcpmanager.h"
 #include "lc_aiprovidersdialog.h"
+#include "lc_aichangepreview.h"
 #include "lc_airevertbar.h"
 #include "lc_aivoiceinput.h"
 #include "lc_aidebugger.h"
@@ -161,6 +162,7 @@ LC_AIAssistantWidget::LC_AIAssistantWidget(QWidget* parent)
     // tool calls waiting for approval sit between the conversation and the composer, as in Cypher
     m_approvals = new LC_AIApprovalBox(m_theme, this);
     layout->addWidget(m_approvals);
+    layout->addWidget(new LC_AIReviewBar(m_theme, this)); // the change preview's Accept / Reject (lc_aichangepreview.cpp)
     m_inference->setApprover([this](const LC_AIToolCall& call, std::function<void(bool, const QString&)> answer) {
         approve(call, answer);
     });
@@ -321,6 +323,17 @@ void LC_AIAssistantWidget::openWithTask(QWidget* window, const QString& prompt, 
 }
 
 void LC_AIAssistantWidget::fitModelButton() {
+    // a narrow panel shows the approval mode and Plan first as icons only (their names stay in the tooltips), so the
+    // model's name keeps some room
+    constexpr int COMPACT_BELOW = 460;
+    const bool compact = m_composer->width() < COMPACT_BELOW;
+    if (m_approvalMode->property("compact").toBool() != compact) {
+        m_approvalMode->setProperty("compact", compact);
+        m_approvalMode->refresh();
+        if (m_plan != nullptr) {
+            m_plan->toggle()->setText(compact ? QString() : tr("Plan"));
+        }
+    }
     // a push button sizes itself by its own text, not by the labels laid out inside it: give it their width,
     // as far as the row has room next to the approval mode and send buttons (the name is shortened then)
     const int wanted = m_modelSelect->layout()->sizeHint().width();

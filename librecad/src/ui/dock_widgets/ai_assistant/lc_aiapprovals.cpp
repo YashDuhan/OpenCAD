@@ -351,7 +351,7 @@ void LC_AIApprovalModeButton::refresh() {
     const bool full = mode == LC_AIPermissions::Mode::Full;
     const QColor color = full ? YELLOW : m_theme.textMuted; // .approval-btn.full is yellow
     setIcon(LC_AIIcons::lucideIcon(LC_AIPermissions::modeIcon(mode), 14, color));
-    setText(LC_AIPermissions::modeShortName(mode));
+    setText(property("compact").toBool() ? QString() : LC_AIPermissions::modeShortName(mode)); // a narrow panel: the icon only
     setToolTip(LC_AIPermissions::modeName(mode) + ": " + LC_AIPermissions::modeHint(mode));
     setStyleSheet(QStringLiteral("QPushButton#approvalBtn { border: none; border-radius: 6px; padding: 0 8px; min-height: 26px; "
                                  "max-height: 26px; font-size: 12px; font-weight: 500; color: %1; background: %2; text-align: left; }"

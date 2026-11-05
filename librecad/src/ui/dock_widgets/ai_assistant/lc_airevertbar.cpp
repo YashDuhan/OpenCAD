@@ -17,6 +17,7 @@
 #include <QStyle>
 #include <QVBoxLayout>
 
+#include "lc_aichangepreview.h"
 #include "lc_aichattranscript.h"
 #include "lc_aicheckpoints.h"
 #include "lc_aiicons.h"
@@ -114,6 +115,13 @@ LC_AIRevertBar::LC_AIRevertBar(const int run, const LC_AITheme& theme, QWidget* 
     m_restore->setToolTip(tr("Bring these changes back"));
     m_restore->hide();
     row->addWidget(m_restore);
+    m_review = new QPushButton(tr("Review"), this);
+    m_review->setObjectName("aiRevertRestore");
+    m_review->setIcon(LC_AIIcons::lucideIcon("eye", 12, t.textMuted));
+    m_review->setIconSize(QSize(12, 12));
+    m_review->setCursor(Qt::PointingHandCursor);
+    m_review->setToolTip(tr("Show these changes in the drawing, then keep or reject them"));
+    row->addWidget(m_review);
     row->addStretch(1);
     layout->addLayout(row);
 
@@ -159,11 +167,28 @@ LC_AIRevertBar::LC_AIRevertBar(const int run, const LC_AITheme& theme, QWidget* 
 
     connect(m_button, &QPushButton::clicked, this, &LC_AIRevertBar::revert);
     connect(m_restore, &QPushButton::clicked, this, &LC_AIRevertBar::restore);
+    connect(m_review, &QPushButton::clicked, this, [this] {
+        if (!LC_AIChangePreview::instance().show(m_run)) {
+            showNote(tr("Nothing of these changes is left to show."));
+        }
+    });
     connect(m_own, &QPushButton::clicked, this, &LC_AIRevertBar::revertOwnChanges);
     connect(m_cancel, &QPushButton::clicked, m_card, &QWidget::hide);
     // while the AI works on the drawing, nothing is reverted under its feet
     connect(&LC_AICheckpoints::instance(), &LC_AICheckpoints::runStarted, this, &LC_AIRevertBar::updateEnabled);
     connect(&LC_AICheckpoints::instance(), &LC_AICheckpoints::runRecorded, this, &LC_AIRevertBar::updateEnabled);
+    // reverted or restored elsewhere too (the change preview's Reject): the row shows how the run stands
+    connect(&LC_AICheckpoints::instance(), &LC_AICheckpoints::runReverted, this, [this](const int run, const bool reverted) {
+        if (run != m_run || reverted == m_reverted) {
+            return;
+        }
+        if (reverted) {
+            showReverted(tr("Taken back."));
+        }
+        else {
+            showReady();
+        }
+    });
     showReady();
 }
 
@@ -194,6 +219,7 @@ void LC_AIRevertBar::updateEnabled() {
     const bool working = LC_AICheckpoints::instance().currentRun() != 0;
     m_button->setEnabled(!working && !m_reverted);
     m_restore->setEnabled(!working);
+    m_review->setEnabled(!working);
     m_own->setEnabled(!working);
     m_button->setToolTip(working ? tr("Available when the AI has finished")
                                  : m_reverted ? QString()
@@ -206,6 +232,7 @@ void LC_AIRevertBar::showReady() {
     m_icon->setPixmap(LC_AIIcons::lucide("undo-2", 13, m_theme.textSecondary, devicePixelRatioF()));
     m_text->setText(tr("Revert AI changes"));
     m_restore->hide();
+    m_review->show();
     m_note->hide();
     fitButton();
     updateEnabled();
@@ -217,6 +244,7 @@ void LC_AIRevertBar::showReverted(const QString& note) {
     m_icon->setPixmap(LC_AIIcons::lucide("check", 13, GREEN, devicePixelRatioF()));
     m_text->setText(tr("Reverted"));
     m_restore->show();
+    m_review->hide();
     fitButton();
     updateEnabled();
     showNote(note);
