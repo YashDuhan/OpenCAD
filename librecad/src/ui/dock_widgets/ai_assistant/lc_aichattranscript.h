@@ -168,6 +168,8 @@ public:
     void activateClarification(std::function<void(const QString&)> deliver);
     void toolResult(const LC_AIChatMessage& message);
     void addError(const QString& error);
+    /** A widget under the answer of the run that just ended, such as its "Revert AI changes" button. */
+    void addRunFooter(QWidget* widget);
     void setThinking(bool thinking);
     /** The thinking line, saying a failed request is being tried again. */
     void showRetry(const QString& text);

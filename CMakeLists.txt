@@ -1993,6 +1993,8 @@ set (SHARED_SOURCES
      librecad/src/ui/dock_widgets/ai_assistant/lc_aibrowser.h
      librecad/src/ui/dock_widgets/ai_assistant/lc_aichattranscript.cpp
      librecad/src/ui/dock_widgets/ai_assistant/lc_aichattranscript.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aicheckpoints.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aicheckpoints.h
      librecad/src/ui/dock_widgets/ai_assistant/lc_aicredentials.cpp
      librecad/src/ui/dock_widgets/ai_assistant/lc_aicredentials.h
      librecad/src/ui/dock_widgets/ai_assistant/lc_aiinferencemanager.cpp
@@ -2013,6 +2015,8 @@ set (SHARED_SOURCES
      librecad/src/ui/dock_widgets/ai_assistant/lc_aimodelpicker.h
      librecad/src/ui/dock_widgets/ai_assistant/lc_aiprovidersdialog.cpp
      librecad/src/ui/dock_widgets/ai_assistant/lc_aiprovidersdialog.h
+     librecad/src/ui/dock_widgets/ai_assistant/lc_airevertbar.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_airevertbar.h
      librecad/src/ui/dock_widgets/ai_assistant/lc_aitool.h
      librecad/src/ui/dock_widgets/ai_assistant/lc_aitools.cpp
      librecad/src/ui/dock_widgets/ai_assistant/lc_aitoolbar.cpp

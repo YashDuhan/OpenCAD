@@ -43,6 +43,8 @@ LUCIDE_ICONS = ["key-round", "trash-2", "search", "check", "refresh-cw", "cpu", 
 CATALOG_PROVIDERS = ["anthropic", "openai", "google", "openrouter", "xai", "deepseek", "mistral", "groq",
                      "cerebras", "together", "fireworks", "nvidia", "huggingface", "moonshotai", "zai", "minimax",
                      "vercel-ai-gateway"]
+# "Revert AI changes" under an answer, and its Restore (lc_airevertbar)
+LUCIDE_ICONS += ["undo-2", "redo-2"]
 
 
 def svg_from_react_icon(pack: str, name: str) -> str:

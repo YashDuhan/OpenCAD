@@ -1268,6 +1268,10 @@ void LC_AIChatTranscript::addError(const QString& error) {
     add(label);
 }
 
+void LC_AIChatTranscript::addRunFooter(QWidget* widget) {
+    add(widget);
+}
+
 void LC_AIChatTranscript::setThinking(const bool thinking) {
     m_thinking->setVisible(thinking);
     if (thinking) {

@@ -48,6 +48,7 @@
 #include "lc_aimodelpicker.h"
 #include "lc_mcpmanager.h"
 #include "lc_aiprovidersdialog.h"
+#include "lc_airevertbar.h"
 
 namespace {
     constexpr int MIN_INPUT_HEIGHT = 64; // about two lines
@@ -137,6 +138,8 @@ LC_AIAssistantWidget::LC_AIAssistantWidget(QWidget* parent)
     m_transcript->setLabelLookup([this](const QString& name) { return toolLabel(name); });
     LC_AIBrowser::setHost(m_transcript); // the browser preview floats over the conversation, like Cypher's
     layout->addWidget(m_transcript, 1);
+    // checkpoints: "Revert AI changes" under each answer that changed the drawing
+    LC_AIRevertBar::addAfterRuns(m_transcript, m_theme);
 
     // tool calls waiting for approval sit between the conversation and the composer, as in Cypher
     m_approvals = new LC_AIApprovalBox(m_theme, this);
