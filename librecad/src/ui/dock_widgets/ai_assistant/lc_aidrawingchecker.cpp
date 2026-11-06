@@ -1425,15 +1425,48 @@ namespace {
 
     // --- pens
 
+    /**
+     * What setting e ByLayer would change in how it looks and prints, e.g. "colour green -> red" (empty: nothing, its
+     * own colour, line type and width are its layer's).
+     */
+    QStringList byLayerChanges(const RS_Entity* e) {
+        const RS_Layer* layer = e->getLayer(true);
+        if (layer == nullptr) {
+            return {};
+        }
+        const RS_Pen own = e->getPen(false);
+        const RS_Pen theirs = layer->getPen();
+        QStringList changes;
+        if (!own.getColor().isByLayer() && !own.getColor().isByBlock() && own.getColor().toQColor() != theirs.getColor().toQColor()) {
+            changes << QStringLiteral("colour %1 -> %2").arg(colourName(own.getColor().toQColor()), colourName(theirs.getColor().toQColor()));
+        }
+        if (own.getLineType() != RS2::LineByLayer && own.getLineType() != RS2::LineByBlock && own.getLineType() != theirs.getLineType()) {
+            changes << QStringLiteral("line type %1 -> %2").arg(own.getLineTypeName(), theirs.getLineTypeName());
+        }
+        const auto width = [](const RS2::LineWidth w) {
+            return w == RS2::WidthDefault ? QStringLiteral("Default") : QStringLiteral("%1 mm").arg(fmt(int(w) / 100.0));
+        };
+        if (own.getWidth() != RS2::WidthByLayer && own.getWidth() != RS2::WidthByBlock && own.getWidth() != theirs.getWidth()) {
+            changes << QStringLiteral("width %1 -> %2").arg(width(own.getWidth()), width(theirs.getWidth()));
+        }
+        return changes;
+    }
+
     void checkByLayer(Context& c) {
         for (RS_Entity* e : std::as_const(c.scoped)) {
             const QStringList what = explicitPen(e);
             if (what.isEmpty()) {
                 continue;
             }
+            // only a pen that looks like its layer's is a safe fix: anything else would change the printed drawing
+            // (green lines on a red layer turning red, a 0.5 mm outline losing its weight), so that is the user's call
+            const QStringList changes = byLayerChanges(e);
             issueAt(c, "bylayer", e, centreOf(e),
                     QStringLiteral("%1 on layer %2 has its own %3").arg(ref(e), layerOf(e), what.join(", ")),
-                    QStringLiteral("set it ByLayer (or put it on a layer that has that look)"), true);
+                    changes.isEmpty() ? QStringLiteral("set it ByLayer (it looks the same)")
+                                      : QStringLiteral("ask the user: ByLayer would change its look (%1); or put it on a layer that has "
+                                                       "that look").arg(changes.join(", ")),
+                    changes.isEmpty());
         }
     }
 
@@ -2436,7 +2469,8 @@ namespace {
         t.description =
             "Apply the safe fixes for what check_drawing reports, as ONE undo step: delete zero-length entities and exact "
             "duplicates (same layer and pen), merge overlapping collinear lines and overlapping arcs, close nearly closed "
-            "polylines, snap endpoints that nearly meet, and set explicit colour/line type/width to ByLayer. Give ids (from "
+            "polylines, snap endpoints that nearly meet, and set an explicit colour/line type/width ByLayer where that does not "
+            "change its look. Give ids (from "
             "check_drawing) or rules to fix only some; nothing given fixes all of them. Entities on locked layers are left "
             "alone. Returns what changed and what is still left (those need a decision).";
         t.parameters = QJsonObject{
