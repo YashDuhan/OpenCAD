@@ -1506,15 +1506,18 @@ namespace {
         double ux = 0;
         double uy = 0;
         vp->toUI(RS_Vector(x, y), ux, uy);
+        // the drawing area: the view widget also holds its scroll bars, and a click there is not on the drawing
+        const int width = vp->getWidth() > 0 ? vp->getWidth() : view->width();
+        const int height = vp->getHeight() > 0 ? vp->getHeight() : view->height();
         constexpr int MARGIN = 4;
-        if (ux < MARGIN || uy < MARGIN || ux >= view->width() - MARGIN || uy >= view->height() - MARGIN) {
+        if (ux < MARGIN || uy < MARGIN || ux >= width - MARGIN || uy >= height - MARGIN) {
             // scroll the drawing (same zoom) so the point is in the middle, as a person would before clicking;
             // this also copes with the user having panned away meanwhile
-            vp->setOffsetAndFactor(vp->getOffsetX() + qRound(view->width() / 2.0 - ux), vp->getOffsetY() + qRound(uy - view->height() / 2.0),
+            vp->setOffsetAndFactor(vp->getOffsetX() + qRound(width / 2.0 - ux), vp->getOffsetY() + qRound(uy - height / 2.0),
                                    vp->getFactor().x);
             view->redraw(RS2::RedrawAll);
             vp->toUI(RS_Vector(x, y), ux, uy);
-            if (ux < 0 || uy < 0 || ux >= view->width() || uy >= view->height()) {
+            if (ux < 0 || uy < 0 || ux >= width || uy >= height) {
                 error = QStringLiteral("The point %1,%2 cannot be brought into view.").arg(x).arg(y);
                 return false;
             }
