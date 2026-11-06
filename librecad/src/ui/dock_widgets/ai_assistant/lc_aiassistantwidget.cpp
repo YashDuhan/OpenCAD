@@ -448,7 +448,11 @@ void LC_AIAssistantWidget::fitModelButton() {
         }
     }
     const int room = m_composer->width() - margins.left() - margins.right() - used - (row != nullptr ? row->spacing() : 8) * shown;
-    m_modelSelect->setFixedWidth(qBound(80, qMin(wanted, room > 0 ? room : wanted), 260));
+    // at least 80 px while the row has them, else only the room left (down to its chevron in the narrowest panel, where
+    // the voice control gives up its own chevron): an overflowing row drew the voice chevron over the mic and this
+    // button over send
+    const int least = qBound(40, room, 80);
+    m_modelSelect->setFixedWidth(qBound(least, qMin(wanted, room > 0 ? room : wanted), 260));
 }
 
 void LC_AIAssistantWidget::updateModelButton() {
@@ -521,6 +525,7 @@ void LC_AIAssistantWidget::openSettings() {
     LC_AIProvidersDialog dialog(window());
     dialog.exec();
     updateModelButton();
+    m_voice->refresh(); // the mic shows at once whether the key it needs is there now
     focusInput();
 }
 

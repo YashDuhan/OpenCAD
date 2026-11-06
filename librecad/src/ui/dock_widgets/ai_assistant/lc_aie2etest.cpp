@@ -16,7 +16,8 @@
  * Use it with a scripted local model (scripts/ai/fake_model.py or any OpenAI-compatible server) and throwaway settings
  * (XDG_CONFIG_HOME, XDG_DATA_HOME), offscreen. Steps run in order; each is {"do": ..., ...}:
  *   setup {base_url, model, mode: supervised|edits|auto|full}   the "custom" provider at base_url, the approval mode
- *   type {text}               puts text in the message box        keys {text | keys, target: input|focus}  types key by key
+ *   type {text}               puts text in the message box        keys {text | keys, target: input|focus|popup}  types key by key
+ *                             (popup: to the open popup, as Qt sends keys while one is open, though the focus stays put)
  *   send                      presses send                         wait_idle {timeout}  until the AI is done
  *   wait {ms}                 click {text, in: ai|main|dialog|popup|any, index}  a visible button by text, tooltip or name
  *   drop {files: [...]}       drops files on the message box       paste_image {file}  pastes an image into it
@@ -310,6 +311,9 @@ namespace {
             }
             else if (what == "keys") {
                 QWidget* target = step.value("target").toString("input") == "focus" ? QApplication::focusWidget() : input();
+                if (QWidget* popup = QApplication::activePopupWidget(); popup != nullptr && step.value("target").toString() == "popup") {
+                    target = popup->focusWidget() != nullptr ? popup->focusWidget() : popup;
+                }
                 if (target == input() && target != nullptr) {
                     target->setFocus();
                 }

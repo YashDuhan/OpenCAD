@@ -41,6 +41,7 @@ namespace {
     constexpr qreal MIN_SECONDS = 0.3;   // anything shorter is a slip of the finger, not speech
     constexpr qreal MAX_SECONDS = 600;   // 10 minutes is ~19 MB of WAV, under the 25 MB upload limit of OpenAI and Groq
     constexpr int NOTE_MS = 2800;        // how long a short note ("No speech was recognized") stays
+    constexpr int NO_AUDIO_MS = 1000;    // recording this long with under MIN_SECONDS of sound: the device sends nothing
     constexpr int MENU_WIDTH = 300;
 #ifdef Q_OS_MACOS
     constexpr Qt::KeyboardModifier PTT_MODIFIER = Qt::MetaModifier; // the Control key: Cmd+Space is Spotlight
@@ -255,21 +256,65 @@ namespace {
         return pixmap;
     }
 
-    /** What a preset needs, under its name: the model and where the key comes from. */
-    QString presetHint(const LC_AIVoice::Endpoint& e) {
+    /** Where a preset's key comes from, after its model under its name. */
+    QString keyHint(const LC_AIVoice::Endpoint& e) {
         const QString provider = LC_AIVoice::keyProviderOf(e);
-        QString key;
         if (provider.isEmpty()) {
-            key = QObject::tr("no key needed");
+            return QObject::tr("no key needed");
         }
-        else {
-            const LC_AIProvider* p = LC_AIProvider::find(provider);
-            const QString name = p != nullptr ? p->name : provider;
-            key = LC_AICredentials::instance().apiKey(provider).isEmpty() ? QObject::tr("needs a %1 key").arg(name)
-                                                                          : QObject::tr("your %1 key").arg(name);
+        const LC_AIProvider* p = LC_AIProvider::find(provider);
+        const QString name = p != nullptr ? p->name : provider;
+        if (!LC_AICredentials::instance().apiKey(provider).isEmpty()) {
+            return QObject::tr("your %1 key").arg(name);
         }
-        return e.model + QStringLiteral(" · ") + key;
+        return LC_AIVoice::startsWithVowel(name) ? QObject::tr("needs an %1 key").arg(name) : QObject::tr("needs a %1 key").arg(name);
     }
+
+    /**
+     * A preset's hint, "model · key", on one line when it fits the menu, else with the key on a line of its own: never
+     * cut off at the menu's edge. Its height follows the text it shows at a width, so the menu can size itself before
+     * it is shown.
+     */
+    class HintLabel : public QLabel {
+    public:
+        explicit HintLabel(QWidget* parent) : QLabel(parent) {
+            setWordWrap(true); // a key text longer than a line still shows whole
+        }
+
+        void setParts(const QString& model, const QString& key) {
+            m_model = model;
+            m_key = key;
+            setText(textFor(contentsRect().width()));
+        }
+
+        int heightForWidth(const int width) const override {
+            const QMargins m = contentsMargins();
+            const int inner = qMax(1, width - m.left() - m.right());
+            return fontMetrics().boundingRect(QRect(0, 0, inner, 100000), Qt::TextWordWrap, textFor(inner)).height() + m.top() + m.bottom();
+        }
+
+    protected:
+        void resizeEvent(QResizeEvent* event) override {
+            QLabel::resizeEvent(event);
+            const QString shown = textFor(contentsRect().width());
+            if (shown != text()) {
+                setText(shown);
+            }
+        }
+
+    private:
+        QString textFor(const int width) const {
+            const QString line = m_model + QStringLiteral(" · ") + m_key;
+            const QFontMetrics fm = fontMetrics();
+            if (width <= 1 || fm.horizontalAdvance(line) <= width) {
+                return line;
+            }
+            return fm.elidedText(m_model, Qt::ElideMiddle, width) + '\n' + m_key;
+        }
+
+        QString m_model;
+        QString m_key;
+    };
 
     /**
      * Cypher's VoiceDropdown, without the read-aloud part: the speech-to-text engines, the model and server
@@ -331,7 +376,7 @@ namespace {
                 text->setSpacing(1);
                 auto* name = new QLabel(preset.name, row.frame);
                 name->setObjectName("voiceName");
-                row.hint = new QLabel(row.frame);
+                row.hint = new HintLabel(row.frame);
                 row.hint->setObjectName("voiceHint");
                 text->addWidget(name);
                 text->addWidget(row.hint);
@@ -419,7 +464,7 @@ namespace {
             LC_AIVoice::Endpoint endpoint;
             ClickRow* frame {nullptr};
             QLabel* dot {nullptr};
-            QLabel* hint {nullptr};
+            HintLabel* hint {nullptr};
             QLabel* check {nullptr};
         };
 
@@ -481,7 +526,7 @@ namespace {
                 if (on) {
                     shown.model = s.endpoint.model;
                 }
-                row.hint->setText(presetHint(shown));
+                row.hint->setParts(shown.model, keyHint(shown));
                 row.check->setVisible(on);
                 row.frame->setProperty("on", on);
                 row.frame->style()->unpolish(row.frame);
@@ -489,11 +534,14 @@ namespace {
             }
             const QString provider = LC_AIVoice::keyProviderOf(s.endpoint);
             m_keyRow->setVisible(!provider.isEmpty() && LC_AICredentials::instance().apiKey(provider).isEmpty());
+            // from their start: a long server shows its scheme and host, not the tail of its path
             if (!m_model->hasFocus()) {
                 m_model->setText(s.endpoint.model);
+                m_model->setCursorPosition(0);
             }
             if (!m_server->hasFocus()) {
                 m_server->setText(s.endpoint.baseUrl);
+                m_server->setCursorPosition(0);
             }
             m_autoSendCheck->setPixmap(s.autoSend ? LC_AIIcons::lucide("check", 13, m_theme.textHeading, dpr) : QPixmap());
             if (isVisible()) {
@@ -503,6 +551,7 @@ namespace {
 
         void fitHeight() {
             // exactly as tall as its rows at this width (the help text wraps), like the approval mode menu
+            ensurePolished(); // the style sheet's font sizes, which the wrapped hints are measured in
             QLayout* l = layout();
             l->activate();
             setFixedHeight(l->hasHeightForWidth() ? l->totalHeightForWidth(MENU_WIDTH) : l->totalSizeHint().height());
@@ -558,10 +607,13 @@ LC_AIVoiceInput::LC_AIVoiceInput(const LC_AITheme& theme, QPlainTextEdit* input,
     connect(m_mic, &QToolButton::pressed, this, [this] { press(false); });
     connect(m_mic, &QToolButton::released, this, &LC_AIVoiceInput::release);
     connect(m_menuButton, &QToolButton::clicked, this, &LC_AIVoiceInput::openMenu);
+    // the voice menu also on a right-click on the mic: the narrowest panel leaves out the chevron for want of room
+    m_mic->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_mic, &QWidget::customContextMenuRequested, this, &LC_AIVoiceInput::openMenu);
     connect(m_recorder, &LC_AIVoiceRecorder::level, this, [this](const qreal rms) { static_cast<LevelStrip*>(m_strip)->push(rms); });
     connect(m_recorder, &LC_AIVoiceRecorder::failed, this, [this](const QString& error) {
         setState(State::Idle);
-        emit failed(error);
+        fail(error);
     });
     connect(m_tick, &QTimer::timeout, this, [this] {
         m_strip->update(); // the clock and the pulse
@@ -615,6 +667,9 @@ bool LC_AIVoiceInput::eventFilter(QObject* watched, QEvent* event) {
     const bool pushToTalk = key->key() == Qt::Key_Space && modifiers == PTT_MODIFIER;
     const bool escape = key->key() == Qt::Key_Escape && modifiers == Qt::NoModifier && m_state != State::Idle;
     const bool space = key->key() == Qt::Key_Space;
+    // an open popup gets the keys (Qt sends them to it while the focus stays in the message box): Esc is for closing
+    // it, not for dropping the recording behind it, and push-to-talk closes the voice menu rather than stacking another
+    QWidget* popup = QApplication::activePopupWidget();
     if (event->type() == QEvent::KeyRelease) {
         // letting go of Space or of Ctrl ends push-to-talk, whichever comes first
         const bool ours = space && m_spaceDown;
@@ -629,6 +684,17 @@ bool LC_AIVoiceInput::eventFilter(QObject* watched, QEvent* event) {
     }
     if (event->type() == QEvent::KeyPress && space && m_spaceDown && key->isAutoRepeat()) {
         return true; // the held key repeating, also after Ctrl was let go first: no spaces in the message
+    }
+    if (popup != nullptr && (!pushToTalk || popup != m_menu)) {
+        return false;
+    }
+    if (popup != nullptr) {
+        if (event->type() == QEvent::KeyPress && !key->isAutoRepeat()) {
+            m_spaceDown = true; // its repeats and key-up are ours: no spaces in the message once the menu is gone
+            popup->close();
+        }
+        event->accept();
+        return true;
     }
     if ((!pushToTalk && !escape) || !panelHasFocus()) {
         return false;
@@ -674,8 +740,10 @@ void LC_AIVoiceInput::press(const bool fromKey) {
     }
     m_held = true;
     m_startedByPress = true;
-    m_pressed.start();
     startRecording();
+    // the hold counts from when the microphone is open: a sound server slow to open it (a busy machine) must not turn
+    // a click into a hold whose release stops the recording at once
+    m_pressed.start();
 }
 
 void LC_AIVoiceInput::release() {
@@ -697,6 +765,7 @@ void LC_AIVoiceInput::release() {
 void LC_AIVoiceInput::startRecording() {
     setState(State::Recording);
     m_recorder->start(); // failed() sets the state back
+    m_recording.start(); // also from when the device is open: a slow sound server is not a silent microphone
 }
 
 void LC_AIVoiceInput::stopRecording() {
@@ -711,7 +780,14 @@ void LC_AIVoiceInput::transcribe(const QByteArray& wav) {
     const qreal seconds = qMax(0, int(wav.size()) - 44) / (2.0 * LC_AIVoice::SAMPLE_RATE);
     if (seconds < MIN_SECONDS) {
         setState(State::Idle);
-        showNote(tr("Too short. Hold the mic or %1 while you talk.").arg(shortcutText()));
+        // the clock ran but the device delivered (next to) nothing: it is muted, suspended or not connected, and
+        // holding the key longer would not help
+        if (m_recording.isValid() && m_recording.elapsed() >= NO_AUDIO_MS) {
+            showNote(tr("The microphone sent no sound. Is it muted?"));
+        }
+        else {
+            showNote(tr("Too short. Hold the mic or %1 while you talk.").arg(shortcutText()));
+        }
         return;
     }
     setState(State::Transcribing);
@@ -724,9 +800,10 @@ void LC_AIVoiceInput::transcribe(const QByteArray& wav) {
         m_reply = nullptr;
         setState(State::Idle);
         if (!error.isEmpty()) {
-            emit failed(error);
+            fail(error);
             return;
         }
+        m_lastError.clear(); // voice input works: a later error is news again
         if (text.isEmpty()) {
             showNote(tr("No speech was recognized."));
             return;
@@ -741,11 +818,21 @@ void LC_AIVoiceInput::transcribe(const QByteArray& wav) {
 void LC_AIVoiceInput::showNote(const QString& text) {
     static_cast<LevelStrip*>(m_strip)->showText(text);
     const int run = m_generation;
-    QTimer::singleShot(NOTE_MS, this, [this, run] {
-        if (m_state == State::Idle && run == m_generation) {
+    const int note = ++m_note;
+    QTimer::singleShot(qMax(NOTE_MS, int(text.size()) * 60), this, [this, run, note] { // time to read a longer one
+        if (m_state == State::Idle && run == m_generation && note == m_note) { // not a newer note's time
             m_strip->hide();
         }
     });
+}
+
+void LC_AIVoiceInput::fail(const QString& error) {
+    if (error == m_lastError) {
+        showNote(error); // clicked again with no microphone: one bubble says it, the strip answers the retries
+        return;
+    }
+    m_lastError = error;
+    emit failed(error);
 }
 
 void LC_AIVoiceInput::cancel() {
@@ -761,19 +848,26 @@ void LC_AIVoiceInput::cancel() {
 }
 
 void LC_AIVoiceInput::insertTranscript(const QString& text) {
-    // appended after what is typed, with one space between (Cypher's editorText with append)
+    // at the text cursor, as dictation does elsewhere (at the end, as Cypher appends, when the cursor was not moved).
+    // After a word, the spaces and tabs before the cursor become one space; at the start of the message or of a line
+    // ("Steps:" and a newline) nothing is taken away. A word right after the cursor gets a space before it.
     const QString current = m_input->toPlainText();
-    qsizetype trailing = 0;
-    while (trailing < current.size() && current.at(current.size() - 1 - trailing).isSpace()) {
-        ++trailing;
+    const int end = qBound(0, m_input->textCursor().position(), int(current.size()));
+    int start = end;
+    while (start > 0 && (current.at(start - 1) == ' ' || current.at(start - 1) == '\t')) {
+        --start;
     }
+    const bool afterWord = start > 0 && current.at(start - 1) != '\n';
+    if (!afterWord) {
+        start = end;
+    }
+    const bool beforeWord = end < current.size() && current.at(end).isLetterOrNumber();
     QTextCursor cursor(m_input->document());
     cursor.beginEditBlock();
-    cursor.movePosition(QTextCursor::End);
-    cursor.movePosition(QTextCursor::Left, QTextCursor::KeepAnchor, int(trailing));
-    cursor.insertText(current.trimmed().isEmpty() ? text : " " + text);
+    cursor.setPosition(start);
+    cursor.setPosition(end, QTextCursor::KeepAnchor);
+    cursor.insertText((afterWord ? QStringLiteral(" ") : QString()) + text + (beforeWord ? QStringLiteral(" ") : QString()));
     cursor.endEditBlock();
-    cursor.movePosition(QTextCursor::End);
     m_input->setTextCursor(cursor);
     m_input->setFocus();
 }
@@ -811,8 +905,8 @@ void LC_AIVoiceInput::refresh() {
     const bool ready = LC_AIVoice::ready(LC_AIVoice::settings().endpoint, &why);
     static_cast<MicButton*>(m_mic)->setLook(m_state, ready);
     switch (m_state) {
-        case State::Recording:
-            m_mic->setToolTip(tr("Stop and transcribe (click, or %1)").arg(shortcutText()));
+        case State::Recording: // the key works where the panel has the focus, not in the drawing
+            m_mic->setToolTip(tr("Stop and transcribe (click, or %1 in the AI panel)").arg(shortcutText()));
             break;
         case State::Transcribing:
             m_mic->setToolTip(tr("Transcribing... click to cancel"));
@@ -825,8 +919,27 @@ void LC_AIVoiceInput::refresh() {
 }
 
 void LC_AIVoiceInput::openMenu() {
+    if (m_menu != nullptr && m_menu->isVisible()) {
+        return; // already open: a second one would stack on it
+    }
     auto* menu = new VoiceMenu(m_theme, this, [this] { refresh(); }, [this] { emit providersRequested(); });
+    m_menu = menu;
     menu->popup(this);
+}
+
+QSize LC_AIVoiceInput::sizeHint() const {
+    return {m_mic->width() + m_menuButton->width(), m_mic->height()};
+}
+
+QSize LC_AIVoiceInput::minimumSizeHint() const {
+    return sizeHint();
+}
+
+void LC_AIVoiceInput::resizeEvent(QResizeEvent* event) {
+    QWidget::resizeEvent(event);
+    // squeezed below the mic and its chevron (a full actions row in the narrowest panel): the chevron goes rather than
+    // being drawn over the mic, and comes back with the room (the size hints still ask for both)
+    m_menuButton->setVisible(width() >= m_mic->width() + m_menuButton->width());
 }
 
 void LC_AIVoiceInput::hideEvent(QHideEvent* event) {

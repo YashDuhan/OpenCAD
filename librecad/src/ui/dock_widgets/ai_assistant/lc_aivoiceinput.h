@@ -42,10 +42,15 @@ public:
     /** The live level strip, for the composer's layout under its actions row. Hidden while there is nothing to show. */
     QWidget* levelStrip() const;
     State state() const { return m_state; }
-    /** The voice menu: speech endpoint and model, send after transcribing. */
+    /** The voice menu: speech endpoint and model, send after transcribing. One at a time. */
     void openMenu();
     /** Drops a recording, or a transcription on its way. */
     void cancel();
+    /** The mic's look and tooltip: ready, or what is missing. Call it when keys may have changed (Providers). */
+    void refresh();
+    /** The mic and its chevron, also while the chevron is left out for want of room. */
+    QSize sizeHint() const override;
+    QSize minimumSizeHint() const override;
 
 signals:
     /** A transcript is in the message box and the user asked to send it at once. */
@@ -57,6 +62,7 @@ signals:
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
     void hideEvent(QHideEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
     void showEvent(QShowEvent* event) override;
 
 private:
@@ -69,10 +75,11 @@ private:
     /** Sends the recording to the speech endpoint; the transcript goes into the message box. */
     void transcribe(const QByteArray& wav);
     void setState(State state);
-    void refresh();
     void insertTranscript(const QString& text);
     /** A short note in the level strip, gone after a few seconds. */
     void showNote(const QString& text);
+    /** Reports an error in the conversation; the same one again only as a note, so retries do not pile up bubbles. */
+    void fail(const QString& error);
     bool panelHasFocus() const;
 
     LC_AITheme m_theme;
@@ -85,14 +92,18 @@ private:
     LC_AIVoiceRecorder* m_recorder {nullptr};
     QNetworkAccessManager* m_network {nullptr};
     QPointer<QNetworkReply> m_reply;
+    QPointer<QWidget> m_menu;      // the voice menu while it is open
     QTimer* m_tick {nullptr};
     State m_state {State::Idle};
     int m_generation {0};          // a transcription that comes back after cancel() is dropped
+    int m_note {0};                // the note shown last: an older one's timer leaves it alone
     bool m_held {false};           // the mic button or the push-to-talk key is down
     bool m_startedByPress {false}; // ... and that press started the recording
     bool m_spaceDown {false};      // the push-to-talk Space is down: its repeats and key-up are ours
     bool m_menuOnRelease {false};  // a click on the mic while nothing is set up: the voice menu opens on release
     QElapsedTimer m_pressed;
+    QElapsedTimer m_recording;     // since the recording started: tells a silent device from a short tap
+    QString m_lastError;           // the error last reported in the conversation, until a recording works
 };
 
 #endif
