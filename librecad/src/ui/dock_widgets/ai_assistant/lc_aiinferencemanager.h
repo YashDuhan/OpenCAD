@@ -91,6 +91,14 @@ public:
     /** The last run was stopped (Stop, New Chat) rather than ended by the model. */
     bool wasCancelled() const { return m_cancelled; }
 
+    /** The result a tool call gets when the user stopped the run before it ran (or while it ran): every call is answered. */
+    static bool isStoppedResult(const LC_AIChatMessage& message);
+    /**
+     * The conversation as the providers accept it: every tool call followed by one result. Calls left without one
+     * (chats saved before stopped calls were answered) get a "stopped" result; results without their call are left out.
+     */
+    static QList<LC_AIChatMessage> paired(const QList<LC_AIChatMessage>& history);
+
 signals:
     void delta(const QString& text);                         // assistant text as it streams
     void messageAdded(const LC_AIChatMessage& message);       // completed assistant or tool-result message
@@ -128,6 +136,8 @@ private:
     void runTools(int index);
     void finishTool(int index, const LC_AIToolResult& result);
     void executeTool(int index, const LC_AITool* tool);
+    /** The run was stopped: the calls of the turn that got no result get a "stopped" one, so the next request is valid. */
+    void answerUnrunCalls();
     void fail(const QString& error);
     QString errorFromBody(const QByteArray& body) const;
 
@@ -155,6 +165,10 @@ private:
     QMap<int, QJsonObject> m_blocks;     // Anthropic: content blocks by index
     QMap<int, QString> m_partialJson;    // Anthropic tool_use input / OpenAI tool arguments, by index
     QMap<int, LC_AIToolCall> m_openAICalls;
+    // the tool calls of m_turn once it is in the history: how many have a result, and whether the next one is running
+    bool m_callsInHistory {false};
+    int m_answered {0};
+    bool m_executing {false};
 
     QString runSystemPrompt() const; // systemPrompt() and m_promptAddition
     QString m_promptAddition;

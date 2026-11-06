@@ -1291,6 +1291,10 @@ void LC_AIChatTranscript::activateClarification(std::function<void(const QString
 }
 
 void LC_AIChatTranscript::toolResult(const LC_AIChatMessage& message) {
+    if (LC_AIInferenceManager::isStoppedResult(message)) {
+        // the user stopped the run before (or while) the call ran: finishRun() shows it as stopped, not failed
+        return;
+    }
     if (LC_AIToolCallWidget* w = m_tools.value(message.toolCallId)) {
         w->setResult(message.result);
     }
