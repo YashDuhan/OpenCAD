@@ -86,9 +86,9 @@ LC_AIAssistantWidget::LC_AIAssistantWidget(QWidget* parent)
     ask.name = "request_clarification";
     ask.label = tr("Question");
     ask.description = "Pause and ask the user one necessary, specific question before continuing, optionally with 2-8 "
-                      "choices to pick from (they can also type their own answer). Use only when the task cannot "
-                      "safely proceed without the answer, e.g. which project, units or dimensions to use. Do not ask "
-                      "what you can find out with the other tools.";
+                      "choices to pick from (at most 12; they can also type their own answer). Use only when the task "
+                      "cannot safely proceed without the answer, e.g. which project, units or dimensions to use. Do not "
+                      "ask what you can find out with the other tools.";
     ask.parameters = QJsonObject{
         {"type", "object"},
         {"properties", QJsonObject{{"question", QJsonObject{{"type", "string"}, {"description", "The question, one at a time"}}},
@@ -96,13 +96,17 @@ LC_AIAssistantWidget::LC_AIAssistantWidget(QWidget* parent)
                                                            {"description", "2 to 8 short answers to pick from (optional)"}}}}},
         {"required", QJsonArray{"question"}}};
     ask.executeAsync = [this](const QJsonObject& args, std::function<void(const LC_AIToolResult&)> done) {
-        if (args.value("question").toString().trimmed().isEmpty()) {
-            done(LC_AIToolResult::error(tr("question must be a non-empty string.")));
+        // the same check that decided whether the transcript shows a card for the call
+        if (const QString problem = LC_AIClarificationCard::problemWith(args); !problem.isEmpty()) {
+            done(LC_AIToolResult::error(problem));
             return;
         }
-        m_transcript->activateClarification([done](const QString& answer) {
+        const bool shown = m_transcript->activateClarification([done](const QString& answer) {
             done(LC_AIToolResult::text(QString::fromUtf8(QJsonDocument(QJsonObject{{"answer", answer}}).toJson(QJsonDocument::Compact))));
         });
+        if (!shown) { // never wait for an answer nobody can give
+            done(LC_AIToolResult::error(tr("The question could not be shown to the user. Call request_clarification again.")));
+        }
     };
     m_tools << ask;
     m_tools << LC_AIBrowser::tools(); // web lookups, when built with Qt WebEngine
@@ -530,6 +534,10 @@ bool LC_AIAssistantWidget::eventFilter(QObject* watched, QEvent* event) {
             && !(keyEvent->modifiers() & Qt::ShiftModifier)) {
             if (!m_busy) {
                 onSend();
+            }
+            else if (const QString text = m_input->toPlainText().trimmed();
+                     !text.isEmpty() && m_transcript->answerClarification(text)) {
+                m_input->clear(); // the AI asked a question: what is typed here answers it, as in its card
             }
             return true;
         }

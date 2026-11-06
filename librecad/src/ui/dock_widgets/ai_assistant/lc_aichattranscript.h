@@ -118,11 +118,21 @@ class LC_AIClarificationCard : public QFrame {
     Q_OBJECT
 public:
     LC_AIClarificationCard(const QString& question, const QStringList& choices, const LC_AITheme& theme, QWidget* parent = nullptr);
+    static constexpr int MAX_CHOICES = 12; // more would not fit the panel; the model is told to give fewer
+    /** The choices of a request_clarification call, blank ones left out. */
+    static QStringList choicesOf(const QJsonObject& arguments);
+    /** Why a request_clarification call cannot be asked (for the model), or empty when it can: no card is shown then. */
+    static QString problemWith(const QJsonObject& arguments);
     /** Called when the tool runs: the answer goes to `deliver` (at once if it was already given). */
     void activate(std::function<void(const QString&)> deliver);
     bool isActivated() const { return m_activated; }
     bool isAnswered() const { return !m_answer.isEmpty(); }
+    /** The tool call the card asks for. */
+    QString callId() const { return m_callId; }
+    void setCallId(const QString& id) { m_callId = id; }
     void setStopped();
+    /** The call got an error instead of asking (e.g. denied by the tool permissions): the card locks with it. */
+    void setFailed(const QString& reason);
     void focusInput();
     /** A chat restored from the history: the card shows the answer it got, locked as when it was given. */
     void showAnswer(const QString& answer) { choose(answer); }
@@ -150,6 +160,7 @@ private:
     QPushButton* m_continue {nullptr};
     QLabel* m_status {nullptr};
     QString m_answer;
+    QString m_callId;
     bool m_activated {false};
     std::function<void(const QString&)> m_deliver;
 };
@@ -167,8 +178,10 @@ public:
     void addAssistant(const LC_AIChatMessage& message);
     void toolStarted(const LC_AIToolCall& call);
     void toolAwaitingApproval(const QString& callId);
-    /** request_clarification is running: hand the answer of its card to `deliver`. */
-    void activateClarification(std::function<void(const QString&)> deliver);
+    /** request_clarification is running: hand the answer of its card to `deliver`; false when no card waits for it. */
+    bool activateClarification(std::function<void(const QString&)> deliver);
+    /** The question waiting for the user gets `answer` (typed in the message box); false when no question waits. */
+    bool answerClarification(const QString& answer);
     void toolResult(const LC_AIChatMessage& message);
     void addError(const QString& error);
     /** A widget under the answer of the run that just ended, such as its "Revert AI changes" button. */
