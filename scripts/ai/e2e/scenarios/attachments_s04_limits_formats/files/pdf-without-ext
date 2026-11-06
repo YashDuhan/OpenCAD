@@ -1,0 +1,39 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+2 0 obj
+<< /Length 253 >>
+stream
+BT /F1 14 Tf 72 760 Td 18 TL
+(BRACKET SPEC SHEET) '
+(Plate: 120 x 80 mm, thickness 6 mm) '
+(Holes: 4 x D10 at 15 mm from each edge) '
+(Material: S235 steel) '
+(Title block: OpenCAD test) '
+ET
+0.2 0.4 0.8 RG 2 w 72 300 m 300 300 l 300 450 l 72 450 l h S
+endstream
+endobj
+3 0 obj
+<< /Type /Page /Parent 4 0 R /MediaBox [0 0 612 792] /Contents 2 0 R /Resources << /Font << /F1 1 0 R >> >> >>
+endobj
+4 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+5 0 obj
+<< /Type /Catalog /Pages 4 0 R >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000079 00000 n 
+0000000382 00000 n 
+0000000508 00000 n 
+0000000565 00000 n 
+trailer
+<< /Size 6 /Root 5 0 R >>
+startxref
+614
+%%EOF

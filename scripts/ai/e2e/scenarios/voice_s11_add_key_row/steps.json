@@ -1,0 +1,36 @@
+[
+ {
+  "do": "click",
+  "text": "Voice settings",
+  "in": "ai",
+  "then_ms": 600
+ },
+ {
+  "do": "invoke",
+  "class": "LC_AIVoiceInput",
+  "method": "providersRequested"
+ },
+ {
+  "do": "wait",
+  "ms": 800
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/01_providers.png",
+  "of": "dialog"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/01_providers.txt",
+  "in": "dialog"
+ },
+ {
+  "do": "expect",
+  "in": "dialog",
+  "regex": "Gemini",
+  "label": "Providers dialog opened"
+ },
+ {
+  "do": "quit"
+ }
+]

@@ -1,0 +1,23 @@
+[
+ {
+  "text": "",
+  "tool_calls": [
+   {
+    "name": "request_clarification",
+    "arguments": {
+     "question": "Which layer should the new lines go on?",
+     "choices": [
+      "Walls",
+      "0"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "echo": true
+ },
+ {
+  "echo": true
+ }
+]

@@ -1,0 +1,141 @@
+[
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "0,0",
+    "100,0",
+    "ESC",
+    "ESC",
+    "line",
+    "0,0",
+    "100,0",
+    "ESC",
+    "ESC"
+   ]
+  }
+ },
+ {
+  "do": "click",
+  "text": "Check drawing: duplicates, gaps, open polylines, layers, pens...",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 400
+ },
+ {
+  "do": "type",
+  "text": "draw something"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait",
+  "ms": 1500
+ },
+ {
+  "do": "type",
+  "text": "my unsent draft about the title block"
+ },
+ {
+  "do": "click",
+  "text": "Fix all",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 600
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/queued.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/queued.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Waiting for the AI",
+  "label": "Fix all waits for the run"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\[input\\] my unsent draft",
+  "label": "the draft stays in the box"
+ },
+ {
+  "do": "invoke",
+  "name": "clarInput",
+  "method": "setText",
+  "args": [
+   "Walls"
+  ]
+ },
+ {
+  "do": "invoke",
+  "name": "clarContinue",
+  "method": "click"
+ },
+ {
+  "do": "wait",
+  "ms": 1500
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 20000
+ },
+ {
+  "do": "wait",
+  "ms": 800
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 20000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/done.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/done.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Asked the AI",
+  "label": "the queued Fix all was sent"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\[input\\] my unsent draft",
+  "label": "the draft is still there"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/entities.txt"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/entities.txt",
+  "regex": "^1 matching entities",
+  "label": "the duplicate is gone"
+ },
+ {
+  "do": "quit"
+ }
+]

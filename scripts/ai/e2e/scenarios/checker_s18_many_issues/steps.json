@@ -1,0 +1,66 @@
+[
+ {
+  "do": "tool",
+  "name": "open_drawing",
+  "args": {
+   "path": "${SCEN}/files/many.dxf"
+  }
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {},
+  "out": "${OUT}/check.txt"
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {
+   "limit": 500
+  },
+  "out": "${OUT}/check500.txt"
+ },
+ {
+  "do": "click",
+  "text": "Check drawing: duplicates, gaps, open polylines, layers, pens...",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 400
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/card.png",
+  "of": "ai"
+ },
+ {
+  "do": "click",
+  "text": "Fix all",
+  "in": "ai"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 20000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/after_fixall.png",
+  "of": "ai"
+ },
+ {
+  "do": "tool",
+  "name": "fix_drawing_issues",
+  "args": {},
+  "out": "${OUT}/fix.txt"
+ },
+ {
+  "do": "tool",
+  "name": "get_drawing_info",
+  "args": {},
+  "out": "${OUT}/info_after.txt"
+ },
+ {
+  "do": "quit"
+ }
+]

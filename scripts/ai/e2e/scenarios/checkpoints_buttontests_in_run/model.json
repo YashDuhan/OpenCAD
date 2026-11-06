@@ -1,0 +1,19 @@
+[
+ {
+  "text": "Testing.",
+  "tool_calls": [
+   {
+    "name": "test_toolbar_buttons",
+    "arguments": {
+     "ids": [
+      "DrawLine",
+      "DrawLineHorizontal"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Tested."
+ }
+]

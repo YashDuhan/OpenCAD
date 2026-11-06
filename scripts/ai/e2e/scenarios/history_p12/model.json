@@ -1,0 +1,62 @@
+[
+ {
+  "text": "Plan:",
+  "tool_calls": [
+   {
+    "name": "propose_plan",
+    "arguments": {
+     "title": "Plate",
+     "steps": [
+      "Draw the outline",
+      "Report"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "tool_calls": [
+   {
+    "name": "update_plan",
+    "arguments": {
+     "step": 1,
+     "status": "in_progress"
+    }
+   },
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "line",
+      "0,0",
+      "80,0",
+      "80,40",
+      "0,40",
+      "close"
+     ]
+    }
+   },
+   {
+    "name": "update_plan",
+    "arguments": {
+     "step": 1,
+     "status": "done"
+    }
+   },
+   {
+    "name": "update_plan",
+    "arguments": {
+     "step": 2,
+     "status": "in_progress"
+    }
+   }
+  ]
+ },
+ {
+  "text": "Finished the plate."
+ },
+ {
+  "when": "^\\[Debugger\\]",
+  "text": "Verdict: the outline is right."
+ }
+]

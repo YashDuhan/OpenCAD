@@ -1,0 +1,29 @@
+[
+ {
+  "text": "Undoing your line.",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "undo"
+     ]
+    }
+   },
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "circle",
+      "100,100",
+      "25",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Undid your line and drew a circle."
+ }
+]

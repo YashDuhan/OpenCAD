@@ -1,0 +1,27 @@
+[
+ {
+  "text": "Let me look first.",
+  "tool_calls": [
+   {
+    "name": "check_drawing",
+    "arguments": {
+     "rules": [
+      "fixable"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Applying the safe fixes.",
+  "tool_calls": [
+   {
+    "name": "fix_drawing_issues",
+    "arguments": {}
+   }
+  ]
+ },
+ {
+  "echo": true
+ }
+]

@@ -1,0 +1,79 @@
+[
+ {
+  "do": "type",
+  "text": "draw a bolt"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait",
+  "ms": 2000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/question.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/question.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "M16",
+  "label": "8th choice shown"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "M24 with a very long",
+  "label": "all 10 choices shown"
+ },
+ {
+  "do": "click",
+  "text": "Stop",
+  "in": "ai"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 10000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/stopped.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/stopped.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Not answered",
+  "label": "card says not answered"
+ },
+ {
+  "do": "type",
+  "text": "anything is fine"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 15000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/after.png",
+  "of": "ai"
+ },
+ {
+  "do": "quit"
+ }
+]

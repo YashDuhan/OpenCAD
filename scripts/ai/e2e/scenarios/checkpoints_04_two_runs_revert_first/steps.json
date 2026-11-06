@@ -1,0 +1,167 @@
+[
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "0,0",
+    "50,0",
+    "ESC"
+   ]
+  },
+  "out": "${OUT}/user.txt"
+ },
+ {
+  "do": "type",
+  "text": "draw a circle"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 30000
+ },
+ {
+  "do": "type",
+  "text": "now a line"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 30000
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/e2_run2.txt"
+ },
+ {
+  "do": "click",
+  "text": "aiRevertButton",
+  "in": "ai",
+  "index": 0
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/e3_after_click.txt"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "later AI answer",
+  "label": "card names the later AI answer"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Revert only these changes",
+  "label": "own-changes button"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/s3_card.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/d3_card.txt",
+  "in": "ai"
+ },
+ {
+  "do": "click",
+  "text": "aiRevertOwn",
+  "in": "ai"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/e4_own.txt"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/s4_own.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/d4_own.txt",
+  "in": "ai"
+ },
+ {
+  "do": "click",
+  "text": "aiRevertButton",
+  "in": "ai",
+  "index": 0
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/e5_rev2.txt"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/s5_rev2.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/d5_rev2.txt",
+  "in": "ai"
+ },
+ {
+  "do": "click",
+  "text": "aiRevertOwn",
+  "in": "ai",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/e6_own2.txt"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/s6_own2.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/d6.txt",
+  "in": "ai"
+ },
+ {
+  "do": "click",
+  "text": "Restore",
+  "in": "ai",
+  "index": 0
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/e7_restore_first.txt"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/s7.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/d7.txt",
+  "in": "ai"
+ },
+ {
+  "do": "quit"
+ }
+]

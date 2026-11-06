@@ -1,0 +1,29 @@
+[
+ {
+  "text": "Pick a size.",
+  "tool_calls": [
+   {
+    "name": "request_clarification",
+    "arguments": {
+     "question": "Which bolt size do you want? This is a deliberately long question to see how the card wraps text that runs over several lines in the narrow AI panel.",
+     "choices": [
+      "M3",
+      "M4",
+      "M5",
+      "M6",
+      "M8",
+      "M10",
+      "M12",
+      "M16",
+      "M20",
+      "M24 with a very long label that should wrap onto a second line inside the card"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "when": "anything",
+  "echo": true
+ }
+]

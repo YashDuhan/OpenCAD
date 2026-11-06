@@ -1,0 +1,133 @@
+[
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "0,0",
+    "100,0",
+    "ESC",
+    "ESC",
+    "line",
+    "0,10",
+    "0.001,10",
+    "ESC",
+    "ESC"
+   ]
+  }
+ },
+ {
+  "do": "click",
+  "text": "Check drawing: duplicates, gaps, open polylines, layers, pens...",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 400
+ },
+ {
+  "do": "click",
+  "text": "Check drawing: duplicates, gaps, open polylines, layers, pens...",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 400
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/card.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/card.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\[button\\] Ask the AI",
+  "label": "nothing fixable: Ask the AI, not Fix all"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\[button\\] Fix all",
+  "not": true,
+  "label": "no Fix all"
+ },
+ {
+  "do": "click",
+  "text": "Ask the AI",
+  "in": "ai",
+  "index": 0
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 20000
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/asked.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Help me fix the issue",
+  "label": "the prompt does not promise safe fixes"
+ },
+ {
+  "do": "tool",
+  "name": "use_menu",
+  "args": {
+   "path": "File > Close"
+  }
+ },
+ {
+  "do": "wait",
+  "ms": 800
+ },
+ {
+  "do": "tool",
+  "name": "handle_dialog",
+  "args": {
+   "button": "No"
+  }
+ },
+ {
+  "do": "wait",
+  "ms": 800
+ },
+ {
+  "do": "click",
+  "text": "Ask the AI",
+  "in": "ai",
+  "index": 0
+ },
+ {
+  "do": "wait",
+  "ms": 300
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/closed.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/closed.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "No drawing is open",
+  "label": "an old card says the drawing is closed"
+ },
+ {
+  "do": "quit"
+ }
+]

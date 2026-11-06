@@ -1,0 +1,53 @@
+[
+ {
+  "do": "drop",
+  "files": [
+   "${FIXTURES}/big-photo.jpg",
+   "${FIXTURES}/sketch.png"
+  ]
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/01_tiles.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/01_dump.txt",
+  "in": "ai"
+ },
+ {
+  "do": "keys",
+  "text": "@sel"
+ },
+ {
+  "do": "keys",
+  "keys": "Escape"
+ },
+ {
+  "do": "type",
+  "text": ""
+ },
+ {
+  "do": "keys",
+  "text": "@"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/02_popup_again.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\[row\\] @selection",
+  "label": "after Escape, clearing the box and typing @ again opens the popup"
+ },
+ {
+  "do": "keys",
+  "keys": "Escape"
+ },
+ {
+  "do": "quit"
+ }
+]

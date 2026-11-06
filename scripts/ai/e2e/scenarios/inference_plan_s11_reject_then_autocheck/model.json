@@ -1,0 +1,51 @@
+[
+ {
+  "text": "Let me look first.",
+  "tool_calls": [
+   {
+    "name": "list_entities",
+    "arguments": {}
+   }
+  ]
+ },
+ {
+  "text": "Plan:",
+  "tool_calls": [
+   {
+    "name": "propose_plan",
+    "arguments": {
+     "title": "Clean up",
+     "steps": [
+      "Delete the stray circle at 0,0",
+      "Draw a 297 x 210 border"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Understood, nothing changed. What would you like instead?"
+ },
+ {
+  "when": "^\\[Debugger\\]",
+  "text": "The request was not carried out: the stray circle is still there. Fixing.",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "line",
+      "0,0",
+      "297,0",
+      "297,210",
+      "0,210",
+      "close"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Verdict: the border was missing; I drew it."
+ }
+]

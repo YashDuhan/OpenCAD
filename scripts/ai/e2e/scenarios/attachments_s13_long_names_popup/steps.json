@@ -1,0 +1,97 @@
+[
+ {
+  "do": "tool",
+  "name": "open_drawing",
+  "args": {
+   "path": "${SCEN}/files/room2.dxf"
+  }
+ },
+ {
+  "do": "tool",
+  "name": "get_drawing_info",
+  "args": {},
+  "out": "${OUT}/info.txt"
+ },
+ {
+  "do": "drop",
+  "files": [
+   "${FIXTURES}/sketch.png",
+   "${FIXTURES}/spec-sheet.pdf"
+  ]
+ },
+ {
+  "do": "keys",
+  "text": "@lay"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/01_popup_tall_composer.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/01_dump.txt",
+  "in": "ai"
+ },
+ {
+  "do": "choose",
+  "text": "@layer Existing building"
+ },
+ {
+  "do": "keys",
+  "text": "vs "
+ },
+ {
+  "do": "keys",
+  "text": "@layer doors"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/02_popup_amp.png",
+  "of": "ai"
+ },
+ {
+  "do": "choose",
+  "text": "@layer Doors & Windows"
+ },
+ {
+  "do": "keys",
+  "text": "?"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/03_pills.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/03_dump.txt",
+  "in": "ai"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 30000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/04_sent.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/04_dump.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/requests.jsonl",
+  "regex": "<mention name=\\\\\"@layer Doors &amp; Windows &lt;new&gt;\\\\\">",
+  "label": "mention name escaped in the wrapper"
+ },
+ {
+  "do": "quit"
+ }
+]

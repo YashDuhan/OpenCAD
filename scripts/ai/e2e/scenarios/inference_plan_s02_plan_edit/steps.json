@@ -1,0 +1,176 @@
+[
+ {
+  "do": "click",
+  "text": "Plan",
+  "in": "ai"
+ },
+ {
+  "do": "type",
+  "text": "Draw the bracket plate"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait",
+  "ms": 1500
+ },
+ {
+  "do": "click",
+  "text": "Edit",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 500
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/01_editing.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/01_editing.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "One step per line, in order",
+  "label": "edit hint shown"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\[input\\] Draw a 120 x 80 rectangle from 0,0\\nDraw four circles",
+  "label": "editor holds the steps"
+ },
+ {
+  "do": "click",
+  "text": "Cancel",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 300
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\[button\\] Approve\\n",
+  "label": "Cancel brings back Approve"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/02_cancelled.png",
+  "of": "ai"
+ },
+ {
+  "do": "click",
+  "text": "Edit",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 300
+ },
+ {
+  "do": "keys",
+  "target": "focus",
+  "keys": "Ctrl+A"
+ },
+ {
+  "do": "keys",
+  "target": "focus",
+  "keys": "Backspace"
+ },
+ {
+  "do": "click",
+  "text": "Approve edited plan",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 300
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Write at least one step, or Reject the plan",
+  "label": "empty edit refused with a hint"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/03_empty.png",
+  "of": "ai"
+ },
+ {
+  "do": "keys",
+  "target": "focus",
+  "text": "1. Draw an 80 x 40 rectangle from 10,10\n- Draw a circle of radius 5 at 50,30\n\n   \n"
+ },
+ {
+  "do": "wait",
+  "ms": 300
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/04_typed.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/04_typed.txt",
+  "in": "ai"
+ },
+ {
+  "do": "click",
+  "text": "Approve edited plan",
+  "in": "ai"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 30000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/05_final.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/05_final.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Edited and approved",
+  "label": "card status Edited and approved"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\n1\\nDraw an 80 x 40 rectangle from 10,10\\n2\\nDraw a circle of radius 5 at 50,30\\n",
+  "label": "card shows the edited steps without bullets"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Add a 6 mm thickness note",
+  "not": true,
+  "label": "old step gone"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {
+   "type": "circle"
+  },
+  "out": "${OUT}/entities.txt"
+ },
+ {
+  "do": "quit"
+ }
+]

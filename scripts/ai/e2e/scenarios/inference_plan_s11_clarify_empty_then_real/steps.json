@@ -1,0 +1,61 @@
+[
+ {
+  "do": "type",
+  "text": "draw on a layer"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait",
+  "ms": 2500
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/two_cards.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/two_cards.txt",
+  "in": "ai"
+ },
+ {
+  "do": "keys",
+  "target": "focus",
+  "text": "Walls"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/typed.png",
+  "of": "ai"
+ },
+ {
+  "do": "click",
+  "text": "Continue",
+  "in": "ai"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 15000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/after.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/after.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Seen: .*answer.*Walls",
+  "label": "answer reached the model"
+ },
+ {
+  "do": "quit"
+ }
+]

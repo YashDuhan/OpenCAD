@@ -1,0 +1,226 @@
+  0
+SECTION
+  2
+HEADER
+  9
+$ACADVER
+  1
+AC1009
+  9
+$INSUNITS
+ 70
+4
+  0
+ENDSEC
+  0
+SECTION
+  2
+TABLES
+  0
+TABLE
+  2
+LTYPE
+ 70
+1
+  0
+LTYPE
+  2
+CONTINUOUS
+ 70
+0
+  3
+Solid line
+ 72
+65
+ 73
+0
+ 40
+0.0
+  0
+ENDTAB
+  0
+TABLE
+  2
+LAYER
+ 70
+2
+  0
+LAYER
+  2
+0
+ 70
+0
+ 62
+7
+  6
+CONTINUOUS
+  0
+LAYER
+  2
+Walls
+ 70
+0
+ 62
+1
+  6
+CONTINUOUS
+  0
+ENDTAB
+  0
+ENDSEC
+  0
+SECTION
+  2
+ENTITIES
+  0
+LINE
+  8
+Walls
+ 62
+1
+ 10
+0
+ 20
+0
+ 30
+0
+ 11
+60
+ 21
+0
+ 31
+0
+  0
+LINE
+  8
+Walls
+ 62
+1
+ 10
+40
+ 20
+0
+ 30
+0
+ 11
+100
+ 21
+0
+ 31
+0
+  0
+POLYLINE
+  8
+Walls
+ 66
+1
+ 10
+0
+ 20
+0
+ 30
+0
+ 70
+0
+  0
+VERTEX
+  8
+Walls
+ 10
+0
+ 20
+20
+ 30
+0
+  0
+VERTEX
+  8
+Walls
+ 10
+50
+ 20
+20
+ 30
+0
+  0
+VERTEX
+  8
+Walls
+ 10
+50
+ 20
+20
+ 30
+0
+  0
+VERTEX
+  8
+Walls
+ 10
+50
+ 20
+60
+ 30
+0
+  0
+VERTEX
+  8
+Walls
+ 10
+0
+ 20
+60
+ 30
+0
+  0
+VERTEX
+  8
+Walls
+ 10
+0
+ 20
+20.03
+ 30
+0
+  0
+SEQEND
+  8
+Walls
+  0
+LINE
+  8
+Walls
+ 10
+200
+ 20
+0
+ 30
+0
+ 11
+250
+ 21
+0
+ 31
+0
+  0
+LINE
+  8
+Walls
+370
+50
+ 10
+250.05
+ 20
+0.0
+ 30
+0
+ 11
+250.05
+ 21
+50
+ 31
+0
+  0
+ENDSEC
+  0
+EOF

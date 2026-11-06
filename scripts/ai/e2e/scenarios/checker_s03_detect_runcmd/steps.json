@@ -1,0 +1,323 @@
+[
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "0,0",
+    "100,0",
+    "ESC",
+    "ESC",
+    "line",
+    "0,0",
+    "100,0",
+    "ESC",
+    "ESC"
+   ]
+  },
+  "out": "${OUT}/r_dup.txt"
+ },
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "0,50",
+    "60,50",
+    "ESC",
+    "ESC",
+    "line",
+    "40,50",
+    "120,50",
+    "ESC",
+    "ESC"
+   ]
+  },
+  "out": "${OUT}/r_overlap.txt"
+ },
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "polyline",
+    "200,0",
+    "300,0",
+    "300,100",
+    "200,100",
+    "200,0.03",
+    "ESC",
+    "ESC"
+   ]
+  },
+  "out": "${OUT}/r_pline.txt"
+ },
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "0,100",
+    "50,100",
+    "ESC",
+    "ESC",
+    "line",
+    "50.04,100.02",
+    "50.04,150",
+    "ESC",
+    "ESC"
+   ]
+  },
+  "out": "${OUT}/r_gap.txt"
+ },
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "0,0.00000000001",
+    "0,0",
+    "ESC",
+    "ESC"
+   ]
+  },
+  "out": "${OUT}/r_zero.txt"
+ },
+ {
+  "do": "tool",
+  "name": "add_text",
+  "args": {
+   "labels": [
+    {
+     "text": "A",
+     "x": 0,
+     "y": -20,
+     "height": 2.5
+    },
+    {
+     "text": "B",
+     "x": 20,
+     "y": -20,
+     "height": 2.5
+    },
+    {
+     "text": "C",
+     "x": 40,
+     "y": -20,
+     "height": 2.5
+    },
+    {
+     "text": "D",
+     "x": 60,
+     "y": -20,
+     "height": 2.5
+    },
+    {
+     "text": "E",
+     "x": 80,
+     "y": -20,
+     "height": 2.25
+    },
+    {
+     "text": "F",
+     "x": 100,
+     "y": -20,
+     "height": 4.37
+    }
+   ]
+  },
+  "out": "${OUT}/r_text.txt"
+ },
+ {
+  "do": "tool",
+  "name": "use_panel",
+  "args": {
+   "panel": "Layers",
+   "button": "Add layer"
+  },
+  "out": "${OUT}/r_layer1.txt"
+ },
+ {
+  "do": "tool",
+  "name": "handle_dialog",
+  "args": {
+   "fields": [
+    {
+     "field": "Layer Name:",
+     "value": "Walls"
+    }
+   ],
+   "button": "OK"
+  },
+  "out": "${OUT}/r_layer2.txt"
+ },
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "150,150",
+    "180,150",
+    "ESC",
+    "ESC"
+   ]
+  },
+  "out": "${OUT}/r_walls.txt"
+ },
+ {
+  "do": "tool",
+  "name": "press_toolbar_button",
+  "args": {
+   "id": "EditKillAllActions"
+  },
+  "out": "${OUT}/r_kill.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "select_entities",
+  "args": {
+   "x1": 149,
+   "y1": 149,
+   "x2": 181,
+   "y2": 151
+  },
+  "out": "${OUT}/r_sel.txt"
+ },
+ {
+  "do": "tool",
+  "name": "use_properties",
+  "args": {
+   "action": "read"
+  },
+  "out": "${OUT}/r_props.txt"
+ },
+ {
+  "do": "tool",
+  "name": "use_properties",
+  "args": {
+   "action": "set",
+   "row": "General / Color",
+   "value": "Red"
+  },
+  "out": "${OUT}/r_colour.txt"
+ },
+ {
+  "do": "tool",
+  "name": "select_entities",
+  "args": {
+   "mode": "clear"
+  }
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {
+   "limit": 200
+  },
+  "out": "${OUT}/entities.txt"
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {},
+  "out": "${OUT}/check.txt"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/check.txt",
+  "regex": "\\[duplicate\\][^\\n]*: 1\\n- error: #14 line at \\(50, 0\\) is an exact copy of #9\\. Fix: delete #14 \\(fixable\\)",
+  "label": "duplicate #14 of #9 with position"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/check.txt",
+  "regex": "#19 line and #24 line overlap for 20 along the same line, from \\(40, 50\\) to \\(60, 50\\)",
+  "label": "overlap #19/#24"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/check.txt",
+  "regex": "#30 polyline is open with a gap of 0\\.03",
+  "label": "nearly closed #30"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/check.txt",
+  "regex": "#50 line start \\(50\\.04, 100\\.02\\) is 0\\.0447 from #45 line end \\(50, 100\\)",
+  "label": "endpoint gap #50/#45"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/check.txt",
+  "regex": "#363 text \\\"E\\\" is 2\\.25 high",
+  "label": "text E 2.25"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/check.txt",
+  "regex": "#433 text \\\"F\\\" has an odd height 4\\.37",
+  "label": "text F 4.37"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/check.txt",
+  "regex": "\\[layer0\\][^\\n]*\\n- note: 13 entities \\(#9, #14, #19",
+  "label": "layer0 entities listed"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/check.txt",
+  "regex": "line on layer Walls has its own colour red",
+  "label": "explicit red colour"
+ },
+ {
+  "do": "tool",
+  "name": "fix_drawing_issues",
+  "args": {},
+  "out": "${OUT}/fix.txt"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {
+   "limit": 200
+  },
+  "out": "${OUT}/after.txt"
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {},
+  "out": "${OUT}/check_after.txt"
+ },
+ {
+  "do": "tool",
+  "name": "press_toolbar_button",
+  "args": {
+   "id": "EditUndo"
+  },
+  "out": "${OUT}/undo.txt"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {
+   "limit": 200
+  },
+  "out": "${OUT}/after_undo.txt"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/main.png",
+  "of": "main"
+ },
+ {
+  "do": "quit"
+ }
+]

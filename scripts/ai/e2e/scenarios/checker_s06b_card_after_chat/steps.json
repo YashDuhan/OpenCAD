@@ -1,0 +1,119 @@
+[
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "0,0",
+    "100,0",
+    "ESC",
+    "ESC",
+    "line",
+    "0,0",
+    "100,0",
+    "ESC",
+    "ESC"
+   ]
+  }
+ },
+ {
+  "do": "type",
+  "text": "hello"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 20000
+ },
+ {
+  "do": "click",
+  "text": "Check drawing: duplicates, gaps, open polylines, layers, pens...",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 400
+ },
+ {
+  "do": "new_drawing"
+ },
+ {
+  "do": "wait",
+  "ms": 400
+ },
+ {
+  "do": "activate",
+  "index": 0
+ },
+ {
+  "do": "wait",
+  "ms": 400
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/a1.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/a1.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "(?s)Hi there\\..*Drawing check.*Fix all",
+  "label": "the card comes back after the chat's messages"
+ },
+ {
+  "do": "type",
+  "text": "more please"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 20000
+ },
+ {
+  "do": "activate",
+  "index": 1
+ },
+ {
+  "do": "wait",
+  "ms": 400
+ },
+ {
+  "do": "activate",
+  "index": 0
+ },
+ {
+  "do": "wait",
+  "ms": 400
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/a2.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Sure\\.",
+  "label": "the chat is back"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Drawing check",
+  "not": true,
+  "label": "a card the conversation went past is not put at the end"
+ },
+ {
+  "do": "quit"
+ }
+]

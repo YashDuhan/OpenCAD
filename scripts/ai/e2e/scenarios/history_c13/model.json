@@ -1,0 +1,21 @@
+[
+ {
+  "text": "Circle.",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "circle",
+      "100,100",
+      "25",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew the circle."
+ }
+]

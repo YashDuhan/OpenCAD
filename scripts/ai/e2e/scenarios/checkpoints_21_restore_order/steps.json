@@ -1,0 +1,152 @@
+[
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "0,0",
+    "50,0",
+    "ESC"
+   ]
+  },
+  "out": "${OUT}/user.txt"
+ },
+ {
+  "do": "type",
+  "text": "draw a circle"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 30000
+ },
+ {
+  "do": "type",
+  "text": "now a line"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 30000
+ },
+ {
+  "do": "click",
+  "text": "Accept",
+  "in": "ai",
+  "may_fail": true
+ },
+ {
+  "do": "click",
+  "text": "aiRevertButton",
+  "in": "ai",
+  "index": 1
+ },
+ {
+  "do": "click",
+  "text": "aiRevertButton",
+  "in": "ai",
+  "index": 0
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/e1_both_reverted.txt"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/d1_both.txt",
+  "in": "ai"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/s1_both.png",
+  "of": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\[button\\] Restore[\\s\\S]*\\[button\\] Restore",
+  "not": true,
+  "label": "only one Restore offered (answer 1's)"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\[button\\] Restore",
+  "label": "answer 1 offers Restore"
+ },
+ {
+  "do": "click",
+  "text": "Restore",
+  "in": "ai"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/e2_restore1.txt"
+ },
+ {
+  "do": "wait",
+  "ms": 200
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/d2_restore1.txt",
+  "in": "ai"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/s2_restore1.png",
+  "of": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\[button\\] Restore",
+  "label": "answer 2 now offers Restore"
+ },
+ {
+  "do": "click",
+  "text": "Restore",
+  "in": "ai"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/e3_restore2.txt"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/e3_restore2.txt",
+  "regex": "circle[\\s\\S]*",
+  "label": "circle back"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/d3.txt",
+  "in": "ai"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/s3.png",
+  "of": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Reverted",
+  "not": true,
+  "label": "both answers back"
+ },
+ {
+  "do": "quit"
+ }
+]

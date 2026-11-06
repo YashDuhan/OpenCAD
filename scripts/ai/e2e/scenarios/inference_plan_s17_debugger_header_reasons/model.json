@@ -1,0 +1,71 @@
+[
+ {
+  "tool_calls": [
+   {
+    "name": "draw_rect",
+    "arguments": {}
+   },
+   {
+    "name": "draw_hole",
+    "arguments": {}
+   }
+  ]
+ },
+ {
+  "text": "Both failed."
+ },
+ {
+  "when": "^\\[Debugger\\]",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "circle",
+      "0,0",
+      "1"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Verdict: fixed."
+ },
+ {
+  "when": "Draw a dot",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "circle",
+      "0,0",
+      "3"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew it."
+ },
+ {
+  "when": "^\\[Debugger\\]",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "circle",
+      "0,0",
+      "2"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Verdict: fixed again."
+ }
+]

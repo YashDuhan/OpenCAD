@@ -1,0 +1,44 @@
+[
+ {
+  "when": "Do the plan",
+  "text": "Plan:",
+  "tool_calls": [
+   {
+    "name": "propose_plan",
+    "arguments": {
+     "title": "Look around",
+     "steps": [
+      "Look at the drawing",
+      "Report what is there"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "when": "approved the plan",
+  "tool_calls": [
+   {
+    "name": "update_plan",
+    "arguments": {
+     "step": 1,
+     "status": "done"
+    }
+   },
+   {
+    "name": "update_plan",
+    "arguments": {
+     "step": 2,
+     "status": "in_progress"
+    }
+   },
+   {
+    "name": "list_entities",
+    "arguments": {}
+   }
+  ]
+ },
+ {
+  "text": "The drawing is empty."
+ }
+]

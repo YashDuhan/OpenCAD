@@ -1,0 +1,83 @@
+[
+ {
+  "do": "drop",
+  "files": [
+   "${FIXTURES}/spec-sheet.pdf"
+  ]
+ },
+ {
+  "do": "type",
+  "text": "From the attached PDF only: what is the plate size and the hole diameter? Answer in one short line, no tools."
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 150000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/01_pdf_answer.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/01_dump.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "120\\s*(mm)?\\s*[x\u00d7]\\s*80",
+  "label": "plate 120 x 80"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "(D|\u00d8|diameter[^\\n]{0,20})\\s*10\\b|\\b10\\s*mm",
+  "label": "hole diameter 10"
+ },
+ {
+  "do": "drop",
+  "files": [
+   "${FIXTURES}/sketch.png"
+  ]
+ },
+ {
+  "do": "type",
+  "text": "What does this new image show? One sentence, no tools."
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 150000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/02_png_answer.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/02_dump.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "rectangle",
+  "label": "mentions the rectangle"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "circle|hole",
+  "label": "mentions the circle"
+ },
+ {
+  "do": "quit"
+ }
+]

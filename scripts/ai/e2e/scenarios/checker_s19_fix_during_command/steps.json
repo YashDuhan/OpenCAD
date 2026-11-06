@@ -1,0 +1,100 @@
+[
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "0,0",
+    "100,0",
+    "ESC",
+    "ESC",
+    "line",
+    "0,0",
+    "100,0",
+    "ESC",
+    "ESC"
+   ]
+  }
+ },
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "0,10"
+   ]
+  },
+  "out": "${OUT}/start_line.txt"
+ },
+ {
+  "do": "tool",
+  "name": "select_entities",
+  "args": {
+   "all": true
+  },
+  "out": "${OUT}/sel.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "fix_drawing_issues",
+  "args": {},
+  "out": "${OUT}/fix.txt"
+ },
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "100,10",
+    "ESC",
+    "ESC"
+   ]
+  },
+  "out": "${OUT}/finish_line.txt"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/after.txt"
+ },
+ {
+  "do": "tool",
+  "name": "press_toolbar_button",
+  "args": {
+   "id": "EditUndo"
+  },
+  "out": "${OUT}/undo1.txt"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/after_undo1.txt"
+ },
+ {
+  "do": "tool",
+  "name": "press_toolbar_button",
+  "args": {
+   "id": "EditUndo"
+  },
+  "out": "${OUT}/undo2.txt"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/after_undo2.txt"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/main.png",
+  "of": "main"
+ },
+ {
+  "do": "quit"
+ }
+]

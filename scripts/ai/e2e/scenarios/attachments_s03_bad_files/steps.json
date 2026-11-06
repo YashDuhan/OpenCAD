@@ -1,0 +1,146 @@
+[
+ {
+  "do": "drop",
+  "files": [
+   "${FIXTURES}/tone.wav",
+   "${SCEN}/files/notes.txt"
+  ]
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/01_wav_txt.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/01_dump.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\ntone\\.wav, notes\\.txt: only images \\(PNG, JPEG, WebP, GIF, BMP\\) and PDFs can be attached\\.\\n",
+  "label": "wav and txt refused in one line, every format named"
+ },
+ {
+  "do": "drop",
+  "files": [
+   "${SCEN}/files/fake.png",
+   "${SCEN}/files/folder.png",
+   "${SCEN}/files/garbage.pdf",
+   "${FIXTURES}/does-not-exist.png"
+  ]
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/02_fake.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/02_dump.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\nfolder\\.png is a folder, not a file\\.",
+  "label": "folder named by its name only"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\ndoes-not-exist\\.png was not found\\.",
+  "label": "missing file named by its name only"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "garbage\\.pdf cannot be read \\(damaged PDF\\)",
+  "label": "garbage PDF refused"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "${OUT}/",
+  "not": true,
+  "label": "no full paths in the notice"
+ },
+ {
+  "do": "drop",
+  "files": [
+   "${FIXTURES}/broken.pdf",
+   "${SCEN}/files/half.pdf"
+  ]
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/03_broken.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/03_dump.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "broken\\.pdf cannot be read \\(damaged PDF\\)",
+  "label": "truncated broken.pdf refused"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "half\\.pdf cannot be read \\(damaged PDF\\)",
+  "label": "truncated half.pdf refused"
+ },
+ {
+  "do": "drop",
+  "files": [
+   "${FIXTURES}/many-pages.pdf"
+  ]
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/04_many.png",
+  "of": "ai"
+ },
+ {
+  "do": "type",
+  "text": "Read these PDFs."
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 60000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/05_sent.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/05_dump.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/requests.jsonl",
+  "regex": "many-pages\\.pdf",
+  "label": "good PDF sent"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/requests.jsonl",
+  "regex": "broken\\.pdf|half\\.pdf|garbage\\.pdf",
+  "not": true,
+  "label": "damaged PDFs not sent"
+ },
+ {
+  "do": "quit"
+ }
+]

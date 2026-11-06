@@ -1,0 +1,264 @@
+[
+ {
+  "do": "tool",
+  "name": "use_menu",
+  "args": {
+   "path": "File > Save as..."
+  }
+ },
+ {
+  "do": "tool",
+  "name": "handle_dialog",
+  "args": {
+   "file_path": "${SCEN}/files/d.dxf",
+   "button": "Save"
+  }
+ },
+ {
+  "do": "type",
+  "text": "First topic: gears"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 30000
+ },
+ {
+  "do": "click",
+  "text": "New Chat",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "gears",
+  "not": true,
+  "label": "New Chat clears the transcript"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/1_after_new_chat.png",
+  "of": "ai"
+ },
+ {
+  "do": "click",
+  "text": "Chat history of this drawing",
+  "in": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/popup_after_new.txt",
+  "in": "popup"
+ },
+ {
+  "do": "expect",
+  "in": "popup",
+  "regex": "First topic: gears",
+  "label": "old chat still in history"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/2_popup_after_new.png",
+  "of": "popup"
+ },
+ {
+  "do": "keys",
+  "keys": "Escape",
+  "target": "focus"
+ },
+ {
+  "do": "type",
+  "text": "Second topic: brackets"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 30000
+ },
+ {
+  "do": "click",
+  "text": "Chat history of this drawing",
+  "in": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/popup_two.txt",
+  "in": "popup"
+ },
+ {
+  "do": "expect",
+  "in": "popup",
+  "regex": "Second topic: brackets[\\s\\S]*First topic: gears",
+  "label": "two chats, newest first"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/3_popup_two.png",
+  "of": "popup"
+ },
+ {
+  "do": "keys",
+  "keys": "Down",
+  "target": "focus"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/4_popup_down.png",
+  "of": "popup"
+ },
+ {
+  "do": "keys",
+  "keys": "Return",
+  "target": "focus"
+ },
+ {
+  "do": "wait",
+  "ms": 500
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "First topic: gears[\\s\\S]*Gears answer",
+  "label": "resumed old chat shown"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "brackets",
+  "not": true,
+  "label": "second chat not shown"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/5_resumed.png",
+  "of": "ai"
+ },
+ {
+  "do": "type",
+  "text": "Gears follow-up"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 30000
+ },
+ {
+  "do": "click",
+  "text": "Chat history of this drawing",
+  "in": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/popup_after_followup.txt",
+  "in": "popup"
+ },
+ {
+  "do": "expect",
+  "in": "popup",
+  "regex": "First topic: gears[\\s\\S]*Second topic: brackets",
+  "label": "continued chat moves to the top"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/6_popup_after_followup.png",
+  "of": "popup"
+ },
+ {
+  "do": "keys",
+  "keys": "Escape",
+  "target": "focus"
+ },
+ {
+  "do": "new_drawing"
+ },
+ {
+  "do": "activate",
+  "index": 0
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Gears follow-up",
+  "label": "back to d.dxf shows the gears chat (latest)"
+ },
+ {
+  "do": "click",
+  "text": "Chat history of this drawing",
+  "in": "ai"
+ },
+ {
+  "do": "keys",
+  "keys": "Down",
+  "target": "focus"
+ },
+ {
+  "do": "keys",
+  "keys": "Return",
+  "target": "focus"
+ },
+ {
+  "do": "wait",
+  "ms": 500
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Second topic: brackets",
+  "label": "resumed brackets chat (only viewed)"
+ },
+ {
+  "do": "activate",
+  "index": 1
+ },
+ {
+  "do": "activate",
+  "index": 0
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/after_switch_back.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Second topic: brackets",
+  "label": "switching away and back keeps the chat I was viewing"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/7_after_switch_back.png",
+  "of": "ai"
+ },
+ {
+  "do": "click",
+  "text": "New Chat",
+  "in": "ai"
+ },
+ {
+  "do": "activate",
+  "index": 1
+ },
+ {
+  "do": "activate",
+  "index": 0
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/after_newchat_switch.txt",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 1200
+ },
+ {
+  "do": "quit"
+ }
+]

@@ -1,0 +1,105 @@
+[
+ {
+  "do": "setting",
+  "key": "checkWorkAutomatically",
+  "value": true
+ },
+ {
+  "do": "type",
+  "text": "Draw a plate"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait",
+  "ms": 2500
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/01_two_failed.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/01_two_failed.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Debugger\\n2 tool calls failed",
+  "label": "reason: 2 tool calls failed"
+ },
+ {
+  "do": "click",
+  "text": "Allow",
+  "in": "ai"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 20000
+ },
+ {
+  "do": "type",
+  "text": "Draw a dot"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait",
+  "ms": 2000
+ },
+ {
+  "do": "click",
+  "text": "Allow",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 2500
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/02_auto.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/02_auto.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "checking automatically",
+  "label": "auto pass after a change"
+ },
+ {
+  "do": "click",
+  "text": "Allow",
+  "in": "ai"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 20000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/03_final.png",
+  "of": "ai"
+ },
+ {
+  "do": "click",
+  "text": "Check again",
+  "in": "ai"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 20000
+ },
+ {
+  "do": "quit"
+ }
+]

@@ -4,7 +4,8 @@
 #   scripts/ai/e2e/run.sh SCENARIO_DIR [OUT_DIR]
 #
 # SCENARIO_DIR holds steps.json (the driver's steps, see lc_aie2etest.cpp) and model.json (the scripted model's replies,
-# see fake_model.py). In steps.json, ${OUT} is the output folder and ${FIXTURES} the dummy files (make_fixtures.py).
+# see fake_model.py), and may hold files/ (its own input files) and env (settings such as MODE=supervised). In both JSON
+# files, ${OUT} is the output folder, ${FIXTURES} the dummy files (make_fixtures.py) and ${SCEN} the scenario's folder.
 # Results: OUT_DIR/results.json, app.log, the model's request log requests.jsonl, and the screenshots the steps take.
 # Env: BIN (build folder), MODE (approval mode: supervised, edits, auto, full; default auto), TIMEOUT (seconds),
 # KEEP_HOME (a folder whose settings and data survive between runs), REAL=gemini (use the Gemini key stored in your own
@@ -14,6 +15,7 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(cd "$HERE/../../.." && pwd)
 SCEN=$(cd "$1" && pwd)
 OUT=${2:-$SCEN/out}
+if [ -f "$SCEN/env" ]; then set -a; . "$SCEN/env"; set +a; fi
 BIN=${BIN:-$ROOT/build/x64-debug}
 MODE=${MODE:-auto}
 FIXTURES=${FIXTURES:-$HERE/fixtures}
@@ -38,7 +40,8 @@ out["approvalMode"] = sys.argv[2]
 json.dump(out, open(sys.argv[1], "w"))
 PY
 else
-    python3 "$HERE/fake_model.py" "$PORT" "$SCEN/model.json" "$OUT/requests.jsonl" & FAKE=$!
+    sed -e "s#\${OUT}#$OUT#g" -e "s#\${FIXTURES}#$FIXTURES#g" -e "s#\${SCEN}#$SCEN#g" "$SCEN/model.json" > "$OUT/model.run.json"
+    python3 "$HERE/fake_model.py" "$PORT" "$OUT/model.run.json" "$OUT/requests.jsonl" & FAKE=$!
     python3 - "$CONF/LibreCAD-2/ai-auth.json" "$MODE" "http://127.0.0.1:$PORT/v1" <<'PY'
 import json, os, sys
 out = json.load(open(sys.argv[1])) if os.path.exists(sys.argv[1]) else {}
@@ -49,7 +52,7 @@ json.dump(out, open(sys.argv[1], "w"))
 PY
     sleep 0.4
 fi
-sed -e "s#\${OUT}#$OUT#g" -e "s#\${FIXTURES}#$FIXTURES#g" "$SCEN/steps.json" > "$OUT/steps.run.json"
+sed -e "s#\${OUT}#$OUT#g" -e "s#\${FIXTURES}#$FIXTURES#g" -e "s#\${SCEN}#$SCEN#g" "$SCEN/steps.json" > "$OUT/steps.run.json"
 cd "$BIN" && OPENCAD_AI_E2E="$OUT/steps.run.json" OPENCAD_AI_E2E_OUT="$OUT/results.json" XDG_CONFIG_HOME="$T/config" \
     XDG_DATA_HOME="$T/data" QT_QPA_PLATFORM=offscreen QTWEBENGINE_CHROMIUM_FLAGS="--disable-gpu --disable-gpu-compositing" \
     timeout "${TIMEOUT:-300}" ./librecad > "$OUT/app.log" 2>&1

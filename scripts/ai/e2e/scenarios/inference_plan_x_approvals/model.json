@@ -1,0 +1,43 @@
+[
+ {
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "circle",
+      "0,0",
+      "5",
+      ""
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "tool_calls": [
+   {
+    "name": "fix_drawing_issues",
+    "arguments": {
+     "rules": [
+      "duplicate",
+      "zero_length"
+     ],
+     "scope": "layer",
+     "layer": "Walls"
+    }
+   }
+  ]
+ },
+ {
+  "tool_calls": [
+   {
+    "name": "fix_drawing_issues",
+    "arguments": {}
+   }
+  ]
+ },
+ {
+  "text": "Done here."
+ }
+]

@@ -1,0 +1,32 @@
+[
+ {
+  "text": "Drawing.",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "circle",
+      "100,100",
+      "25",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "line",
+      "0,50",
+      "80,50",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew a circle and a line."
+ }
+]

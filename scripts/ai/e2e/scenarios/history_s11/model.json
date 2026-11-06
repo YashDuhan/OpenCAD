@@ -1,0 +1,22 @@
+[
+ {
+  "when": "circle please",
+  "text": "Drawing.",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "circle",
+      "100,100",
+      "25"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "when": "Did you draw",
+  "echo": true
+ }
+]

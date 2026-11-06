@@ -1,0 +1,155 @@
+[
+ {
+  "do": "type",
+  "text": "draw two circles and a line"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait",
+  "ms": 2000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/approval1.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/approval1.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Approval needed",
+  "label": "approval box shown"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Types 3 lines into the command line",
+  "label": "what it does"
+ },
+ {
+  "do": "click",
+  "text": "Allow",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 2000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/approval2.png",
+  "of": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Approval needed",
+  "label": "second call asks"
+ },
+ {
+  "do": "click",
+  "text": "Session",
+  "in": "ai"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 20000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/after_session.png",
+  "of": "ai"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/entities1.txt"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/entities1.txt",
+  "regex": "radius=25",
+  "label": "circle 1 drawn"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/entities1.txt",
+  "regex": "centre=\\(200, 200\\) radius=10",
+  "label": "circle 2 drawn without asking (session)"
+ },
+ {
+  "do": "click",
+  "text": "New Chat",
+  "in": "ai"
+ },
+ {
+  "do": "type",
+  "text": "draw one more circle"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait",
+  "ms": 2000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/approval3.png",
+  "of": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Approval needed",
+  "label": "new chat asks again"
+ },
+ {
+  "do": "click",
+  "text": "Deny",
+  "in": "ai"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 20000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/after_deny.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/after_deny.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Denied a command",
+  "label": "denied block says denied"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/entities2.txt"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/entities2.txt",
+  "regex": "radius=40",
+  "not": true,
+  "label": "denied circle not drawn"
+ },
+ {
+  "do": "quit"
+ }
+]

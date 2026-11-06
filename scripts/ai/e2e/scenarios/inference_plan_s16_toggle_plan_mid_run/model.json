@@ -1,0 +1,48 @@
+[
+ {
+  "text": "One question first.",
+  "tool_calls": [
+   {
+    "name": "request_clarification",
+    "arguments": {
+     "question": "Which radius?",
+     "choices": [
+      "5 mm",
+      "10 mm"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "circle",
+      "0,0",
+      "5"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "I need a plan first.",
+  "tool_calls": [
+   {
+    "name": "propose_plan",
+    "arguments": {
+     "title": "Circle",
+     "steps": [
+      "Draw a circle of radius 5 at 0,0"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "echo": true
+ }
+]

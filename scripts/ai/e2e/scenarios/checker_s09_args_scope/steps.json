@@ -1,0 +1,286 @@
+[
+ {
+  "do": "tool",
+  "name": "open_drawing",
+  "args": {
+   "path": "${SCEN}/files/problems.dxf"
+  }
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {
+   "scope": "selection"
+  },
+  "out": "${OUT}/c01_sel_empty.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {
+   "scope": "layer"
+  },
+  "out": "${OUT}/c02_layer_noname.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {
+   "scope": "layer",
+   "layer": "Roof"
+  },
+  "out": "${OUT}/c03_layer_unknown.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {
+   "scope": "layer",
+   "layer": "walls"
+  },
+  "out": "${OUT}/c04_layer_lowercase.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {
+   "scope": "layer",
+   "layer": "Walls"
+  },
+  "out": "${OUT}/c05_layer_walls.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {
+   "scope": "bogus"
+  },
+  "out": "${OUT}/c06_scope_bogus.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {
+   "rules": [
+    "bogus",
+    "duplicate"
+   ]
+  },
+  "out": "${OUT}/c07_rules_bogus.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {
+   "rules": [
+    "geometry"
+   ]
+  },
+  "out": "${OUT}/c08_rules_geometry.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {
+   "rules": "duplicates, gaps"
+  },
+  "out": "${OUT}/c09_rules_string.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {
+   "rules": [
+    "endpoint_gap"
+   ],
+   "tolerance": 0.01
+  },
+  "out": "${OUT}/c10_tol_small.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {
+   "rules": [
+    "endpoint_gap",
+    "tiny_segment"
+   ],
+   "tolerance": 5
+  },
+  "out": "${OUT}/c11_tol_big.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {
+   "rules": [
+    "endpoint_gap"
+   ],
+   "tolerance": -3
+  },
+  "out": "${OUT}/c12_tol_negative.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {
+   "limit": 5
+  },
+  "out": "${OUT}/c13_limit5.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "select_entities",
+  "args": {
+   "ids": [
+    16,
+    17,
+    20
+   ]
+  },
+  "out": "${OUT}/c14a_select.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {
+   "scope": "selection"
+  },
+  "out": "${OUT}/c14_sel.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "select_entities",
+  "args": {
+   "mode": "clear"
+  },
+  "out": "${OUT}/c14b_clear.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "fix_drawing_issues",
+  "args": {
+   "rules": [
+    "text_height",
+    "layer0"
+   ]
+  },
+  "out": "${OUT}/f01_nonfixable.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "fix_drawing_issues",
+  "args": {
+   "rules": [
+    "nope"
+   ]
+  },
+  "out": "${OUT}/f02_unknown.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "fix_drawing_issues",
+  "args": {
+   "ids": [
+    999999
+   ]
+  },
+  "out": "${OUT}/f03_ids_none.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "fix_drawing_issues",
+  "args": {
+   "ids": [
+    "#17"
+   ]
+  },
+  "out": "${OUT}/f04_ids_string.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {
+   "limit": 200
+  },
+  "out": "${OUT}/f04_after.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "fix_drawing_issues",
+  "args": {
+   "ids": [
+    33
+   ],
+   "rules": [
+    "bylayer"
+   ]
+  },
+  "out": "${OUT}/f05_ids_rule.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "fix_drawing_issues",
+  "args": {
+   "scope": "layer",
+   "layer": "Notes"
+  },
+  "out": "${OUT}/f06_scope_notes.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "fix_drawing_issues",
+  "args": {
+   "rules": [
+    "endpoint_gap"
+   ],
+   "tolerance": 0.01
+  },
+  "out": "${OUT}/f07_tol_small.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "fix_drawing_issues",
+  "args": {
+   "rules": [
+    "fixable"
+   ]
+  },
+  "out": "${OUT}/f08_rest.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {},
+  "out": "${OUT}/f09_check_after.txt",
+  "may_fail": true
+ },
+ {
+  "do": "quit"
+ }
+]

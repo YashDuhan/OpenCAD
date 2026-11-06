@@ -1,0 +1,108 @@
+[
+ {
+  "do": "tool",
+  "name": "open_drawing",
+  "args": {
+   "path": "${SCEN}/files/problems.dxf"
+  }
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {
+   "limit": 200
+  },
+  "out": "${OUT}/before.txt"
+ },
+ {
+  "do": "tool",
+  "name": "fix_drawing_issues",
+  "args": {},
+  "out": "${OUT}/fix.txt"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {
+   "limit": 200
+  },
+  "out": "${OUT}/after.txt"
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {},
+  "out": "${OUT}/check_after.txt"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/main_after.png",
+  "of": "main"
+ },
+ {
+  "do": "tool",
+  "name": "press_toolbar_button",
+  "args": {
+   "id": "EditUndo"
+  },
+  "out": "${OUT}/undo.txt"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {
+   "limit": 200
+  },
+  "out": "${OUT}/after_undo.txt"
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {},
+  "out": "${OUT}/check_after_undo.txt"
+ },
+ {
+  "do": "tool",
+  "name": "press_toolbar_button",
+  "args": {
+   "id": "EditRedo"
+  },
+  "out": "${OUT}/redo.txt"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {
+   "limit": 200
+  },
+  "out": "${OUT}/after_redo.txt"
+ },
+ {
+  "do": "tool",
+  "name": "press_toolbar_button",
+  "args": {
+   "id": "EditUndo"
+  },
+  "out": "${OUT}/undo2.txt"
+ },
+ {
+  "do": "tool",
+  "name": "press_toolbar_button",
+  "args": {
+   "id": "EditUndo"
+  },
+  "out": "${OUT}/undo3.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {
+   "limit": 200
+  },
+  "out": "${OUT}/after_undo3.txt"
+ },
+ {
+  "do": "quit"
+ }
+]

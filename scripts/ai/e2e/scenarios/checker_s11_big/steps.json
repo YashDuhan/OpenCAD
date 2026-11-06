@@ -1,0 +1,96 @@
+[
+ {
+  "do": "tool",
+  "name": "open_drawing",
+  "args": {
+   "path": "${SCEN}/files/big25.dxf"
+  }
+ },
+ {
+  "do": "tool",
+  "name": "get_drawing_info",
+  "args": {},
+  "out": "${OUT}/info25.txt"
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {},
+  "out": "${OUT}/check25.txt"
+ },
+ {
+  "do": "click",
+  "text": "Check drawing: duplicates, gaps, open polylines, layers, pens...",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 100
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/card25.png",
+  "of": "ai"
+ },
+ {
+  "do": "tool",
+  "name": "fix_drawing_issues",
+  "args": {},
+  "out": "${OUT}/fix25.txt"
+ },
+ {
+  "do": "tool",
+  "name": "press_toolbar_button",
+  "args": {
+   "id": "EditUndo"
+  },
+  "out": "${OUT}/undo25.txt"
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {
+   "rules": [
+    "duplicate",
+    "endpoint_gap"
+   ]
+  },
+  "out": "${OUT}/check25_after_undo.txt"
+ },
+ {
+  "do": "tool",
+  "name": "open_drawing",
+  "args": {
+   "path": "${SCEN}/files/big60.dxf"
+  }
+ },
+ {
+  "do": "tool",
+  "name": "get_drawing_info",
+  "args": {},
+  "out": "${OUT}/info60.txt"
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {},
+  "out": "${OUT}/check60.txt"
+ },
+ {
+  "do": "tool",
+  "name": "fix_drawing_issues",
+  "args": {},
+  "out": "${OUT}/fix60.txt"
+ },
+ {
+  "do": "tool",
+  "name": "press_toolbar_button",
+  "args": {
+   "id": "EditUndo"
+  },
+  "out": "${OUT}/undo60.txt"
+ },
+ {
+  "do": "quit"
+ }
+]

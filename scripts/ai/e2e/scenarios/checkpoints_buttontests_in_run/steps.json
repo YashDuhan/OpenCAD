@@ -1,0 +1,52 @@
+[
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "circle",
+    "0,0",
+    "5",
+    "ESC"
+   ]
+  }
+ },
+ {
+  "do": "type",
+  "text": "test the line buttons"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 120000
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/d1.txt",
+  "in": "ai"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/e1.txt"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/e1.txt",
+  "regex": "^1 matching",
+  "label": "the user's drawing untouched"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Revert AI changes",
+  "not": true,
+  "label": "no revert bar: nothing changed"
+ },
+ {
+  "do": "quit"
+ }
+]

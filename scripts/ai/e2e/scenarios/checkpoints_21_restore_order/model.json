@@ -1,0 +1,51 @@
+[
+ {
+  "text": "Circle.",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "circle",
+      "100,100",
+      "25",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew the circle."
+ },
+ {
+  "text": "Line.",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "line",
+      "0,50",
+      "80,50",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "line",
+      "0,60",
+      "80,60",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew two lines."
+ }
+]

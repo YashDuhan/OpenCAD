@@ -1,0 +1,237 @@
+[
+ {
+  "do": "tool",
+  "name": "use_menu",
+  "args": {
+   "path": "File > Save as..."
+  }
+ },
+ {
+  "do": "tool",
+  "name": "handle_dialog",
+  "args": {
+   "file_path": "${SCEN}/files/many.dxf",
+   "button": "Save"
+  }
+ },
+ {
+  "do": "type",
+  "text": "Chat number 1 about part 1"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle"
+ },
+ {
+  "do": "click",
+  "text": "New Chat",
+  "in": "ai"
+ },
+ {
+  "do": "type",
+  "text": "Chat number 2 about part 2"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle"
+ },
+ {
+  "do": "click",
+  "text": "New Chat",
+  "in": "ai"
+ },
+ {
+  "do": "type",
+  "text": "Chat number 3 about part 3"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle"
+ },
+ {
+  "do": "click",
+  "text": "New Chat",
+  "in": "ai"
+ },
+ {
+  "do": "type",
+  "text": "Chat number 4 about part 4"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle"
+ },
+ {
+  "do": "click",
+  "text": "New Chat",
+  "in": "ai"
+ },
+ {
+  "do": "type",
+  "text": "Chat number 5 about part 5"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle"
+ },
+ {
+  "do": "click",
+  "text": "New Chat",
+  "in": "ai"
+ },
+ {
+  "do": "type",
+  "text": "Chat number 6 about part 6"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle"
+ },
+ {
+  "do": "click",
+  "text": "New Chat",
+  "in": "ai"
+ },
+ {
+  "do": "type",
+  "text": "Chat number 7 about part 7"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle"
+ },
+ {
+  "do": "click",
+  "text": "New Chat",
+  "in": "ai"
+ },
+ {
+  "do": "type",
+  "text": "Chat number 8 about part 8"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle"
+ },
+ {
+  "do": "click",
+  "text": "New Chat",
+  "in": "ai"
+ },
+ {
+  "do": "type",
+  "text": "Chat number 9 about part 9"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle"
+ },
+ {
+  "do": "click",
+  "text": "New Chat",
+  "in": "ai"
+ },
+ {
+  "do": "type",
+  "text": "Chat number 10 about part 10"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle"
+ },
+ {
+  "do": "click",
+  "text": "Chat history of this drawing",
+  "in": "ai"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/1_popup_many.png",
+  "of": "popup"
+ },
+ {
+  "do": "keys",
+  "keys": "Up",
+  "target": "focus"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/2_popup_wrapped_up.png",
+  "of": "popup"
+ },
+ {
+  "do": "keys",
+  "keys": "Return",
+  "target": "focus"
+ },
+ {
+  "do": "wait",
+  "ms": 500
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Chat number 1 about part 1\\b",
+  "label": "Up from the top wraps to the oldest chat"
+ },
+ {
+  "do": "expect",
+  "in": "popup",
+  "regex": "Chat number",
+  "not": true,
+  "label": "popup closed after resume"
+ },
+ {
+  "do": "click",
+  "text": "Chat history of this drawing",
+  "in": "ai"
+ },
+ {
+  "do": "keys",
+  "keys": "Escape",
+  "target": "focus"
+ },
+ {
+  "do": "wait",
+  "ms": 300
+ },
+ {
+  "do": "expect",
+  "in": "popup",
+  "regex": "Chat number",
+  "not": true,
+  "label": "Escape closes the popup"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/3_panel.png",
+  "of": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 1200
+ },
+ {
+  "do": "quit"
+ }
+]

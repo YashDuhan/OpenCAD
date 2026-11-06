@@ -1,0 +1,72 @@
+[
+ {
+  "text": "Here is a plan.",
+  "tool_calls": [
+   {
+    "name": "propose_plan",
+    "arguments": {
+     "title": "Off",
+     "steps": [
+      "Do it"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "The plan could not be shown."
+ },
+ {
+  "when": "^\\[Debugger\\]",
+  "text": "Verdict: nothing in the drawing to fix."
+ },
+ {
+  "text": "Two plans:",
+  "tool_calls": [
+   {
+    "name": "propose_plan",
+    "arguments": {
+     "title": "Empty",
+     "steps": []
+    }
+   },
+   {
+    "name": "propose_plan",
+    "arguments": {
+     "title": "Plan A",
+     "steps": [
+      "A one",
+      "A two"
+     ]
+    }
+   },
+   {
+    "name": "propose_plan",
+    "arguments": {
+     "title": "Plan B",
+     "steps": [
+      "B one",
+      "B two"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "circle",
+      "0,0",
+      "4"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "OK, nothing changed."
+ }
+]

@@ -1,0 +1,82 @@
+[
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "0,0",
+    "50,0",
+    "ESC"
+   ]
+  },
+  "out": "${OUT}/u1.txt"
+ },
+ {
+  "do": "type",
+  "text": "draw a circle"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 30000
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Revert AI changes",
+  "label": "bar after run in drawing 1"
+ },
+ {
+  "do": "new_drawing"
+ },
+ {
+  "do": "wait",
+  "ms": 800
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/d1_drawing2.txt",
+  "in": "ai"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/s1_drawing2.png",
+  "of": "ai"
+ },
+ {
+  "do": "activate",
+  "index": 0
+ },
+ {
+  "do": "wait",
+  "ms": 800
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/e2_d1.txt"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/d2_back_to_drawing1.txt",
+  "in": "ai"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/s2_back_to_drawing1.png",
+  "of": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Revert AI changes",
+  "label": "bar still there after switching drawings and back"
+ },
+ {
+  "do": "quit"
+ }
+]

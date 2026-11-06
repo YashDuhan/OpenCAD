@@ -1,0 +1,31 @@
+[
+ {
+  "tool_calls": [
+   {
+    "name": "request_clarification",
+    "arguments": {
+     "question": "   "
+    }
+   }
+  ]
+ },
+ {
+  "text": "Sorry, asking properly.",
+  "tool_calls": [
+   {
+    "name": "request_clarification",
+    "arguments": {
+     "question": "Real question: which layer?",
+     "choices": [
+      "Walls",
+      "Doors"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "when": "answer",
+  "echo": true
+ }
+]

@@ -1,0 +1,99 @@
+[
+ {
+  "do": "setup",
+  "base_url": "${BASE_URL}",
+  "api_key": "",
+  "mode": "auto"
+ },
+ {
+  "do": "setting",
+  "key": "voice",
+  "value": {
+   "stt": {
+    "kind": "openai",
+    "baseUrl": "${BASE_URL}",
+    "model": "whisper-1",
+    "keyProvider": "custom"
+   },
+   "autoSend": false
+  }
+ },
+ {
+  "do": "invoke",
+  "class": "LC_AIVoiceInput",
+  "method": "hide"
+ },
+ {
+  "do": "invoke",
+  "class": "LC_AIVoiceInput",
+  "method": "show"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/01_no_key.png",
+  "of": "ai"
+ },
+ {
+  "do": "click",
+  "text": "Voice input: Add a Custom",
+  "in": "ai",
+  "then_ms": 600,
+  "label": "tooltip says the Custom key is missing (a Custom)"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/01_menu.txt",
+  "in": "popup"
+ },
+ {
+  "do": "invoke",
+  "name": "voiceMenu",
+  "method": "close"
+ },
+ {
+  "do": "wait",
+  "ms": 300
+ },
+ {
+  "do": "invoke",
+  "class": "LC_AIVoiceInput",
+  "method": "providersRequested"
+ },
+ {
+  "do": "wait",
+  "ms": 600
+ },
+ {
+  "do": "setup",
+  "base_url": "${BASE_URL}",
+  "api_key": "test-key",
+  "mode": "auto"
+ },
+ {
+  "do": "click",
+  "text": "Close",
+  "in": "dialog",
+  "then_ms": 600
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/02_key_added_dialog_closed.png",
+  "of": "ai"
+ },
+ {
+  "do": "click",
+  "text": "Dictate:",
+  "in": "ai",
+  "then_ms": 800,
+  "label": "tooltip says Dictate right after Providers closed"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "No microphone was found",
+  "label": "the click tries to record (no audio server here)"
+ },
+ {
+  "do": "quit"
+ }
+]

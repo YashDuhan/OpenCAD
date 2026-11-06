@@ -1,0 +1,79 @@
+[
+ {
+  "do": "type",
+  "text": "tidy up"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait",
+  "ms": 2000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/01_run.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/01_run.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Types 3 lines",
+  "label": "blank entry not counted"
+ },
+ {
+  "do": "click",
+  "text": "Allow",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 2000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/02_fix.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/02_fix.txt",
+  "in": "ai"
+ },
+ {
+  "do": "click",
+  "text": "Deny",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 2000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/03_fix_all.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/03_fix_all.txt",
+  "in": "ai"
+ },
+ {
+  "do": "click",
+  "text": "Deny",
+  "in": "ai"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 20000
+ },
+ {
+  "do": "quit"
+ }
+]

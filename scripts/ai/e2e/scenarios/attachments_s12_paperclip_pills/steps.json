@@ -1,0 +1,139 @@
+[
+ {
+  "do": "tool",
+  "name": "open_drawing",
+  "args": {
+   "path": "${SCEN}/files/room.dxf"
+  }
+ },
+ {
+  "do": "click",
+  "text": "attachBtn",
+  "in": "ai",
+  "then_ms": 1200
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/01_dialog.png",
+  "of": "dialog"
+ },
+ {
+  "do": "tool",
+  "name": "handle_dialog",
+  "args": {},
+  "out": "${OUT}/dialog.txt",
+  "may_fail": true
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/dialog.txt",
+  "regex": "File dialog: folder ${SCEN}/files,",
+  "label": "paperclip opens in the drawing's folder"
+ },
+ {
+  "do": "tool",
+  "name": "handle_dialog",
+  "args": {
+   "file_path": "${FIXTURES}/sketch.png",
+   "button": "Open"
+  },
+  "out": "${OUT}/dialog2.txt",
+  "may_fail": true
+ },
+ {
+  "do": "wait",
+  "ms": 600
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/02_after_dialog.png",
+  "of": "ai"
+ },
+ {
+  "do": "type",
+  "text": "hi @layer Wall outlines"
+ },
+ {
+  "do": "keys",
+  "keys": "Backspace"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\[input\\] hi \\n",
+  "label": "Backspace removed the whole mention"
+ },
+ {
+  "do": "type",
+  "text": "@entity #19 x"
+ },
+ {
+  "do": "keys",
+  "keys": "Left"
+ },
+ {
+  "do": "keys",
+  "keys": "Left"
+ },
+ {
+  "do": "keys",
+  "keys": "Left"
+ },
+ {
+  "do": "keys",
+  "text": "Z"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/03_dump.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\[input\\] Z @entity #19 x\\n",
+  "label": "a letter typed before the pill is kept apart by a space"
+ },
+ {
+  "do": "keys",
+  "text": "oom"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\[input\\] Zoom @entity #19 x\\n",
+  "label": "typing on after it adds no more spaces"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/03_typed_before_pill.png",
+  "of": "ai"
+ },
+ {
+  "do": "type",
+  "text": "@entity #19 and @entity #12 and @block Bolt"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/04_before_newchat.png",
+  "of": "ai"
+ },
+ {
+  "do": "click",
+  "text": "New Chat",
+  "in": "ai"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/05_after_newchat.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/05_dump.txt",
+  "in": "ai"
+ },
+ {
+  "do": "quit"
+ }
+]

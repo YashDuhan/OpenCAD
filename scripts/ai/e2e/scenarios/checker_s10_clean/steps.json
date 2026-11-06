@@ -1,0 +1,126 @@
+[
+ {
+  "do": "click",
+  "text": "Check drawing: duplicates, gaps, open polylines, layers, pens...",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 400
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {},
+  "out": "${OUT}/empty.txt"
+ },
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "0,0",
+    "100,0",
+    "@0,50",
+    "@-100,0",
+    "close",
+    "ESC",
+    "ESC",
+    "circle",
+    "50,25",
+    "10",
+    "ESC",
+    "ESC"
+   ]
+  },
+  "out": "${OUT}/build.txt"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/entities.txt"
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {},
+  "out": "${OUT}/check_runcmd.txt"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/check_runcmd.txt",
+  "regex": "No issues found",
+  "label": "command-built rectangle is clean"
+ },
+ {
+  "do": "click",
+  "text": "Check drawing: duplicates, gaps, open polylines, layers, pens...",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 400
+ },
+ {
+  "do": "tool",
+  "name": "open_drawing",
+  "args": {
+   "path": "${SCEN}/files/clean.dxf"
+  }
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {},
+  "out": "${OUT}/check_dxf.txt"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/check_dxf.txt",
+  "regex": "No issues found",
+  "label": "clean dxf is clean"
+ },
+ {
+  "do": "click",
+  "text": "Check drawing: duplicates, gaps, open polylines, layers, pens...",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 400
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/clean_card.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/clean_card.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "No problems found",
+  "label": "clean card text"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\[button\\] Fix all",
+  "not": true,
+  "label": "no Fix all on a clean card"
+ },
+ {
+  "do": "tool",
+  "name": "fix_drawing_issues",
+  "args": {},
+  "out": "${OUT}/fix_clean.txt"
+ },
+ {
+  "do": "quit"
+ }
+]

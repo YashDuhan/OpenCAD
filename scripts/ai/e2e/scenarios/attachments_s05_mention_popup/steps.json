@@ -1,0 +1,132 @@
+[
+ {
+  "do": "tool",
+  "name": "open_drawing",
+  "args": {
+   "path": "${SCEN}/files/room.dxf"
+  }
+ },
+ {
+  "do": "tool",
+  "name": "select_entities",
+  "args": {
+   "ids": [
+    12,
+    18
+   ]
+  }
+ },
+ {
+  "do": "keys",
+  "text": "@"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/01_popup.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/01_dump.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\[row\\] @selection",
+  "label": "popup lists @selection"
+ },
+ {
+  "do": "choose",
+  "text": "@selection"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\[input\\] @selection \\n",
+  "label": "@selection inserted with a space"
+ },
+ {
+  "do": "keys",
+  "text": "what are these and @lay wal"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/02_filtered.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/02_dump.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\[row\\] Layers\\n\\[row\\] @layer Walls\\n\\[row\\] @layer Wall outlines",
+  "label": "closer match first"
+ },
+ {
+  "do": "keys",
+  "keys": "Return"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\[input\\] @selection what are these and @layer Walls \\n",
+  "label": "Enter takes the closer match"
+ },
+ {
+  "do": "keys",
+  "text": "?"
+ },
+ {
+  "do": "keys",
+  "text": " @12"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/02b_dump.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\[row\\] Entities\\n\\[row\\] @entity #12(\\n|$)",
+  "label": "the exact id first"
+ },
+ {
+  "do": "keys",
+  "keys": "Escape"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/03_pills.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/03_dump.txt",
+  "in": "ai"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 30000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/04_sent.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/04_dump.txt",
+  "in": "ai"
+ },
+ {
+  "do": "quit"
+ }
+]

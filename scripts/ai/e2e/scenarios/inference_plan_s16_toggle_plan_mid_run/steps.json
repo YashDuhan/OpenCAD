@@ -1,0 +1,58 @@
+[
+ {
+  "do": "type",
+  "text": "Draw a circle at 0,0"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait",
+  "ms": 1500
+ },
+ {
+  "do": "click",
+  "text": "Plan",
+  "in": "ai"
+ },
+ {
+  "do": "keys",
+  "target": "focus",
+  "text": "5 mm"
+ },
+ {
+  "do": "click",
+  "text": "Continue",
+  "in": "ai"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 20000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/01_final.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/01_final.txt",
+  "in": "ai"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/entities.txt"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Not answered \\(stopped\\)",
+  "not": true,
+  "label": "no dead plan card"
+ },
+ {
+  "do": "quit"
+ }
+]

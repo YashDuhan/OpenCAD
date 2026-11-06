@@ -1,0 +1,45 @@
+[
+ {
+  "do": "setting",
+  "key": "checkWorkAutomatically",
+  "value": false
+ },
+ {
+  "do": "type",
+  "text": "try bad addresses"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 60000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/chat.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/chat.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Debugger",
+  "not": true,
+  "label": "no debugger pass after web lookups"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Check &?& fix",
+  "not": true,
+  "label": "no Check & fix after web lookups"
+ },
+ {
+  "do": "quit"
+ }
+]

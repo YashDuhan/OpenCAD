@@ -1,0 +1,103 @@
+[
+ {
+  "do": "type",
+  "text": "Alpha first chat"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle"
+ },
+ {
+  "do": "click",
+  "text": "New Chat",
+  "in": "ai"
+ },
+ {
+  "do": "type",
+  "text": "Bravo second chat"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle"
+ },
+ {
+  "do": "click",
+  "text": "Chat history of this drawing",
+  "in": "ai"
+ },
+ {
+  "do": "keys",
+  "keys": "Delete",
+  "target": "focus"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/1_armed.png",
+  "of": "popup"
+ },
+ {
+  "do": "keys",
+  "keys": "Escape",
+  "target": "focus"
+ },
+ {
+  "do": "expect",
+  "in": "popup",
+  "regex": "Bravo second chat",
+  "label": "Escape takes the question back, the popup stays"
+ },
+ {
+  "do": "keys",
+  "keys": "Delete",
+  "target": "focus"
+ },
+ {
+  "do": "keys",
+  "keys": "Delete",
+  "target": "focus"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/after_delete.txt",
+  "in": "popup"
+ },
+ {
+  "do": "expect",
+  "in": "popup",
+  "regex": "Bravo second chat",
+  "not": true,
+  "label": "a second Delete deletes the highlighted chat"
+ },
+ {
+  "do": "expect",
+  "in": "popup",
+  "regex": "Alpha first chat",
+  "label": "the other chat stays"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/2_deleted.png",
+  "of": "popup"
+ },
+ {
+  "do": "keys",
+  "keys": "Escape",
+  "target": "focus"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/panel.txt",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 800
+ },
+ {
+  "do": "quit"
+ }
+]

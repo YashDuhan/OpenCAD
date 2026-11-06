@@ -1,0 +1,110 @@
+[
+ {
+  "do": "setting",
+  "key": "voice",
+  "value": {
+   "stt": {
+    "kind": "openai",
+    "baseUrl": "${BASE_URL}",
+    "model": "whisper-1",
+    "keyProvider": ""
+   },
+   "autoSend": false
+  }
+ },
+ {
+  "do": "invoke",
+  "class": "LC_AIVoiceInput",
+  "method": "hide"
+ },
+ {
+  "do": "invoke",
+  "class": "LC_AIVoiceInput",
+  "method": "show"
+ },
+ {
+  "do": "click",
+  "text": "Dictate",
+  "in": "ai",
+  "then_ms": 800
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "No microphone was found",
+  "label": "clear note: no microphone"
+ },
+ {
+  "do": "click",
+  "text": "Dictate",
+  "in": "ai",
+  "then_ms": 800
+ },
+ {
+  "do": "click",
+  "text": "Dictate",
+  "in": "ai",
+  "then_ms": 300
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/03_after_three_clicks.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/03_after_clicks.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "No microphone was found[\\s\\S]*No microphone was found",
+  "not": true,
+  "label": "one bubble for three clicks"
+ },
+ {
+  "do": "type",
+  "text": "keep me"
+ },
+ {
+  "do": "keys",
+  "keys": "Ctrl+Space"
+ },
+ {
+  "do": "wait",
+  "ms": 500
+ },
+ {
+  "do": "keys",
+  "keys": "Ctrl+Space"
+ },
+ {
+  "do": "wait",
+  "ms": 500
+ },
+ {
+  "do": "keys",
+  "keys": "Esc"
+ },
+ {
+  "do": "wait",
+  "ms": 500
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\[input\\] keep me\\n",
+  "label": "message kept"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "No microphone was found[\\s\\S]*No microphone was found",
+  "not": true,
+  "label": "still one bubble after push-to-talk tries"
+ },
+ {
+  "do": "quit"
+ }
+]

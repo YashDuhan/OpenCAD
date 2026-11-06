@@ -1,0 +1,109 @@
+[
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "0,0",
+    "100,0",
+    "ESC",
+    "ESC",
+    "line",
+    "0,0",
+    "100,0",
+    "ESC",
+    "ESC"
+   ]
+  }
+ },
+ {
+  "do": "tool",
+  "name": "get_drawing_info",
+  "args": {},
+  "out": "${OUT}/info_a.txt"
+ },
+ {
+  "do": "click",
+  "text": "Check drawing: duplicates, gaps, open polylines, layers, pens...",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 400
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/a_card.png",
+  "of": "ai"
+ },
+ {
+  "do": "new_drawing"
+ },
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "0,0",
+    "50,50",
+    "ESC",
+    "ESC",
+    "line",
+    "0,0",
+    "50,50",
+    "ESC",
+    "ESC",
+    "line",
+    "0,0",
+    "50,50",
+    "ESC",
+    "ESC"
+   ]
+  }
+ },
+ {
+  "do": "tool",
+  "name": "get_drawing_info",
+  "args": {},
+  "out": "${OUT}/info_b.txt"
+ },
+ {
+  "do": "wait",
+  "ms": 400
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/b_after_switch.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/b_after_switch.txt",
+  "in": "ai"
+ },
+ {
+  "do": "activate",
+  "index": 0
+ },
+ {
+  "do": "tool",
+  "name": "get_drawing_info",
+  "args": {},
+  "out": "${OUT}/info_a2.txt"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/a_back.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/a_back.txt",
+  "in": "ai"
+ },
+ {
+  "do": "quit"
+ }
+]

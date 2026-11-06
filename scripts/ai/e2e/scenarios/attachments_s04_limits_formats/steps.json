@@ -1,0 +1,94 @@
+[
+ {
+  "do": "drop",
+  "files": [
+   "${SCEN}/files/anim.gif",
+   "${SCEN}/files/pic.bmp",
+   "${SCEN}/files/UPPER.PNG",
+   "${SCEN}/files/pdf-without-ext",
+   "${SCEN}/files/a very long file name for the bracket specification sheet revision 7 final.pdf"
+  ]
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/03_formats.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/03_dump.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "pdf-without-ext:",
+  "not": true,
+  "label": "a PDF without a suffix is accepted"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "a very long file name for the bracket specification sheet revision 7 final\\.pdf is already attached \\(as pdf-without-ext\\)\\.",
+  "label": "the same bytes under another name: one copy"
+ },
+ {
+  "do": "drop",
+  "files": [
+   "${FIXTURES}/drawing-brief.pdf",
+   "${FIXTURES}/drawing-brief.pdf",
+   "${FIXTURES}/drawing-brief.pdf",
+   "${FIXTURES}/drawing-brief.pdf",
+   "${FIXTURES}/drawing-brief.pdf",
+   "${FIXTURES}/drawing-brief.pdf",
+   "${FIXTURES}/drawing-brief.pdf",
+   "${FIXTURES}/drawing-brief.pdf"
+  ]
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/04_over_limit.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/04_dump.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\ndrawing-brief\\.pdf is already attached\\.\\n(?!drawing-brief)",
+  "label": "one line for the repeated file"
+ },
+ {
+  "do": "type",
+  "text": "Many files."
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 60000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/05_sent.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/05_dump.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/requests.jsonl",
+  "regex": "Attached files, in order: 1\\. anim\\.gif \\(image\\); 2\\. pic\\.bmp \\(image\\); 3\\. UPPER\\.PNG \\(image\\); 4\\. pdf-without-ext \\(PDF, 1 page\\); 5\\. drawing-brief\\.pdf \\(PDF[^)]*\\)\\.",
+  "label": "five distinct files sent, each once"
+ },
+ {
+  "do": "quit"
+ }
+]

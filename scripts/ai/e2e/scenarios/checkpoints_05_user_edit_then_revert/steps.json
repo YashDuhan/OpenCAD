@@ -1,0 +1,155 @@
+[
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "0,0",
+    "50,0",
+    "ESC"
+   ]
+  },
+  "out": "${OUT}/user.txt"
+ },
+ {
+  "do": "type",
+  "text": "draw a circle"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 30000
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/e1_run.txt"
+ },
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "0,-20",
+    "50,-20",
+    "ESC"
+   ]
+  },
+  "out": "${OUT}/user2.txt"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/e2_user_edit.txt"
+ },
+ {
+  "do": "click",
+  "text": "aiRevertButton",
+  "in": "ai"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/e3_after_click.txt"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "1 entity added since \\(by you\\)",
+  "label": "card says the user added 1"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/s3_card.png",
+  "of": "ai"
+ },
+ {
+  "do": "click",
+  "text": "aiRevertCancel",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Revert only these changes",
+  "not": true,
+  "label": "card hidden after Cancel"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/s4_cancel.png",
+  "of": "ai"
+ },
+ {
+  "do": "click",
+  "text": "aiRevertButton",
+  "in": "ai"
+ },
+ {
+  "do": "click",
+  "text": "aiRevertOwn",
+  "in": "ai"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/e5_own.txt"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/s5_own.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/d5.txt",
+  "in": "ai"
+ },
+ {
+  "do": "click",
+  "text": "Restore",
+  "in": "ai"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/e6_restore.txt"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/s6_restore.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/d6.txt",
+  "in": "ai"
+ },
+ {
+  "do": "click",
+  "text": "aiRevertButton",
+  "in": "ai"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/s7_again.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/d7.txt",
+  "in": "ai"
+ },
+ {
+  "do": "quit"
+ }
+]

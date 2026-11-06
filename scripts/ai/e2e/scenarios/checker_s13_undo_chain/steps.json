@@ -1,0 +1,103 @@
+[
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "0,0",
+    "30,0",
+    "ESC",
+    "ESC",
+    "line",
+    "20,0",
+    "50,0",
+    "ESC",
+    "ESC",
+    "line",
+    "40,0",
+    "70,0",
+    "ESC",
+    "ESC"
+   ]
+  }
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/before.txt"
+ },
+ {
+  "do": "tool",
+  "name": "fix_drawing_issues",
+  "args": {},
+  "out": "${OUT}/fix.txt"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/after_fix.txt"
+ },
+ {
+  "do": "tool",
+  "name": "press_toolbar_button",
+  "args": {
+   "id": "EditUndo"
+  },
+  "out": "${OUT}/undo.txt"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/after_undo.txt"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/after_undo.txt",
+  "regex": "^3 matching entities",
+  "label": "undo restores exactly the 3 original lines"
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {},
+  "out": "${OUT}/check_after_undo.txt"
+ },
+ {
+  "do": "tool",
+  "name": "zoom_to_fit",
+  "args": {},
+  "may_fail": true
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/main_after_undo.png",
+  "of": "main"
+ },
+ {
+  "do": "tool",
+  "name": "press_toolbar_button",
+  "args": {
+   "id": "EditRedo"
+  },
+  "out": "${OUT}/redo.txt"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/after_redo.txt"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/after_redo.txt",
+  "regex": "^1 matching entities",
+  "label": "redo gives the single merged line"
+ },
+ {
+  "do": "quit"
+ }
+]

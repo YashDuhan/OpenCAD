@@ -1,0 +1,920 @@
+[
+ {
+  "text": "P0",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "0,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 0."
+ },
+ {
+  "text": "P1",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "10,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 1."
+ },
+ {
+  "text": "P2",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "20,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 2."
+ },
+ {
+  "text": "P3",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "30,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 3."
+ },
+ {
+  "text": "P4",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "40,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 4."
+ },
+ {
+  "text": "P5",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "50,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 5."
+ },
+ {
+  "text": "P6",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "60,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 6."
+ },
+ {
+  "text": "P7",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "70,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 7."
+ },
+ {
+  "text": "P8",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "80,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 8."
+ },
+ {
+  "text": "P9",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "90,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 9."
+ },
+ {
+  "text": "P10",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "100,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 10."
+ },
+ {
+  "text": "P11",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "110,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 11."
+ },
+ {
+  "text": "P12",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "120,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 12."
+ },
+ {
+  "text": "P13",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "130,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 13."
+ },
+ {
+  "text": "P14",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "140,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 14."
+ },
+ {
+  "text": "P15",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "150,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 15."
+ },
+ {
+  "text": "P16",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "160,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 16."
+ },
+ {
+  "text": "P17",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "170,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 17."
+ },
+ {
+  "text": "P18",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "180,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 18."
+ },
+ {
+  "text": "P19",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "190,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 19."
+ },
+ {
+  "text": "P20",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "200,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 20."
+ },
+ {
+  "text": "P21",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "210,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 21."
+ },
+ {
+  "text": "P22",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "220,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 22."
+ },
+ {
+  "text": "P23",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "230,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 23."
+ },
+ {
+  "text": "P24",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "240,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 24."
+ },
+ {
+  "text": "P25",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "250,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 25."
+ },
+ {
+  "text": "P26",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "260,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 26."
+ },
+ {
+  "text": "P27",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "270,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 27."
+ },
+ {
+  "text": "P28",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "280,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 28."
+ },
+ {
+  "text": "P29",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "290,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 29."
+ },
+ {
+  "text": "P30",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "300,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 30."
+ },
+ {
+  "text": "P31",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "310,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 31."
+ },
+ {
+  "text": "P32",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "320,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 32."
+ },
+ {
+  "text": "P33",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "330,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 33."
+ },
+ {
+  "text": "P34",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "340,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 34."
+ },
+ {
+  "text": "P35",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "350,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 35."
+ },
+ {
+  "text": "P36",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "360,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 36."
+ },
+ {
+  "text": "P37",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "370,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 37."
+ },
+ {
+  "text": "P38",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "380,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 38."
+ },
+ {
+  "text": "P39",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "390,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 39."
+ },
+ {
+  "text": "P40",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "400,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 40."
+ },
+ {
+  "text": "P41",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "410,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 41."
+ },
+ {
+  "text": "P42",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "420,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 42."
+ },
+ {
+  "text": "P43",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "430,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 43."
+ },
+ {
+  "text": "P44",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "440,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 44."
+ },
+ {
+  "text": "P45",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "450,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 45."
+ },
+ {
+  "text": "P46",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "460,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 46."
+ },
+ {
+  "text": "P47",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "470,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 47."
+ },
+ {
+  "text": "P48",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "480,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 48."
+ },
+ {
+  "text": "P49",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "490,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 49."
+ },
+ {
+  "text": "P50",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "point",
+      "500,0",
+      "ESC"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew point 50."
+ }
+]

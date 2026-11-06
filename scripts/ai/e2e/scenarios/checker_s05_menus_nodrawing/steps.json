@@ -1,0 +1,153 @@
+[
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "0,0",
+    "100,0",
+    "ESC",
+    "ESC",
+    "line",
+    "0,0",
+    "100,0",
+    "ESC",
+    "ESC"
+   ]
+  }
+ },
+ {
+  "do": "click",
+  "text": "AI",
+  "in": "main"
+ },
+ {
+  "do": "wait",
+  "ms": 500
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/closed.png",
+  "of": "main"
+ },
+ {
+  "do": "tool",
+  "name": "use_menu",
+  "args": {
+   "path": "Tools > Check Drawing"
+  },
+  "out": "${OUT}/menu_tools.txt"
+ },
+ {
+  "do": "wait",
+  "ms": 500
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/tools_menu.png",
+  "of": "main"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Drawing check[\\s\\S]*1 issue",
+  "label": "card from Tools menu"
+ },
+ {
+  "do": "tool",
+  "name": "use_menu",
+  "args": {
+   "path": "Agent Progress > Check Drawing"
+  },
+  "out": "${OUT}/menu_ap.txt"
+ },
+ {
+  "do": "wait",
+  "ms": 500
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/two_cards.txt",
+  "in": "ai"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/two_cards.png",
+  "of": "ai"
+ },
+ {
+  "do": "tool",
+  "name": "use_menu",
+  "args": {
+   "path": "File > Close"
+  },
+  "out": "${OUT}/close.txt"
+ },
+ {
+  "do": "wait",
+  "ms": 800
+ },
+ {
+  "do": "tool",
+  "name": "handle_dialog",
+  "args": {
+   "button": "No"
+  },
+  "out": "${OUT}/close_dialog.txt",
+  "may_fail": true
+ },
+ {
+  "do": "wait",
+  "ms": 800
+ },
+ {
+  "do": "tool",
+  "name": "use_menu",
+  "args": {
+   "search": "check"
+  },
+  "out": "${OUT}/menu_after_close.txt"
+ },
+ {
+  "do": "click",
+  "text": "Check drawing: duplicates, gaps, open polylines, layers, pens...",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 500
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/no_drawing.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/no_drawing.txt",
+  "in": "ai"
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {},
+  "out": "${OUT}/check_nodrawing.txt",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "fix_drawing_issues",
+  "args": {},
+  "out": "${OUT}/fix_nodrawing.txt",
+  "may_fail": true
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/main_end.png",
+  "of": "main"
+ },
+ {
+  "do": "quit"
+ }
+]

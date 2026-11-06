@@ -1,0 +1,72 @@
+[
+ {
+  "do": "type",
+  "text": "Draw a circle please"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait",
+  "ms": 1500
+ },
+ {
+  "do": "click",
+  "text": "sendBtn",
+  "in": "ai"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 10000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/1_after_stop.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/after_stop.txt",
+  "in": "ai"
+ },
+ {
+  "do": "new_drawing"
+ },
+ {
+  "do": "activate",
+  "index": 0
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/2_reloaded.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/reloaded.txt",
+  "in": "ai"
+ },
+ {
+  "do": "type",
+  "text": "Did you draw it?"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 30000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/3_after_followup.png",
+  "of": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 1200
+ },
+ {
+  "do": "quit"
+ }
+]

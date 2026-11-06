@@ -1,0 +1,132 @@
+[
+ {
+  "do": "click",
+  "text": "Plan",
+  "in": "ai"
+ },
+ {
+  "do": "type",
+  "text": "Draw plate outline 80 x 40"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait",
+  "ms": 1500
+ },
+ {
+  "do": "click",
+  "text": "Approve",
+  "in": "ai"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 20000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/01a_after_run.png",
+  "of": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 135
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/01b_after_run.png",
+  "of": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 180
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/01c_after_run.png",
+  "of": "ai"
+ },
+ {
+  "do": "click",
+  "text": "Check & fix",
+  "in": "ai"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 20000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/02_checked.png",
+  "of": "ai"
+ },
+ {
+  "do": "click",
+  "text": "New Chat",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 500
+ },
+ {
+  "do": "click",
+  "text": "Chat history of this drawing",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 600
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/03_history.png",
+  "of": "popup"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/03_history.txt",
+  "in": "popup"
+ },
+ {
+  "do": "choose",
+  "text": "Draw plate outline"
+ },
+ {
+  "do": "keys",
+  "target": "focus",
+  "keys": "Return"
+ },
+ {
+  "do": "wait",
+  "ms": 1000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/04_replayed.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/04_replayed.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\[button\\] Approve\\n",
+  "not": true,
+  "label": "replayed plan card has no live Approve"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\[Debugger\\] Check and fix",
+  "not": true,
+  "label": "debugger request not replayed as a user message"
+ },
+ {
+  "do": "quit"
+ }
+]

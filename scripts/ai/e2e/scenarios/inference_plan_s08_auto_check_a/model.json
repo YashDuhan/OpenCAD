@@ -1,0 +1,54 @@
+[
+ {
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "circle",
+      "0,0",
+      "10"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew circle one."
+ },
+ {
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "circle",
+      "30,0",
+      "10"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "text": "Drew circle two."
+ },
+ {
+  "when": "^\\[Debugger\\]",
+  "text": "Verdict: both circles are right."
+ },
+ {
+  "text": "A circle is a round shape."
+ },
+ {
+  "tool_calls": [
+   {
+    "name": "get_drawing_info",
+    "arguments": {}
+   }
+  ]
+ },
+ {
+  "text": "The drawing has two circles."
+ }
+]

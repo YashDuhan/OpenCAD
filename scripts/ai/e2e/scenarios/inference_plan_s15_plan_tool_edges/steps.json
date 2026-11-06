@@ -1,0 +1,92 @@
+[
+ {
+  "do": "type",
+  "text": "Plan something"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 20000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/01_plan_off.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/01_plan_off.txt",
+  "in": "ai"
+ },
+ {
+  "do": "click",
+  "text": "Plan",
+  "in": "ai"
+ },
+ {
+  "do": "type",
+  "text": "Now with plan mode"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait",
+  "ms": 2000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/02_two_cards.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/02_two_cards.txt",
+  "in": "ai"
+ },
+ {
+  "do": "click",
+  "text": "Approve",
+  "in": "ai",
+  "index": 0
+ },
+ {
+  "do": "wait",
+  "ms": 800
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/03_first_approved.png",
+  "of": "ai"
+ },
+ {
+  "do": "click",
+  "text": "Reject",
+  "in": "ai"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 20000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/04_final.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/04_final.txt",
+  "in": "ai"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/entities.txt"
+ },
+ {
+  "do": "quit"
+ }
+]

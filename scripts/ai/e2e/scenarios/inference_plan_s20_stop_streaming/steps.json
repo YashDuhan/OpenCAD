@@ -1,0 +1,103 @@
+[
+ {
+  "do": "type",
+  "text": "first question: tell me about bolts"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait",
+  "ms": 3000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/streaming.png",
+  "of": "ai"
+ },
+ {
+  "do": "click",
+  "text": "Stop",
+  "in": "ai"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 8000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/stopped_stream.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/stopped_stream.txt",
+  "in": "ai"
+ },
+ {
+  "do": "type",
+  "text": "second: go on"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 20000
+ },
+ {
+  "do": "type",
+  "text": "third question: what is a washer?"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait",
+  "ms": 2000
+ },
+ {
+  "do": "click",
+  "text": "Stop",
+  "in": "ai"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 8000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/stopped_thinking.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/stopped_thinking.txt",
+  "in": "ai"
+ },
+ {
+  "do": "type",
+  "text": "fourth: answer it please"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 20000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/after.png",
+  "of": "ai"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/entities.txt"
+ },
+ {
+  "do": "quit"
+ }
+]

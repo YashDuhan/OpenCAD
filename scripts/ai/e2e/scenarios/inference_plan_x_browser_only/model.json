@@ -1,0 +1,31 @@
+[
+ {
+  "tool_calls": [
+   {
+    "name": "browser_read",
+    "arguments": {}
+   }
+  ]
+ },
+ {
+  "tool_calls": [
+   {
+    "name": "browser_navigate",
+    "arguments": {
+     "url": "javascript:alert(1)"
+    }
+   }
+  ]
+ },
+ {
+  "tool_calls": [
+   {
+    "name": "browser_navigate",
+    "arguments": {}
+   }
+  ]
+ },
+ {
+  "text": "Errors checked."
+ }
+]

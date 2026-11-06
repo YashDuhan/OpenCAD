@@ -1,0 +1,38 @@
+[
+ {
+  "do": "tool",
+  "name": "open_drawing",
+  "args": {
+   "path": "${SCEN}/files/problems.dxf"
+  },
+  "out": "${OUT}/open.txt"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {
+   "limit": 200
+  },
+  "out": "${OUT}/entities.txt"
+ },
+ {
+  "do": "tool",
+  "name": "get_drawing_info",
+  "args": {},
+  "out": "${OUT}/info.txt"
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {},
+  "out": "${OUT}/check.txt"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/main.png",
+  "of": "main"
+ },
+ {
+  "do": "quit"
+ }
+]

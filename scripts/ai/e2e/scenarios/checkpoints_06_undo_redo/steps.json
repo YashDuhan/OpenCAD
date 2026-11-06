@@ -1,0 +1,254 @@
+[
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "0,0",
+    "50,0",
+    "ESC"
+   ]
+  },
+  "out": "${OUT}/user.txt"
+ },
+ {
+  "do": "type",
+  "text": "draw a circle and a line"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 30000
+ },
+ {
+  "do": "click",
+  "text": "Accept",
+  "in": "ai",
+  "may_fail": true
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/e1_run.txt"
+ },
+ {
+  "do": "click",
+  "text": "aiRevertButton",
+  "in": "ai"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/e2_reverted.txt"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Reverted",
+  "label": "reverted"
+ },
+ {
+  "do": "tool",
+  "name": "press_toolbar_button",
+  "args": {
+   "id": "EditRedo"
+  }
+ },
+ {
+  "do": "wait",
+  "ms": 200
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/d3_redo1.txt",
+  "in": "ai"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/s3_redo1.png",
+  "of": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\[button\\] Restore",
+  "not": true,
+  "label": "half redone: no Restore offered"
+ },
+ {
+  "do": "tool",
+  "name": "press_toolbar_button",
+  "args": {
+   "id": "EditUndo"
+  }
+ },
+ {
+  "do": "wait",
+  "ms": 200
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\[button\\] Restore",
+  "label": "back as the revert left it: Restore offered again"
+ },
+ {
+  "do": "tool",
+  "name": "press_toolbar_button",
+  "args": {
+   "id": "EditRedo"
+  }
+ },
+ {
+  "do": "tool",
+  "name": "press_toolbar_button",
+  "args": {
+   "id": "EditRedo"
+  }
+ },
+ {
+  "do": "wait",
+  "ms": 200
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/e4_redo2.txt"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/d4_redo2.txt",
+  "in": "ai"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/s4_after_redo.png",
+  "of": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Revert AI changes",
+  "label": "after Redo the bar offers Revert again"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Reverted",
+  "not": true,
+  "label": "no longer says Reverted"
+ },
+ {
+  "do": "click",
+  "text": "aiRevertButton",
+  "in": "ai"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/e5_revert_again.txt"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/e5_revert_again.txt",
+  "regex": "circle",
+  "not": true,
+  "label": "revert again removes the circle"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/d5.txt",
+  "in": "ai"
+ },
+ {
+  "do": "click",
+  "text": "Restore",
+  "in": "ai"
+ },
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "0,90",
+    "50,90",
+    "ESC"
+   ]
+  }
+ },
+ {
+  "do": "click",
+  "text": "aiRevertButton",
+  "in": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/d6_card.txt",
+  "in": "ai"
+ },
+ {
+  "do": "click",
+  "text": "aiRevertOwn",
+  "in": "ai"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/e6_own.txt"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/d6_own.txt",
+  "in": "ai"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/s6_own.png",
+  "of": "ai"
+ },
+ {
+  "do": "tool",
+  "name": "press_toolbar_button",
+  "args": {
+   "id": "EditUndo"
+  }
+ },
+ {
+  "do": "wait",
+  "ms": 200
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/e7_undo_own.txt"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/d7_undo_own.txt",
+  "in": "ai"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/s7_undo_own.png",
+  "of": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Revert AI changes",
+  "label": "Undo of the own step: the bar offers Revert again"
+ },
+ {
+  "do": "quit"
+ }
+]

@@ -1,0 +1,93 @@
+[
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "0,0",
+    "100,0",
+    "ESC",
+    "ESC",
+    "line",
+    "0,0",
+    "100,0",
+    "ESC",
+    "ESC"
+   ]
+  }
+ },
+ {
+  "do": "click",
+  "text": "Check drawing: duplicates, gaps, open polylines, layers, pens...",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 400
+ },
+ {
+  "do": "type",
+  "text": "my unsent draft about the title block"
+ },
+ {
+  "do": "click",
+  "text": "Fix all",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 2500
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/approval.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/approval.txt",
+  "in": "ai"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Approve Fix drawing issues",
+  "label": "fix_drawing_issues needs approval in supervised"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Approve Check drawing",
+  "not": true,
+  "label": "check_drawing ran without approval"
+ },
+ {
+  "do": "click",
+  "text": "Allow",
+  "in": "ai"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 20000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/done.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/done.txt",
+  "in": "ai"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/entities.txt"
+ },
+ {
+  "do": "quit"
+ }
+]

@@ -1,0 +1,31 @@
+[
+ {
+  "text": "Here is a long answer about bolts. Here is a long answer about bolts. Here is a long answer about bolts. Here is a long answer about bolts. Here is a long answer about bolts. Here is a long answer about bolts. Here is a long answer about bolts. Here is a long answer about bolts. Here is a long answer about bolts. Here is a long answer about bolts. Here is a long answer about bolts. Here is a long answer about bolts. Here is a long answer about bolts. Here is a long answer about bolts. Here is a long answer about bolts. Here is a long answer about bolts. Here is a long answer about bolts. Here is a long answer about bolts. Here is a long answer about bolts. Here is a long answer about bolts. ",
+  "chunk_delay_ms": 300,
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "circle",
+      "0,0",
+      "99"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "when": "second",
+  "echo": true
+ },
+ {
+  "when": "third question",
+  "text": "slow",
+  "first_delay_ms": 8000
+ },
+ {
+  "when": "fourth",
+  "echo": true
+ }
+]

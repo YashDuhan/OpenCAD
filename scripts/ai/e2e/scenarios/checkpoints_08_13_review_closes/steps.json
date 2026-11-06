@@ -1,0 +1,101 @@
+[
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "0,0",
+    "50,0",
+    "ESC"
+   ]
+  }
+ },
+ {
+  "do": "type",
+  "text": "draw a circle"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 30000
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Review the AI",
+  "label": "review open after run 1"
+ },
+ {
+  "do": "click",
+  "text": "New Chat",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 500
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Revert AI changes|Review the AI",
+  "not": true,
+  "label": "bar and review gone after New Chat"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/s1_newchat.png",
+  "of": "ai"
+ },
+ {
+  "do": "type",
+  "text": "now draw a line"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 30000
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Review the AI",
+  "label": "review open after run 2"
+ },
+ {
+  "do": "new_drawing"
+ },
+ {
+  "do": "wait",
+  "ms": 800
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/d2_drawing2.txt",
+  "in": "ai"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/s2_drawing2.png",
+  "of": "ai"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/s2_drawing2_main.png",
+  "of": "main"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Review the AI",
+  "not": true,
+  "label": "review gone over drawing 2's chat"
+ },
+ {
+  "do": "quit"
+ }
+]

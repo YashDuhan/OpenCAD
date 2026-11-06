@@ -1,0 +1,14 @@
+[
+ {
+  "when": "First topic",
+  "text": "Gears answer."
+ },
+ {
+  "when": "Second topic",
+  "text": "Brackets answer."
+ },
+ {
+  "when": "Gears follow-up",
+  "echo": true
+ }
+]

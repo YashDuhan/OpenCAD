@@ -1,0 +1,40 @@
+[
+ {
+  "do": "click",
+  "text": "Plan",
+  "in": "ai"
+ },
+ {
+  "do": "type",
+  "text": "Do the plan"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait",
+  "ms": 2000
+ },
+ {
+  "do": "click",
+  "text": "Approve",
+  "in": "ai"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 20000
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/end.png",
+  "of": "ai"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/end.txt",
+  "in": "ai"
+ },
+ {
+  "do": "quit"
+ }
+]

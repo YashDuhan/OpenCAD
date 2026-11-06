@@ -1,0 +1,80 @@
+[
+ {
+  "do": "type",
+  "text": "draw a circle"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 30000
+ },
+ {
+  "do": "click",
+  "text": "aiRevertButton",
+  "in": "ai"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/e1_rev.txt"
+ },
+ {
+  "do": "type",
+  "text": "now make the circle red"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 30000
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/d2.txt",
+  "in": "ai"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/s2.png",
+  "of": "ai"
+ },
+ {
+  "do": "type",
+  "text": "second message"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 30000
+ },
+ {
+  "do": "click",
+  "text": "Restore",
+  "in": "ai"
+ },
+ {
+  "do": "type",
+  "text": "third message"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 30000
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/d3.txt",
+  "in": "ai"
+ },
+ {
+  "do": "quit"
+ }
+]

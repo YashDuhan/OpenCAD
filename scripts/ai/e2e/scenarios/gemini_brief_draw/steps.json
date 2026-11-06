@@ -1,0 +1,55 @@
+[
+ {
+  "do": "drop",
+  "files": [
+   "${FIXTURES}/drawing-brief.pdf"
+  ]
+ },
+ {
+  "do": "type",
+  "text": "Using the attached brief, draw only the room's inner outline as a closed rectangle with its lower-left corner at 0,0 (the room size given in the brief, in mm). Nothing else: no walls thickness, doors, windows, layers or dimensions. Then tell me the size you drew in one line."
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 240000
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {},
+  "out": "${OUT}/entities.txt"
+ },
+ {
+  "do": "tool",
+  "name": "get_drawing_info",
+  "args": {},
+  "out": "${OUT}/info.txt"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/info.txt",
+  "regex": "size 5000 x 4000",
+  "label": "extents 5000 x 4000"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/01_chat.png",
+  "of": "ai"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/01_main.png",
+  "of": "main"
+ },
+ {
+  "do": "dump",
+  "file": "${OUT}/01_dump.txt",
+  "in": "ai"
+ },
+ {
+  "do": "quit"
+ }
+]

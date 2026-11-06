@@ -1,0 +1,48 @@
+[
+ {
+  "do": "click",
+  "text": "Check drawing: duplicates, gaps, open polylines, layers, pens...",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 400
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/empty_card.png",
+  "of": "ai"
+ },
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "0,0",
+    "0.5,0",
+    "ESC",
+    "ESC",
+    "line",
+    "0.5,0",
+    "0.5,0.5",
+    "ESC",
+    "ESC",
+    "line",
+    "0,0",
+    "0.5,0",
+    "ESC",
+    "ESC"
+   ]
+  }
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {},
+  "out": "${OUT}/tiny_check.txt"
+ },
+ {
+  "do": "quit"
+ }
+]

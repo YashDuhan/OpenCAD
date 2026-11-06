@@ -1,0 +1,99 @@
+[
+ {
+  "do": "tool",
+  "name": "open_drawing",
+  "args": {
+   "path": "${SCEN}/files/more.dxf"
+  },
+  "out": "${OUT}/open.txt"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {
+   "limit": 200
+  },
+  "out": "${OUT}/before.txt"
+ },
+ {
+  "do": "tool",
+  "name": "get_drawing_info",
+  "args": {},
+  "out": "${OUT}/info.txt"
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {},
+  "out": "${OUT}/check.txt"
+ },
+ {
+  "do": "click",
+  "text": "Check drawing: duplicates, gaps, open polylines, layers, pens...",
+  "in": "ai"
+ },
+ {
+  "do": "wait",
+  "ms": 300
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/card.png",
+  "of": "ai"
+ },
+ {
+  "do": "tool",
+  "name": "fix_drawing_issues",
+  "args": {},
+  "out": "${OUT}/fix.txt"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {
+   "limit": 200
+  },
+  "out": "${OUT}/after.txt"
+ },
+ {
+  "do": "tool",
+  "name": "check_drawing",
+  "args": {},
+  "out": "${OUT}/check_after.txt"
+ },
+ {
+  "do": "tool",
+  "name": "zoom_to_area",
+  "args": {
+   "x1": 90,
+   "y1": -10,
+   "x2": 150,
+   "y2": 30
+  },
+  "may_fail": true
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/slot_after.png",
+  "of": "main"
+ },
+ {
+  "do": "tool",
+  "name": "press_toolbar_button",
+  "args": {
+   "id": "EditUndo"
+  },
+  "out": "${OUT}/undo.txt"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {
+   "limit": 200
+  },
+  "out": "${OUT}/after_undo.txt"
+ },
+ {
+  "do": "quit"
+ }
+]
