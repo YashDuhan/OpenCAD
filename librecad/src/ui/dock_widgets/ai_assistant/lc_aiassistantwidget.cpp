@@ -436,6 +436,7 @@ void LC_AIAssistantWidget::openSettings() {
     LC_AIProvidersDialog dialog(window());
     dialog.exec();
     updateModelButton();
+    m_voice->refresh(); // the mic shows at once whether the key it needs is there now
     focusInput();
 }
 

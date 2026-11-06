@@ -46,6 +46,8 @@ public:
     void openMenu();
     /** Drops a recording, or a transcription on its way. */
     void cancel();
+    /** The mic's look and tooltip: ready, or what is missing. Call it when keys may have changed (Providers). */
+    void refresh();
 
 signals:
     /** A transcript is in the message box and the user asked to send it at once. */
@@ -69,7 +71,6 @@ private:
     /** Sends the recording to the speech endpoint; the transcript goes into the message box. */
     void transcribe(const QByteArray& wav);
     void setState(State state);
-    void refresh();
     void insertTranscript(const QString& text);
     /** A short note in the level strip, gone after a few seconds. */
     void showNote(const QString& text);
