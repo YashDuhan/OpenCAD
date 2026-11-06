@@ -905,8 +905,8 @@ void LC_AIVoiceInput::refresh() {
     const bool ready = LC_AIVoice::ready(LC_AIVoice::settings().endpoint, &why);
     static_cast<MicButton*>(m_mic)->setLook(m_state, ready);
     switch (m_state) {
-        case State::Recording:
-            m_mic->setToolTip(tr("Stop and transcribe (click, or %1)").arg(shortcutText()));
+        case State::Recording: // the key works where the panel has the focus, not in the drawing
+            m_mic->setToolTip(tr("Stop and transcribe (click, or %1 in the AI panel)").arg(shortcutText()));
             break;
         case State::Transcribing:
             m_mic->setToolTip(tr("Transcribing... click to cancel"));
