@@ -2625,16 +2625,21 @@ namespace {
                 errors += issue.severity == "error" ? 1 : 0;
             }
             const bool clean = report.error.isEmpty() && report.issues.isEmpty();
+            const bool empty = clean && report.checked == 0; // nothing was checked
             auto* header = new QHBoxLayout();
             header->setSpacing(7);
             auto* icon = new QLabel(this);
-            const QColor tone = !report.error.isEmpty() ? t.textMuted : clean ? t.accentGreen : errors > 0 ? QColor("#f87171") : QColor("#fbbf24");
+            const QColor tone = !report.error.isEmpty() || empty ? t.textMuted
+                                : clean                         ? t.accentGreen
+                                : errors > 0                    ? QColor("#f87171")
+                                                                : QColor("#fbbf24");
             icon->setPixmap(LC_AIIcons::lucide(clean ? "shield-check" : "shield-alert", 15, tone, dpr));
             auto* title = new QLabel(QObject::tr("Drawing check"), this);
             title->setObjectName("checkTitle");
             auto* count = new QLabel(this);
             count->setObjectName("checkCount");
             count->setText(!report.error.isEmpty() ? QString()
+                           : empty                 ? QObject::tr("no entities")
                            : clean                 ? QObject::tr("no issues")
                            : report.issues.size() == 1 ? QObject::tr("1 issue")
                                                        : QObject::tr("%1 issues").arg(report.issues.size()));
@@ -2652,14 +2657,18 @@ namespace {
                 sub->setText(report.error);
             }
             else {
-                const QString scope = report.scopeText.left(1).toUpper() + report.scopeText.mid(1);
-                QString text = report.checked == 1 ? QObject::tr("%1 · 1 entity").arg(scope)
-                                                   : QObject::tr("%1 · %2 entities").arg(scope).arg(report.checked);
-                text += QObject::tr(" · gaps under %1").arg(QString(fmt(report.tolerance) + " " + report.unit).trimmed());
-                if (fixable > 0) {
-                    text += QObject::tr(" · %1 fixable").arg(fixable);
+                // each part keeps its words together (no-break spaces), so a narrow chat wraps between the parts
+                const auto keep = [](QString part) { return part.replace(' ', QChar(0x00A0)); };
+                QStringList parts;
+                parts << report.scopeText.left(1).toUpper() + report.scopeText.mid(1);
+                parts << keep(report.checked == 1 ? QObject::tr("1 entity") : QObject::tr("%1 entities").arg(report.checked));
+                if (!empty) {
+                    parts << keep(QObject::tr("gaps under %1").arg(QString(fmt(report.tolerance) + " " + report.unitSign).trimmed()));
                 }
-                sub->setText(text);
+                if (fixable > 0) {
+                    parts << keep(QObject::tr("%1 fixable").arg(fixable));
+                }
+                sub->setText(parts.join(QStringLiteral(" · ")));
             }
             layout->addWidget(sub);
             layout->addSpacing(4);
@@ -2668,9 +2677,12 @@ namespace {
                 auto* row = new QHBoxLayout();
                 row->setSpacing(7);
                 auto* ok = new QLabel(this);
-                ok->setPixmap(LC_AIIcons::lucide("check", 13, t.accentGreen, dpr));
-                auto* text = new QLabel(QObject::tr("No problems found."), this);
+                ok->setPixmap(LC_AIIcons::lucide(empty ? "circle-slash" : "check", 13, empty ? t.textMuted : t.accentGreen, dpr));
+                auto* text = new QLabel(empty ? QObject::tr("Nothing to check: %1 has no entities.").arg(report.scopeText)
+                                              : QObject::tr("No problems found."), this);
                 text->setObjectName("ruleName");
+                text->setWordWrap(true); // in a narrow chat it wraps rather than widening the card
+                text->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
                 row->addWidget(ok);
                 row->addWidget(text, 1);
                 layout->addLayout(row);
@@ -2776,6 +2788,9 @@ namespace {
             name->setToolTip(rule);
             auto* count = new QLabel(QString::number(indexes.size()), row);
             count->setObjectName("ruleCount");
+            count->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+            count->ensurePolished(); // the style sheet's font, to measure with
+            count->setMinimumWidth(count->fontMetrics().horizontalAdvance(QStringLiteral("0000")));
             rowLayout->addWidget(chevron);
             rowLayout->addWidget(dot);
             rowLayout->addWidget(name, 1);
@@ -2858,6 +2873,7 @@ LC_AIDrawingChecker::Report LC_AIDrawingChecker::check(RS_Graphic* graphic, cons
     report.precision = c.eps;
     report.size = c.size;
     report.unit = graphic->getUnit() == RS2::None ? QString() : RS_Units::unitToString(graphic->getUnit());
+    report.unitSign = RS_Units::unitToSign(graphic->getUnit());
     for (const Rule& r : RULES) {
         if (c.wants(r.id)) {
             report.rules << QString::fromLatin1(r.id);
@@ -2881,6 +2897,10 @@ QString LC_AIDrawingChecker::format(const Report& report, const int limit) {
         errors += issue.severity == "error" ? 1 : 0;
         warnings += issue.severity == "warning" ? 1 : 0;
         fixable += issue.fixable ? 1 : 0;
+    }
+    if (report.checked == 0 && report.issues.isEmpty()) {
+        out << QStringLiteral("Nothing to check: %1 has no entities.").arg(report.scopeText);
+        return out.join('\n');
     }
     if (report.issues.isEmpty()) {
         out << QStringLiteral("No issues found (rules: %1).").arg(report.rules.join(", "));

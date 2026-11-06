@@ -60,6 +60,7 @@ namespace LC_AIDrawingChecker {
         double precision {0}; // points closer than this are the same point
         double size {0};      // diagonal of the main extents
         QString unit;
+        QString unitSign;  // "mm", for the chat card
         const RS_Graphic* graphic {nullptr}; // only to tell whether the open drawing is still the checked one
     };
 
