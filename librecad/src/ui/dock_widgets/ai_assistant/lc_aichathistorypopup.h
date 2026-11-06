@@ -11,6 +11,7 @@
 #define LC_AICHATHISTORYPOPUP_H
 
 #include <QFrame>
+#include <QSet>
 
 #include "lc_aiprovidersdialog.h"
 
@@ -22,14 +23,18 @@ class QPushButton;
  * The chat history list, a popup under the header's history button (styled like the model picker): the chats of
  * the active drawing, or of all drawings grouped by drawing, newest first, each with its title (the first
  * question), date and message count. Typing searches titles, questions and drawing names. A click resumes a
- * chat; on the highlighted row the pencil renames it in place and the bin deletes it (a second click confirms).
+ * chat; on the highlighted row the pencil (F2) renames it in place and the bin (Delete) deletes it (a second click
+ * or Delete confirms).
  */
 class LC_AIChatHistoryPopup : public QFrame {
     Q_OBJECT
 public:
-    /** drawing and drawingName: the active drawing ("This drawing"); current: the chat the panel shows. */
+    /**
+     * drawing and drawingName: the active drawing ("This drawing"); current: the chat the panel shows; open: the keys
+     * of the drawings open now (an unsaved drawing that is not open was closed without saving: it is gone).
+     */
     LC_AIChatHistoryPopup(const LC_AITheme& theme, const QString& drawing, const QString& drawingName,
-                          const QString& current, QWidget* parent = nullptr);
+                          const QString& current, const QSet<QString>& open, QWidget* parent = nullptr);
     /** Opens under the anchor, right edges aligned (above it when there is no room below). */
     void popup(QWidget* anchor);
 
@@ -52,6 +57,7 @@ private:
     QString m_drawing;
     QString m_drawingName;
     QString m_current;
+    QSet<QString> m_open;
     bool m_all {false};
     QString m_armed;                 // the chat whose bin was clicked once: a second click deletes it
     QString m_editing;               // the chat being renamed: its row shows the name box only

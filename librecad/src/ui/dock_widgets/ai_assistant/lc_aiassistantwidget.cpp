@@ -716,7 +716,7 @@ void LC_AIAssistantWidget::showChat(const QList<LC_AIChatMessage>& messages) {
     m_sessionAllows.clear(); // "Allow for this session" answers belong to the chat they were given in
     m_transcript->clear();
     LC_AIChatSession::replay(m_transcript, messages);
-    m_plan->reset(); // a plan belongs to the chat it was made in
+    m_plan->reset(messages); // a plan belongs to the chat it was made in
     m_runStart = -1; // a run of another chat cannot be checked from here
 }
 
@@ -738,6 +738,8 @@ void LC_AIAssistantWidget::startDebugger(const QString& reason) {
     // the pass goes on in the same conversation, so it sees the request and every call and screenshot of the run
     LC_AIChatMessage review;
     review.role = LC_AIChatMessage::Role::User;
+    review.internal = QStringLiteral("debugger"); // a chat shown again shows it as the Debugger's section, as now
+    review.internalReason = reason;
     review.text = LC_AIDebugger::reviewRequest(m_messages, m_runStart, reason);
     if (const QString note = revertNote(); !note.isEmpty()) {
         review.text += QStringLiteral("\n\n") + note; // e.g. the user reverted the run before asking for the check

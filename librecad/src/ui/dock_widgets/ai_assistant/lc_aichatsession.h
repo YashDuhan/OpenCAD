@@ -26,7 +26,7 @@ class QToolButton;
 
 /**
  * Files the AI panel's conversation under the drawing it is about. The chat is saved as it grows; moving to
- * another drawing shows that drawing's latest chat (never in the middle of a run: the run stays with its chat,
+ * another drawing shows the chat it showed last, else its latest (never in the middle of a run: the run stays with its chat,
  * and a drawing you moved to meanwhile shows once it ends); the header's history button lists the chats to
  * resume, rename or delete. A drawing that was never saved gets a temporary key, which becomes its file path
  * when it is saved.
@@ -54,7 +54,11 @@ public:
     /** Shows a saved chat, switching to its drawing (or opening its file) when it can. */
     void resume(const QString& chatId);
 
-    /** Fills an empty transcript with a saved conversation: questions, answers, tool calls folded with their results. */
+    /**
+     * Fills an empty transcript with a saved conversation, as it looked live: questions with their files, answers,
+     * tool calls folded with their results, answered question and plan cards, the debugger's sections, and the
+     * "Revert AI changes" bars of runs this session still keeps.
+     */
     static void replay(LC_AIChatTranscript* transcript, const QList<LC_AIChatMessage>& messages);
 
 signals:
@@ -64,12 +68,16 @@ signals:
 private:
     void attach();
     void onWindowActivated(QMdiSubWindow* window);
-    /** Shows this drawing's latest chat (an empty one when it has none). */
+    /** Shows the chat this drawing showed last, else its latest one (an empty one when it has none). */
     void follow(QC_MDIWindow* window);
+    /** Shows a saved chat; one whose file cannot be read is not shown (a note says so) and a new chat starts. */
     void show(const QString& chatId);
+    /** The drawing's window keeps which chat it shows, for when it comes back to the front. */
+    void remember();
     void openHistory();
     void watch(QC_MDIWindow* window);
     QC_MDIWindow* activeDrawing() const;
+    bool hasDrawings() const;
     QC_MDIWindow* windowOf(const QString& key);
     /** The drawing's key. When it was saved under a (new) file name meanwhile, its chats move along. */
     QString keyOf(QC_MDIWindow* window);

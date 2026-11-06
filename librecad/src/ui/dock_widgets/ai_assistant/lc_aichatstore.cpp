@@ -16,6 +16,7 @@
 #include <QFileInfo>
 #include <QImage>
 #include <QJsonDocument>
+#include <QRandomGenerator>
 #include <QSaveFile>
 #include <QSet>
 #include <QStandardPaths>
@@ -31,7 +32,34 @@ namespace {
     constexpr int MAX_SEARCH_TEXT = 1200;
     constexpr int PNG_GOOD_ENOUGH = 96 * 1024; // a PNG this small is kept; a larger one is tried as JPEG too
     constexpr int MAX_IMAGE_CACHE = 256;
+    constexpr qint64 MAX_FILE_CACHE_BYTES = 96 * 1024 * 1024; // attached files read back, kept for the next drawing switch
     const QString DROPPED_IMAGE = QStringLiteral("(An older screenshot, not kept in the saved chat.)");
+    const QString FILES_SUFFIX = QStringLiteral(".files");
+    // for the model, so not translated; the chat shows such a call as stopped. The words the inference manager
+    // answers a call with when Stop ends the run before it, so both read the same.
+    const QString STOPPED_CALL = QStringLiteral("Stopped by the user before this ran.");
+
+    /**
+     * Run numbers (LC_AICheckpoints) start at 1 in every OpenCAD session and live in memory only: a saved one counts
+     * in the session that wrote it, and is left out when a later session reads the chat.
+     */
+    const QString& sessionToken() {
+        static const QString token = QString::number(QRandomGenerator::global()->generate64(), 16);
+        return token;
+    }
+
+    QString fileSuffix(const QString& mimeType) {
+        if (mimeType == QStringLiteral("application/pdf")) {
+            return QStringLiteral("pdf");
+        }
+        if (mimeType == QStringLiteral("image/jpeg")) {
+            return QStringLiteral("jpg");
+        }
+        if (mimeType == QStringLiteral("image/webp")) {
+            return QStringLiteral("webp");
+        }
+        return QStringLiteral("png");
+    }
 
     QString roleName(const LC_AIChatMessage::Role role) {
         switch (role) {
@@ -62,19 +90,23 @@ namespace {
         QFile::setPermissions(path, QFileDevice::ReadOwner | QFileDevice::WriteOwner);
     }
 
-    bool writeJson(const QString& path, const QJsonObject& json) {
+    bool writeBytes(const QString& path, const QByteArray& bytes) {
         QSaveFile file(path);
         if (!file.open(QIODevice::WriteOnly)) {
             qWarning("AI chat history: cannot write %s: %s", qPrintable(path), qPrintable(file.errorString()));
             return false;
         }
-        file.write(QJsonDocument(json).toJson(QJsonDocument::Compact));
+        file.write(bytes);
         if (!file.commit()) {
             qWarning("AI chat history: cannot write %s: %s", qPrintable(path), qPrintable(file.errorString()));
             return false;
         }
         ownerOnly(path);
         return true;
+    }
+
+    bool writeJson(const QString& path, const QJsonObject& json) {
+        return writeBytes(path, QJsonDocument(json).toJson(QJsonDocument::Compact));
     }
 }
 
@@ -90,6 +122,10 @@ LC_AIChatStore::LC_AIChatStore() {
 
 QString LC_AIChatStore::chatFile(const QString& id) const {
     return m_dir + "/" + id + ".json";
+}
+
+QString LC_AIChatStore::filesDir(const QString& id) const {
+    return m_dir + "/" + id + FILES_SUFFIX;
 }
 
 QString LC_AIChatStore::pathKey(const QString& fileName) {
@@ -181,6 +217,12 @@ void LC_AIChatStore::loadIndex() {
             ++it;
         }
     }
+    // the attached files of a chat whose file is gone
+    for (const QString& folder : QDir(m_dir).entryList({QStringLiteral("*") + FILES_SUFFIX}, QDir::Dirs | QDir::NoDotAndDotDot)) {
+        if (!onDisk.contains(folder.chopped(FILES_SUFFIX.size()))) {
+            QDir(m_dir + "/" + folder).removeRecursively();
+        }
+    }
     if (changed) {
         writeIndex();
     }
@@ -222,12 +264,24 @@ QString LC_AIChatStore::latest(const QString& drawing) const {
 
 // ------------------------------------------------------------------------------------------------ chats
 
-QJsonObject LC_AIChatStore::readChat(const QString& id) const {
+QJsonObject LC_AIChatStore::readChat(const QString& id, QString* error) const {
     QFile file(chatFile(id));
     if (!file.open(QIODevice::ReadOnly)) {
+        if (error != nullptr) {
+            *error = file.errorString();
+        }
         return {};
     }
-    return QJsonDocument::fromJson(file.readAll()).object();
+    QJsonParseError parse;
+    const QJsonDocument doc = QJsonDocument::fromJson(file.readAll(), &parse);
+    if (parse.error != QJsonParseError::NoError || !doc.isObject() || !doc.object().value("messages").isArray()) {
+        if (error != nullptr) {
+            *error = parse.error != QJsonParseError::NoError ? tr("the file is damaged (%1 at byte %2)").arg(parse.errorString()).arg(parse.offset)
+                                                             : tr("the file holds no conversation");
+        }
+        return {};
+    }
+    return doc.object();
 }
 
 bool LC_AIChatStore::writeChat(const LC_AIChatInfo& info, const QJsonArray& messages) const {
@@ -248,9 +302,18 @@ void LC_AIChatStore::describe(LC_AIChatInfo& info, const QList<LC_AIChatMessage>
     int count = 0;
     int length = 0;
     for (const LC_AIChatMessage& m : messages) {
-        if (m.role == LC_AIChatMessage::Role::User) {
+        if (m.role == LC_AIChatMessage::Role::User && m.internal.isEmpty()) { // the debugger's request is no question of the user
             ++count;
-            const QString question = m.text.simplified();
+            QString question = m.text.simplified();
+            if (question.isEmpty()) { // only files: their names say what it was about
+                QStringList names;
+                for (const LC_AIAttachment& a : m.attachments) {
+                    if (!a.fromMention) {
+                        names << a.name;
+                    }
+                }
+                question = names.join(QStringLiteral(", "));
+            }
             if (first.isEmpty()) {
                 // the first line of the first question names the chat
                 for (const QString& line : m.text.split('\n')) {
@@ -259,14 +322,17 @@ void LC_AIChatStore::describe(LC_AIChatInfo& info, const QList<LC_AIChatMessage>
                         break;
                     }
                 }
+                if (first.isEmpty()) {
+                    first = question;
+                }
             }
             if (length < MAX_SEARCH_TEXT) {
                 questions << question.left(MAX_QUESTION_SEARCH);
                 length += qMin(static_cast<int>(question.size()), MAX_QUESTION_SEARCH);
             }
         }
-        else if (m.role == LC_AIChatMessage::Role::Assistant && !m.text.trimmed().isEmpty()) {
-            ++count;
+        else if (m.role == LC_AIChatMessage::Role::Assistant && !m.text.trimmed().isEmpty() && m.toolCalls.isEmpty()) {
+            ++count; // an answer; the short lines between tool calls ("Saving.") are not counted
         }
     }
     if (!info.renamed) {
@@ -313,7 +379,130 @@ QJsonObject LC_AIChatStore::smallImage(const LC_AIContent& image) {
     return saved;
 }
 
-QJsonArray LC_AIChatStore::messagesToJson(const QList<LC_AIChatMessage>& messages) {
+QString LC_AIChatStore::fileNameOf(const LC_AIAttachment& attachment) {
+    if (const auto it = m_fileNames.constFind(attachment.id); !attachment.id.isEmpty() && it != m_fileNames.constEnd()) {
+        return it.value();
+    }
+    const QString name = QString::fromLatin1(QCryptographicHash::hash(attachment.data, QCryptographicHash::Sha1).toHex()) + "."
+                         + fileSuffix(attachment.mimeType);
+    if (!attachment.id.isEmpty()) {
+        if (m_fileNames.size() >= MAX_IMAGE_CACHE) {
+            m_fileNames.clear();
+        }
+        m_fileNames.insert(attachment.id, name);
+    }
+    return name;
+}
+
+bool LC_AIChatStore::writeFile(const QString& id, const QString& name, const QByteArray& data) const {
+    const QString folder = filesDir(id);
+    const QString path = folder + "/" + name;
+    if (QFileInfo(path).size() == data.size() && QFileInfo::exists(path)) {
+        return true; // named after its bytes: it is there already
+    }
+    if (!QDir().mkpath(folder)) {
+        qWarning("AI chat history: cannot create %s", qPrintable(folder));
+        return false;
+    }
+    QFile::setPermissions(folder, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+    return writeBytes(path, data);
+}
+
+bool LC_AIChatStore::readAttachment(const QString& id, const QJsonObject& json, LC_AIAttachment& out) const {
+    const QString name = json.value("file").toString();
+    if (name.isEmpty() || name.contains('/') || name.contains('\\') || name.startsWith('.')) {
+        return false; // only a file of the chat's own folder
+    }
+    const QString path = filesDir(id) + "/" + name;
+    if (const auto it = m_files.constFind(path); it != m_files.constEnd()) {
+        out = it.value();
+    }
+    else {
+        // read as when it was attached: the bytes stay as they were sent, the preview is drawn again
+        QString error;
+        if (!LC_AIAttachments::fromFile(path, out, error)) {
+            qWarning("AI chat history: an attached file of chat %s cannot be read: %s", qPrintable(id), qPrintable(error));
+            return false;
+        }
+        if (m_filesBytes + out.data.size() > MAX_FILE_CACHE_BYTES) {
+            m_files.clear();
+            m_filesBytes = 0;
+        }
+        m_files.insert(path, out);
+        m_filesBytes += out.data.size();
+    }
+    out.name = json.value("name").toString(out.name);
+    out.note = json.value("note").toString();
+    if (out.pages == 0) {
+        out.pages = json.value("pages").toInt();
+    }
+    out.fromMention = json.value("fromMention").toBool();
+    return true;
+}
+
+void LC_AIChatStore::removeUnusedFiles(const QString& id, const QSet<QString>& used) const {
+    QDir folder(filesDir(id));
+    if (!folder.exists()) {
+        return;
+    }
+    for (const QString& file : folder.entryList(QDir::Files)) {
+        if (!used.contains(file)) {
+            folder.remove(file);
+        }
+    }
+    if (used.isEmpty()) {
+        QDir(m_dir).rmdir(id + FILES_SUFFIX);
+    }
+}
+
+bool LC_AIChatStore::copyFiles(const QString& from, const QString& to) const {
+    const QDir source(filesDir(from));
+    if (!source.exists()) {
+        return true;
+    }
+    for (const QString& file : source.entryList(QDir::Files)) {
+        QFile in(source.filePath(file));
+        if (!in.open(QIODevice::ReadOnly) || !writeFile(to, file, in.readAll())) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool LC_AIChatStore::closeOpenCalls(QList<LC_AIChatMessage>& messages) {
+    bool added = false;
+    for (int i = 0; i < messages.size(); ++i) {
+        if (messages[i].role != LC_AIChatMessage::Role::Assistant || messages[i].toolCalls.isEmpty()) {
+            continue;
+        }
+        const QList<LC_AIToolCall> calls = messages[i].toolCalls;
+        const int run = messages[i].run;
+        // the results of its calls follow it, before the next answer or question
+        int end = i + 1;
+        QSet<QString> answered;
+        for (; end < messages.size() && messages[end].role == LC_AIChatMessage::Role::ToolResult; ++end) {
+            answered.insert(messages[end].toolCallId);
+        }
+        for (const LC_AIToolCall& call : calls) {
+            if (answered.contains(call.id)) {
+                continue;
+            }
+            LC_AIChatMessage result;
+            result.role = LC_AIChatMessage::Role::ToolResult;
+            result.toolCallId = call.id;
+            result.toolName = call.name;
+            result.result = LC_AIToolResult::error(STOPPED_CALL);
+            result.stopped = true;
+            result.run = run;
+            messages.insert(end++, result);
+            added = true;
+        }
+        i = end - 1;
+    }
+    return added;
+}
+
+QJsonArray LC_AIChatStore::messagesToJson(const QString& id, const QList<LC_AIChatMessage>& messages, QSet<QString>& files) {
     int images = 0;
     for (const LC_AIChatMessage& m : messages) {
         for (const LC_AIContent& c : m.result.content) {
@@ -322,15 +511,62 @@ QJsonArray LC_AIChatStore::messagesToJson(const QList<LC_AIChatMessage>& message
     }
     int dropped = qMax(0, images - MAX_IMAGES); // the oldest screenshots go first
 
+    // the files attached to the newest questions are kept, as far as MAX_FILE_BYTES goes (a file attached twice counts once)
+    QSet<QString> kept;
+    qint64 bytes = 0;
+    for (auto m = messages.crbegin(); m != messages.crend(); ++m) {
+        for (const LC_AIAttachment& a : m->attachments) {
+            const QString name = fileNameOf(a);
+            if (!kept.contains(name) && bytes + a.data.size() <= MAX_FILE_BYTES) {
+                kept.insert(name);
+                bytes += a.data.size();
+            }
+        }
+    }
+
     QJsonArray out;
     for (const LC_AIChatMessage& m : messages) {
         QJsonObject o{{"role", roleName(m.role)}};
         if (!m.text.isEmpty()) {
             o.insert("text", m.text);
         }
+        if (m.run > 0) { // see sessionToken()
+            o.insert("run", m.run);
+            o.insert("runOf", sessionToken());
+        }
         switch (m.role) {
-            case LC_AIChatMessage::Role::User:
+            case LC_AIChatMessage::Role::User: {
+                if (!m.context.isEmpty()) {
+                    o.insert("context", m.context); // what its @-mentions stood for when it was sent
+                }
+                if (!m.internal.isEmpty()) {
+                    o.insert("internal", m.internal);
+                    o.insert("internalReason", m.internalReason);
+                }
+                QJsonArray attached;
+                for (const LC_AIAttachment& a : m.attachments) {
+                    QJsonObject file{{"name", a.name}, {"mimeType", a.mimeType}};
+                    if (!a.note.isEmpty()) {
+                        file.insert("note", a.note);
+                    }
+                    if (a.pages > 0) {
+                        file.insert("pages", a.pages);
+                    }
+                    if (a.fromMention) {
+                        file.insert("fromMention", true);
+                    }
+                    const QString name = fileNameOf(a);
+                    if (kept.contains(name) && writeFile(id, name, a.data)) {
+                        file.insert("file", name);
+                        files.insert(name);
+                    }
+                    attached.append(file); // without "file": not kept
+                }
+                if (!attached.isEmpty()) {
+                    o.insert("attachments", attached);
+                }
                 break;
+            }
             case LC_AIChatMessage::Role::Assistant: {
                 if (!m.origin.isEmpty()) {
                     o.insert("origin", m.origin);
@@ -357,6 +593,9 @@ QJsonArray LC_AIChatStore::messagesToJson(const QList<LC_AIChatMessage>& message
                 if (m.result.isError) {
                     o.insert("isError", true);
                 }
+                if (m.stopped) {
+                    o.insert("stopped", true);
+                }
                 QJsonArray content;
                 for (const LC_AIContent& c : m.result.content) {
                     if (c.type == LC_AIContent::Type::Text) {
@@ -379,10 +618,13 @@ QJsonArray LC_AIChatStore::messagesToJson(const QList<LC_AIChatMessage>& message
     return out;
 }
 
-LC_AIChatMessage LC_AIChatStore::messageFromJson(const QJsonObject& json) {
+LC_AIChatMessage LC_AIChatStore::messageFromJson(const QJsonObject& json, const QString& id) const {
     LC_AIChatMessage m;
     const QString role = json.value("role").toString();
     m.text = json.value("text").toString();
+    if (json.value("runOf").toString() == sessionToken()) {
+        m.run = json.value("run").toInt();
+    }
     if (role == "assistant") {
         m.role = LC_AIChatMessage::Role::Assistant;
         m.origin = json.value("origin").toString();
@@ -398,6 +640,7 @@ LC_AIChatMessage LC_AIChatStore::messageFromJson(const QJsonObject& json) {
         m.toolCallId = json.value("toolCallId").toString();
         m.toolName = json.value("toolName").toString();
         m.result.isError = json.value("isError").toBool();
+        m.stopped = json.value("stopped").toBool();
         for (const QJsonValue& v : json.value("content").toArray()) {
             const QJsonObject c = v.toObject();
             if (c.value("type").toString() == "image") {
@@ -411,15 +654,33 @@ LC_AIChatMessage LC_AIChatStore::messageFromJson(const QJsonObject& json) {
     }
     else {
         m.role = LC_AIChatMessage::Role::User;
+        m.context = json.value("context").toString();
+        m.internal = json.value("internal").toString();
+        m.internalReason = json.value("internalReason").toString();
+        QStringList lost;
+        for (const QJsonValue& v : json.value("attachments").toArray()) {
+            LC_AIAttachment attachment;
+            if (readAttachment(id, v.toObject(), attachment)) {
+                m.attachments << attachment;
+            }
+            else {
+                lost << v.toObject().value("name").toString();
+            }
+        }
+        if (!lost.isEmpty()) { // the model still learns that files came with the question (for the model: not translated)
+            const QString note = QStringLiteral("[Files attached here that the saved chat no longer has: %1.]").arg(lost.join(QStringLiteral(", ")));
+            m.context = m.context.isEmpty() ? note : note + QStringLiteral("\n\n") + m.context;
+        }
     }
     return m;
 }
 
-QList<LC_AIChatMessage> LC_AIChatStore::load(const QString& id) const {
+QList<LC_AIChatMessage> LC_AIChatStore::load(const QString& id, QString* error) const {
     QList<LC_AIChatMessage> messages;
-    for (const QJsonValue& v : readChat(id).value("messages").toArray()) {
-        messages.append(messageFromJson(v.toObject()));
+    for (const QJsonValue& v : readChat(id, error).value("messages").toArray()) {
+        messages.append(messageFromJson(v.toObject(), id));
     }
+    closeOpenCalls(messages); // e.g. written while a call waited for approval, and OpenCAD was closed then
     return messages;
 }
 
@@ -435,7 +696,9 @@ QString LC_AIChatStore::save(const QString& id, const QString& drawing, const QS
     info.drawingName = drawingName;
     info.updated = QDateTime::currentDateTimeUtc();
     describe(info, messages);
-    if (writeChat(info, messagesToJson(messages))) {
+    QSet<QString> files;
+    if (writeChat(info, messagesToJson(info.id, messages, files))) { // the attached files first, then the chat that refers to them
+        removeUnusedFiles(info.id, files);
         m_chats.insert(info.id, info);
         writeIndex();
         emit changed();
@@ -455,14 +718,11 @@ void LC_AIChatStore::rename(const QString& id, const QString& title) {
     if (info.renamed) {
         info.title = name.left(200);
     }
-    else { // back to the first question
-        QList<LC_AIChatMessage> list;
-        for (const QJsonValue& v : messages) {
-            list.append(messageFromJson(v.toObject()));
-        }
-        describe(info, list);
+    else if (!file.isEmpty()) { // back to the first question
+        describe(info, load(id));
     }
-    if (writeChat(info, messages)) {
+    // a damaged file is left as it is: only the list shows the new name
+    if (file.isEmpty() || writeChat(info, messages)) {
         m_chats.insert(id, info);
         writeIndex();
         emit changed();
@@ -474,6 +734,7 @@ void LC_AIChatStore::remove(const QString& id) {
         return;
     }
     QFile::remove(chatFile(id));
+    QDir(filesDir(id)).removeRecursively();
     m_chats.remove(id);
     writeIndex();
     emit changed();
@@ -498,6 +759,9 @@ QHash<QString, QString> LC_AIChatStore::moveDrawing(const QString& from, const Q
         }
         info.drawing = to;
         info.drawingName = toName;
+        if (copy && !copyFiles(old.id, info.id)) {
+            continue;
+        }
         if (writeChat(info, file.value("messages").toArray())) {
             m_chats.insert(info.id, info);
             ids.insert(old.id, info.id);
