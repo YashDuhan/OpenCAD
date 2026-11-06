@@ -73,6 +73,12 @@ namespace {
         return QStringLiteral("%1 %2").arg(n).arg(n == 1 ? one : many);
     }
 
+    /** The drawing's unit for the model: in English, and "unitless" rather than "None". */
+    QString unitsOf(const RS_Graphic* graphic) {
+        const RS2::Unit unit = graphic->getUnit();
+        return unit == RS2::None ? QStringLiteral("unitless") : RS_Units::unitToString(unit, false);
+    }
+
     /** Names of layers or blocks, longest first, so "Wall outlines" is found before "Wall". */
     QStringList longestFirst(QStringList names) {
         std::sort(names.begin(), names.end(), [](const QString& a, const QString& b) { return a.size() > b.size(); });
@@ -134,7 +140,7 @@ namespace {
         if (count == 0) {
             return QStringLiteral("Nothing is selected in the drawing.");
         }
-        return QStringLiteral("%1 selected (units: %2):\n").arg(plural(count, "entity", "entities"), RS_Units::unitToString(graphic->getUnit()))
+        return QStringLiteral("%1 selected (units: %2):\n").arg(plural(count, "entity", "entities"), unitsOf(graphic))
                + describeAll(shown, count, QStringLiteral("list_entities with selected_only reads them"));
     }
 
@@ -179,7 +185,7 @@ namespace {
         QString text = QStringLiteral("Layer \"%1\"%2: %3%4 (units: %5).")
                            .arg(layer->getName(), flags.isEmpty() ? QString() : " [" + flags.join(", ") + "]",
                                 plural(count, "entity", "entities"), types.isEmpty() ? QString() : " (" + types.join(", ") + ")",
-                                RS_Units::unitToString(graphic->getUnit()));
+                                unitsOf(graphic));
         if (count > 0) {
             text += "\n" + describeAll(shown, count, QStringLiteral("list_entities with layer \"%1\" reads them").arg(layer->getName()));
         }
@@ -234,7 +240,7 @@ namespace {
         if (found == nullptr) {
             return QStringLiteral("Entity #%1 is not in the drawing (it may have been deleted).").arg(idText);
         }
-        QString text = LC_AITools::describeEntity(found) + QStringLiteral(" (units: %1)").arg(RS_Units::unitToString(graphic->getUnit()));
+        QString text = LC_AITools::describeEntity(found) + QStringLiteral(" (units: %1)").arg(unitsOf(graphic));
         if (found->rtti() == RS2::EntityInsert) {
             const auto* insert = static_cast<RS_Insert*>(found);
             text += QStringLiteral("\nAn insert of block \"%1\" at %2, scale %3 x %4, rotation %5°.")
