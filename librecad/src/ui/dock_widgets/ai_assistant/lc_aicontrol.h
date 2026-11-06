@@ -61,6 +61,8 @@ public:
     /** Wraps tools so afterTool runs on their results. */
     static QList<LC_AITool> withControl(const QList<LC_AITool>& tools);
 
+    /** The AI moved the view itself (zoom, pan, an opened drawing): this is its view now. */
+    void adoptView() { rememberView(); }
     /** The AI's own view of this drawing when the visible one differs (the user moved it): offset and zoom. */
     bool aiView(RS_GraphicView* view, int& offsetX, int& offsetY, double& factor) const;
     /** The drawing the run works on (what LC_AITools::view() gives during a run); nullptr while idle or once it is closed. */

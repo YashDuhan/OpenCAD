@@ -14,6 +14,11 @@
 #include <QRegularExpression>
 
 #include "lc_aicredentials.h"
+#include "lc_aitool.h"
+#include "rs_entity.h"
+#include "rs_graphic.h"
+#include "rs_graphicview.h"
+#include "rs_layer.h"
 
 namespace {
     const QString MODE_KEY = QStringLiteral("approvalMode");
@@ -30,7 +35,8 @@ namespace {
     // tools that change the drawing: asked by default, approved by "Auto-accept edits"
     const QSet<QString> EDIT_TOOLS = {"run_command", "add_text", "press_toolbar_button", "click_drawing", "set_toolbar_value",
                                       "tool_options", "use_panel", "use_menu", "context_menu", "press_in_app", "use_properties",
-                                      "fix_drawing_issues"}; // the drawing checker's safe fixes
+                                      "fix_drawing_issues", // the drawing checker's safe fixes
+                                      "layers"};
 
     /** Calls of edit tools that only read (describe a panel, list the menus): they need no approval. */
     bool onlyReads(const QString& toolName, const QJsonObject& arguments) {
@@ -41,7 +47,82 @@ namespace {
         if (toolName == "use_menu") {
             return arguments.value("path").toString().trimmed().isEmpty();
         }
+        if (toolName == "layers") {
+            const QString action = arguments.value("action").toString("list").trimmed().toLower();
+            return action.isEmpty() || action == "list";
+        }
         return false;
+    }
+
+    /** The live entities of the drawing the AI works on, and how many of them are selected. */
+    void drawingCounts(int& all, int& selected) {
+        all = 0;
+        selected = 0;
+        RS_GraphicView* view = LC_AITools::view();
+        RS_Graphic* graphic = view != nullptr ? view->getGraphic() : nullptr;
+        if (graphic == nullptr) {
+            return;
+        }
+        for (RS_Entity* e : *graphic) {
+            if (e != nullptr && !e->isDeleted()) {
+                ++all;
+                selected += e->isSelected() ? 1 : 0;
+            }
+        }
+    }
+
+    /**
+     * A call that would delete most of the drawing (at least 20 entities and at least half of it) asks in every mode,
+     * Full access too: a run that "starts over" should not wipe the user's work without a word.
+     */
+    QString wipeRule(const QString& toolName, const QJsonObject& arguments) {
+        constexpr int AT_LEAST = 20;
+        bool deletes = false;
+        if (toolName == "press_toolbar_button") {
+            static const QRegularExpression ids(QStringLiteral("^(ModifyDelete\\w*|EditCut\\w*)$"), QRegularExpression::CaseInsensitiveOption);
+            deletes = ids.match(arguments.value("id").toString().trimmed()).hasMatch();
+        }
+        else if (toolName == "run_command") {
+            static const QRegularExpression words(QStringLiteral("^(moddelete|er|del|erase|delete|cut)$"), QRegularExpression::CaseInsensitiveOption);
+            for (const QJsonValue& v : arguments.value("commands").toArray()) {
+                deletes = deletes || words.match(v.toString().trimmed()).hasMatch();
+            }
+        }
+        if (deletes) {
+            int all = 0;
+            int selected = 0;
+            drawingCounts(all, selected);
+            if (selected >= AT_LEAST && selected * 2 >= all) {
+                return QStringLiteral("Safety rule: deletes most of the drawing (%1 of %2 entities)").arg(selected).arg(all);
+            }
+            return {};
+        }
+        if (toolName == "layers" && arguments.value("action").toString().trimmed().toLower() == "remove"
+            && arguments.value("entities").toString().trimmed().compare("delete", Qt::CaseInsensitive) == 0) {
+            RS_GraphicView* view = LC_AITools::view();
+            RS_Graphic* graphic = view != nullptr ? view->getGraphic() : nullptr;
+            if (graphic == nullptr) {
+                return {};
+            }
+            QStringList names;
+            for (const QJsonValue& v : arguments.value("names").toArray()) {
+                names << v.toString().trimmed().toLower();
+            }
+            names << arguments.value("name").toString().trimmed().toLower();
+            int all = 0;
+            int onThem = 0;
+            for (RS_Entity* e : *graphic) {
+                if (e != nullptr && !e->isDeleted()) {
+                    ++all;
+                    onThem += e->getLayer() != nullptr && names.contains(e->getLayer()->getName().toLower()) ? 1 : 0;
+                }
+            }
+            if (onThem >= AT_LEAST && onThem * 2 >= all) {
+                return QStringLiteral("Safety rule: deletes most of the drawing with these layers (%1 of %2 entities)")
+                    .arg(onThem).arg(all);
+            }
+        }
+        return {};
     }
 
     /** Calls of an edit tool that only look: reading the Properties panel, folding it, choosing which type it shows. */
@@ -86,6 +167,13 @@ namespace {
             const QString id = arguments.value("id").toString().trimmed();
             if (risky.match(id).hasMatch()) {
                 return QStringLiteral("Safety rule: \"%1\" deletes, closes or writes files").arg(id);
+            }
+            return {};
+        }
+        if (toolName == "layers") {
+            if (arguments.value("action").toString().trimmed().toLower() == "remove"
+                && arguments.value("entities").toString().trimmed().compare("delete", Qt::CaseInsensitive) == 0) {
+                return QStringLiteral("Safety rule: removes layers and deletes their entities (a removed layer cannot come back)");
             }
             return {};
         }
@@ -237,7 +325,10 @@ LC_AIPermissions::Decision LC_AIPermissions::decide(const QString& toolName, con
         d.reason = QObject::tr("Tool \"%1\" is denied by the user's tool permissions.").arg(toolName);
         return d;
     }
-    const QString rule = m == Mode::Full ? QString() : safetyRule(toolName, arguments); // Full access asks for nothing
+    QString rule = m == Mode::Full ? QString() : safetyRule(toolName, arguments); // Full access asks for nothing...
+    if (const QString wipe = wipeRule(toolName, arguments); !wipe.isEmpty()) {
+        rule = wipe; // ...except before deleting most of the drawing
+    }
     if (p == Permission::Ask && !hasSavedPermission(toolName) && onlyLooks(toolName, arguments)) {
         p = Permission::Allow; // a look at the panel is not an edit (unless the user asked to be asked)
     }
@@ -249,7 +340,8 @@ LC_AIPermissions::Decision LC_AIPermissions::decide(const QString& toolName, con
         d.permission = Permission::Ask;
         d.reason = rule;
         d.ruleAsked = true;
-        d.key = toolName == "press_toolbar_button" ? "rule:button:" + arguments.value("id").toString()
+        d.key = rule.contains("most of the drawing") ? QStringLiteral("rule:wipe")
+                : toolName == "press_toolbar_button" ? "rule:button:" + arguments.value("id").toString()
                 : toolName == "run_command" ? QStringLiteral("rule:delete") : "rule:" + toolName + ":" + rule;
     }
     else {

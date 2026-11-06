@@ -26,6 +26,7 @@
 #include "lc_aicontrol.h"
 #include "lc_aiproperties.h"
 #include "lc_aidrawingchecker.h"
+#include "lc_ailayers.h"
 #include "lc_aitoolbar.h"
 #include "lc_graphicviewport.h"
 #include "lc_printviewportrenderer.h"
@@ -386,6 +387,7 @@ namespace {
                 return LC_AIToolResult::error(NO_DRAWING);
             }
             view->getViewPort()->zoomAuto(false, true);
+            LC_AIControl::instance().adoptView(); // the result and its picture show the new view
             return viewResult(view, QStringLiteral("Zoomed to fit the drawing."), args.value("capture").toBool());
         };
         return t;
@@ -424,6 +426,7 @@ namespace {
                 max = RS_Vector(std::max(max.x, u.x), std::max(max.y, u.y));
             }
             vp->zoomWindow(min, max, true);
+            LC_AIControl::instance().adoptView(); // the result and its picture show the new view
             return viewResult(view, QStringLiteral("Zoomed to the area %1 .. %2.").arg(fmt(a), fmt(b)),
                               args.value("capture").toBool());
         };
@@ -467,6 +470,7 @@ namespace {
             else {
                 vp->zoomOut(1.0 / factor, center);
             }
+            LC_AIControl::instance().adoptView(); // the result and its picture show the new view
             return viewResult(view, QStringLiteral("Zoomed by %1.").arg(fmt(factor)), args.value("capture").toBool());
         };
         return t;
@@ -496,6 +500,7 @@ namespace {
             const RS_Vector ucsDelta = vp->toUCSDelta(delta);
             // same window shifted by the delta: the scale stays as it is
             vp->zoomWindow(vp->getUCSViewLeftBottom() + ucsDelta, vp->getUCSViewRightTop() + ucsDelta, true);
+            LC_AIControl::instance().adoptView(); // the result and its picture show the new view
             return viewResult(view, QStringLiteral("Panned by %1.").arg(fmt(delta)), args.value("capture").toBool());
         };
         return t;
@@ -767,6 +772,7 @@ namespace {
             if (view->getViewPort() != nullptr) {
                 view->getViewPort()->zoomAuto(false, true);
             }
+            LC_AIControl::instance().adoptView(); // the result and its picture show the new view
             return viewResult(view, QStringLiteral("Opened %1; it is now the active drawing.").arg(info.fileName()),
                               args.value("capture").toBool());
         };
@@ -866,7 +872,11 @@ namespace {
             for (int i = 0; i < specs.size(); ++i) {
                 const QJsonObject& spec = specs[i];
                 const QString which = specs.size() > 1 ? QStringLiteral("Label %1: ").arg(i + 1) : QString();
-                const QString text = spec.value("text").toString();
+                QString text = spec.value("text").toString();
+                if (!text.contains('\n')) {
+                    // models often write the two characters \n (escaped once too often) where they mean a line break
+                    text.replace(QStringLiteral("\\r\\n"), QStringLiteral("\n")).replace(QStringLiteral("\\n"), QStringLiteral("\n"));
+                }
                 bool ok = true;
                 const RS_Vector pos(arg(spec, "x", ok), arg(spec, "y", ok));
                 if (text.trimmed().isEmpty() || !ok) {
@@ -1000,5 +1010,6 @@ QList<LC_AITool> LC_AITools::all() {
     return QList<LC_AITool>{captureView(), getView(), zoomToFit(), zoomToArea(), zoom(), pan(),
             drawingInfo(), listEntities(), listCommands(), runCommand(), addText(), openDrawing(), viewImageFile()}
         + LC_AIProperties::tools()      // the Properties panel (lc_aiproperties.cpp)
-        + LC_AIDrawingChecker::tools(); // check_drawing, fix_drawing_issues
+        + LC_AIDrawingChecker::tools()  // check_drawing, fix_drawing_issues
+        + LC_AILayers::tools();         // layers by name (lc_ailayers.cpp)
 }

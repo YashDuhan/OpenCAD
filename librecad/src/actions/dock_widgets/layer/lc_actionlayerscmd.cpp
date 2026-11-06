@@ -23,6 +23,8 @@
 
 #include "lc_actionlayerscmd.h"
 
+#include "rs_commandevent.h"
+
 #include "rs_graphic.h"
 #include "rs_layer.h"
 
@@ -51,6 +53,10 @@ void LC_ActionLayersCmd::trigger() {
 
 void LC_ActionLayersCmd::updateActionPrompt() {
     updatePromptTRCancel(tr("Enter layer name to %1").arg(m_actionType == RS2::ActionLayersActivateCmd? tr("activate") : tr("create")));
+}
+
+QString LC_ActionLayersCmd::prepareCommand(RS_CommandEvent* e) const {
+    return e->getCommand().trimmed();
 }
 
 bool LC_ActionLayersCmd::doProcessCommand([[maybe_unused]]int status, const QString& command) {

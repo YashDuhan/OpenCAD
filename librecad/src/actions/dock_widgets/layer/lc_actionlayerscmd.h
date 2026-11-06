@@ -40,6 +40,8 @@ protected:
     QString m_layerName;
     void updateActionPrompt() override;
     bool doProcessCommand(int status, const QString& command) override;
+    /** A layer name keeps its case (commands are lowercased for matching, and "Walls" is not "walls"). */
+    QString prepareCommand(RS_CommandEvent* e) const override;
     void onMouseRightButtonRelease(int status, QMouseEvent* e) override;
     void activateLayer() const;
     void createLayer() const;

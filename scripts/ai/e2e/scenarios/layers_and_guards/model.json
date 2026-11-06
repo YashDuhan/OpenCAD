@@ -1,0 +1,134 @@
+[
+ {
+  "text": "Layers first.",
+  "tool_calls": [
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "cnlayer",
+      "OUTLINE"
+     ]
+    }
+   },
+   {
+    "name": "layers",
+    "arguments": {
+     "action": "create",
+     "name": "SCREEN",
+     "color": "cyan",
+     "width": "0.25",
+     "current": false
+    }
+   },
+   {
+    "name": "layers",
+    "arguments": {
+     "action": "create",
+     "name": "screen"
+    }
+   },
+   {
+    "name": "layers",
+    "arguments": {
+     "action": "switch",
+     "name": "SCREEN"
+    }
+   },
+   {
+    "name": "run_command",
+    "arguments": {
+     "commands": [
+      "line",
+      "0,0",
+      "100,0",
+      "ESC",
+      "ESC"
+     ]
+    }
+   },
+   {
+    "name": "layers",
+    "arguments": {
+     "action": "move",
+     "from": "SCREEN",
+     "to": "OUTLINE"
+    }
+   },
+   {
+    "name": "layers",
+    "arguments": {
+     "action": "rename",
+     "name": "OUTLINE",
+     "new_name": "Body Outline"
+    }
+   },
+   {
+    "name": "layers",
+    "arguments": {
+     "action": "set",
+     "name": "SCREEN",
+     "visible": false
+    }
+   },
+   {
+    "name": "layers",
+    "arguments": {
+     "action": "remove",
+     "names": [
+      "Body Outline"
+     ]
+    }
+   },
+   {
+    "name": "layers",
+    "arguments": {
+     "action": "list"
+    }
+   }
+  ]
+ },
+ {
+  "text": "Labels and view.",
+  "tool_calls": [
+   {
+    "name": "add_text",
+    "arguments": {
+     "text": "Triple Camera Module\\n(Main, UW, Tele)",
+     "x": 10,
+     "y": 10,
+     "height": 2
+    }
+   },
+   {
+    "name": "zoom_to_area",
+    "arguments": {
+     "x1": 0,
+     "y1": -20,
+     "x2": 60,
+     "y2": 40
+    }
+   }
+  ]
+ },
+ {
+  "text": "Starting over.",
+  "tool_calls": [
+   {
+    "name": "select_entities",
+    "arguments": {
+     "all": true
+    }
+   },
+   {
+    "name": "press_toolbar_button",
+    "arguments": {
+     "id": "ModifyDelete"
+    }
+   }
+  ]
+ },
+ {
+  "text": "Done."
+ }
+]

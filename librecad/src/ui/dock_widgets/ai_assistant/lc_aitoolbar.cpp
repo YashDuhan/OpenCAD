@@ -942,6 +942,19 @@ namespace {
             bool isNumber = false;
             const int asNumber = QString(wanted).remove(QRegularExpression(QStringLiteral("^r"))).toInt(&isNumber);
             QList<QModelIndex> partial;
+            // the exact text first, case included: "Walls" and "WALLS" can be two different layers
+            for (int r = 0; !found.isValid() && r < model->rowCount(parent); ++r) {
+                for (int c = 0; c < model->columnCount(parent) && !found.isValid(); ++c) {
+                    const QModelIndex idx = model->index(r, c, parent);
+                    for (const QVariant& v : {idx.data(Qt::DisplayRole), idx.data(Qt::UserRole), idx.data(Qt::AccessibleTextRole)}) {
+                        if (!v.toString().isEmpty() && clean(v.toString()) == wanted) {
+                            found = idx;
+                            foundColumn = c;
+                            break;
+                        }
+                    }
+                }
+            }
             for (int r = 0; !found.isValid() && r < model->rowCount(parent); ++r) {
                 for (int c = 0; c < model->columnCount(parent); ++c) {
                     const QModelIndex idx = model->index(r, c, parent);

@@ -814,6 +814,7 @@ HEADERS += \
     ui/dock_widgets/ai_assistant/lc_aidrawingchecker.h \
     ui/dock_widgets/ai_assistant/lc_aichangepreview.h \
     ui/dock_widgets/ai_assistant/lc_aimarkdownview.h \
+    ui/dock_widgets/ai_assistant/lc_ailayers.h \
     ui/dock_widgets/views_list/lc_dlgnamedviewslistoptions.h \
     ui/dock_widgets/views_list/lc_namedviewsbutton.h \
     ui/dock_widgets/views_list/lc_namedviewslistoptions.h \
@@ -1394,6 +1395,7 @@ SOURCES += \
     ui/dock_widgets/ai_assistant/lc_aie2etest.cpp \
     ui/dock_widgets/ai_assistant/lc_aichangepreview.cpp \
     ui/dock_widgets/ai_assistant/lc_aimarkdownview.cpp \
+    ui/dock_widgets/ai_assistant/lc_ailayers.cpp \
     ui/dock_widgets/ai_assistant/lc_aicontrol.cpp \
     ui/dock_widgets/ai_assistant/lc_aisidebar.cpp \
     ui/dock_widgets/ai_assistant/lc_aivoice.cpp \

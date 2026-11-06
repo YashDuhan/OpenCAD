@@ -1,0 +1,233 @@
+[
+ {
+  "do": "tool",
+  "name": "run_command",
+  "args": {
+   "commands": [
+    "line",
+    "0,50",
+    "0,90",
+    "ESC",
+    "line",
+    "10,50",
+    "10,90",
+    "ESC",
+    "line",
+    "20,50",
+    "20,90",
+    "ESC",
+    "line",
+    "30,50",
+    "30,90",
+    "ESC",
+    "line",
+    "40,50",
+    "40,90",
+    "ESC",
+    "line",
+    "50,50",
+    "50,90",
+    "ESC",
+    "line",
+    "60,50",
+    "60,90",
+    "ESC",
+    "line",
+    "70,50",
+    "70,90",
+    "ESC",
+    "line",
+    "80,50",
+    "80,90",
+    "ESC",
+    "line",
+    "90,50",
+    "90,90",
+    "ESC",
+    "line",
+    "100,50",
+    "100,90",
+    "ESC",
+    "line",
+    "110,50",
+    "110,90",
+    "ESC",
+    "line",
+    "120,50",
+    "120,90",
+    "ESC",
+    "line",
+    "130,50",
+    "130,90",
+    "ESC",
+    "line",
+    "140,50",
+    "140,90",
+    "ESC",
+    "line",
+    "150,50",
+    "150,90",
+    "ESC",
+    "line",
+    "160,50",
+    "160,90",
+    "ESC",
+    "line",
+    "170,50",
+    "170,90",
+    "ESC",
+    "line",
+    "180,50",
+    "180,90",
+    "ESC",
+    "line",
+    "190,50",
+    "190,90",
+    "ESC",
+    "line",
+    "200,50",
+    "200,90",
+    "ESC",
+    "line",
+    "210,50",
+    "210,90",
+    "ESC",
+    "line",
+    "220,50",
+    "220,90",
+    "ESC",
+    "line",
+    "230,50",
+    "230,90",
+    "ESC",
+    "line",
+    "240,50",
+    "240,90",
+    "ESC",
+    "line",
+    "250,50",
+    "250,90",
+    "ESC",
+    "line",
+    "260,50",
+    "260,90",
+    "ESC",
+    "line",
+    "270,50",
+    "270,90",
+    "ESC",
+    "line",
+    "280,50",
+    "280,90",
+    "ESC",
+    "line",
+    "290,50",
+    "290,90",
+    "ESC"
+   ]
+  }
+ },
+ {
+  "do": "type",
+  "text": "tidy the layers then start over"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait",
+  "ms": 8000
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Safety rule: deletes",
+  "label": "deleting most of the drawing asks, even in Full access"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/1_guard.png",
+  "of": "ai"
+ },
+ {
+  "do": "click",
+  "text": "Deny",
+  "in": "ai"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 30000
+ },
+ {
+  "do": "tool",
+  "name": "layers",
+  "args": {},
+  "out": "${OUT}/layers.txt"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/layers.txt",
+  "regex": "\"Body Outline\": 1 entities",
+  "label": "cnlayer kept the case; switch, move and rename worked"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/layers.txt",
+  "regex": "\"SCREEN\": 0 entities; colour #00ffff, width 0.25 mm[^\\n]*hidden",
+  "label": "create with look, set hidden"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/layers.txt",
+  "regex": "(?-i)\"(outline|screen)\"",
+  "not": true,
+  "label": "no lowercase duplicate layers"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/requests.jsonl",
+  "regex": "A layer \\\\\"SCREEN\\\\\" exists already",
+  "label": "a case-only duplicate is refused"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/requests.jsonl",
+  "regex": "Layer \\\\\"Body Outline\\\\\" has 1 entities",
+  "label": "removing a layer with entities needs a choice"
+ },
+ {
+  "do": "tool",
+  "name": "list_entities",
+  "args": {
+   "type": "mtext"
+  },
+  "out": "${OUT}/mtext.txt"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/mtext.txt",
+  "regex": "1 matching",
+  "label": "a literal \\\\n became a multi-line text"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/requests.jsonl",
+  "regex": "Zoomed to the area \\(0, -20\\) \\.\\. \\(60, 40\\)\\.\\\\nVisible area: x 0 \\.\\. 60,",
+  "label": "zoom reports the new view"
+ },
+ {
+  "do": "tool",
+  "name": "get_drawing_info",
+  "args": {},
+  "out": "${OUT}/info.txt"
+ },
+ {
+  "do": "expect",
+  "in": "file:${OUT}/info.txt",
+  "regex": "Entities: 32",
+  "label": "nothing deleted after Deny"
+ },
+ {
+  "do": "quit"
+ }
+]
