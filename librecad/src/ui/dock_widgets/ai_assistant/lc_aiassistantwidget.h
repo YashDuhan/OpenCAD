@@ -50,6 +50,8 @@ public:
      * drawing, a newer task took its place, or the request could not start).
      */
     void sendTask(const QString& prompt, const std::function<void(bool sent)>& done = {});
+    /** How many messages the shown chat has (the drawing check's card comes back after them when the chat does). */
+    int messageCount() const { return int(m_messages.size()); }
     /** The tools the AI can use now: OpenCAD's own and those of connected MCP servers. */
     QList<LC_AITool> availableTools() const;
     /** Opens the AI sidebar of this window and starts a task in it. */

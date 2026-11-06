@@ -29,6 +29,7 @@
 #include <numeric>
 
 #include "lc_aiassistantwidget.h"
+#include "lc_aichatsession.h"
 #include "lc_aichattranscript.h"
 #include "lc_aiicons.h"
 #include "lc_aiprovidersdialog.h"
@@ -2842,6 +2843,58 @@ namespace {
         Report m_report;
         QPointer<LC_AIAssistantWidget> m_chat;
     };
+
+    /**
+     * The last check card of each drawing's chat. Switching drawings shows the other chat by replaying its messages
+     * only, so without this the card would be gone when you come back. It comes back with its chat, unless the
+     * conversation went on after it (Fix all, a question) or the drawing was closed meanwhile.
+     */
+    class KeptCards : public QObject {
+    public:
+        static KeptCards* of(LC_AIAssistantWidget* chat) {
+            auto* kept = static_cast<KeptCards*>(chat->findChild<QObject*>(NAME, Qt::FindDirectChildrenOnly));
+            return kept != nullptr ? kept : new KeptCards(chat);
+        }
+
+        void remember(const Report& report) {
+            if (m_session != nullptr) {
+                m_cards.insert(m_session->drawing(), {m_session->chatId(), m_chat->messageCount(), report});
+            }
+        }
+
+    private:
+        explicit KeptCards(LC_AIAssistantWidget* chat)
+            : QObject(chat), m_chat(chat), m_session(chat->findChild<LC_AIChatSession*>()) {
+            setObjectName(NAME);
+            if (m_session != nullptr) {
+                // after the chat panel's own handler, which has replayed the messages by then
+                QObject::connect(m_session, &LC_AIChatSession::showMessages, this,
+                                 [this](const QList<LC_AIChatMessage>& messages) { restore(int(messages.size())); });
+            }
+        }
+
+        void restore(const int messages) {
+            const auto it = m_cards.constFind(m_session->drawing());
+            const RS_GraphicView* view = LC_AITools::view();
+            if (it == m_cards.cend() || it->chatId != m_session->chatId() || it->messages != messages || view == nullptr
+                || view->getGraphic() != it->report.graphic) {
+                return;
+            }
+            if (auto* transcript = m_chat->findChild<LC_AIChatTranscript*>()) {
+                transcript->addCard(new CheckCard(it->report, m_chat, LC_AITheme::current(), transcript));
+            }
+        }
+
+        struct Kept {
+            QString chatId;
+            int messages {0}; // the chat's messages when the card was added: it came after them
+            Report report;
+        };
+        static constexpr const char* NAME = "aiKeptCheckCards";
+        LC_AIAssistantWidget* m_chat;
+        LC_AIChatSession* m_session;
+        QHash<QString, Kept> m_cards; // by the drawing's key (LC_AIChatSession::drawing)
+    };
 }
 
 // ---------------------------------------------------------------------------------------------- public
@@ -2995,6 +3048,9 @@ void LC_AIDrawingChecker::showInChat(QWidget* window) {
         report = check(view->getGraphic(), Options{});
     }
     transcript->addCard(new CheckCard(report, chat, LC_AITheme::current(), transcript));
+    if (report.graphic != nullptr) {
+        KeptCards::of(chat)->remember(report);
+    }
 }
 
 QAction* LC_AIDrawingChecker::action(QWidget* window) {
