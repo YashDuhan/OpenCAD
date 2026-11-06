@@ -686,13 +686,16 @@ LC_AIComposerExtras::LC_AIComposerExtras(LC_AIComposerInput* input, QWidget* com
 
 void LC_AIComposerExtras::addFiles(const QStringList& paths) {
     QStringList problems;
+    QStringList refused; // files of a kind that cannot be attached: named together, in one line
+    int refusedAt = -1;
     for (const QString& path : paths) {
         if (m_attachments.size() >= LC_AIAttachments::MAX_ATTACHMENTS) {
             problems << tr("A message can have at most %1 files.").arg(LC_AIAttachments::MAX_ATTACHMENTS);
             break;
         }
         if (!LC_AIAttachments::isAttachable(path)) {
-            problems << tr("%1: only images (PNG, JPEG, WebP, GIF, BMP) and PDFs can be attached.").arg(QFileInfo(path).fileName());
+            refusedAt = refusedAt < 0 ? int(problems.size()) : refusedAt;
+            refused << QFileInfo(path).fileName();
             continue;
         }
         LC_AIAttachment attachment;
@@ -711,6 +714,10 @@ void LC_AIComposerExtras::addFiles(const QStringList& paths) {
             continue;
         }
         m_attachments << attachment;
+    }
+    if (!refused.isEmpty()) {
+        refused.removeDuplicates();
+        problems.insert(refusedAt, tr("%1: only images (PNG, JPEG, WebP, GIF, BMP) and PDFs can be attached.").arg(refused.join(", ")));
     }
     rebuildStrip();
     if (const QString note = blindModelNote(); !note.isEmpty() && !m_attachments.isEmpty()) {
