@@ -533,6 +533,17 @@ namespace {
         else if (scope == "layer") {
             c.wholeDrawing = false;
             RS_Layer* layer = o.layer.isEmpty() ? nullptr : graphic->getLayerList()->find(o.layer);
+            if (layer == nullptr && !o.layer.isEmpty()) {
+                // "walls" for "Walls" (DXF layer names do not differ by case), when only one layer matches
+                int matches = 0;
+                for (RS_Layer* l : *graphic->getLayerList()) {
+                    if (l->getName().compare(o.layer, Qt::CaseInsensitive) == 0) {
+                        layer = l;
+                        ++matches;
+                    }
+                }
+                layer = matches == 1 ? layer : nullptr;
+            }
             if (layer == nullptr) {
                 QStringList names;
                 for (RS_Layer* l : *graphic->getLayerList()) {
