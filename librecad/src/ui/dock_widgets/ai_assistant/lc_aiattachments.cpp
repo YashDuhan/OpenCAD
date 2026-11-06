@@ -125,16 +125,23 @@ namespace {
     }
 
 #ifdef LC_AI_PDF
-    /** Opens the PDF bytes with Qt Pdf (from a temporary file: loading from memory is asynchronous). */
+    /**
+     * Opens the PDF bytes with Qt Pdf (from a temporary file: loading from memory is asynchronous). When it cannot,
+     * `status` says why; it stays None when the PDF itself was not the problem (no temporary file).
+     */
     template <typename Use>
-    bool withPdf(const QByteArray& data, Use use) {
+    bool withPdf(const QByteArray& data, Use use, QPdfDocument::Error* status = nullptr) {
         QTemporaryFile file(QDir::temp().filePath("opencad-ai-XXXXXX.pdf"));
         if (!file.open() || file.write(data) != data.size()) {
             return false;
         }
         file.close(); // kept on disk until `file` goes; closed, so Qt Pdf can open it on every platform
         QPdfDocument doc;
-        if (doc.load(file.fileName()) != QPdfDocument::Error::None || doc.pageCount() <= 0) {
+        const QPdfDocument::Error loaded = doc.load(file.fileName());
+        if (loaded != QPdfDocument::Error::None || doc.pageCount() <= 0) {
+            if (status != nullptr) {
+                *status = loaded != QPdfDocument::Error::None ? loaded : QPdfDocument::Error::InvalidFileFormat; // no pages
+            }
             return false;
         }
         use(doc);
@@ -169,16 +176,33 @@ namespace {
             error = QObject::tr("%1 is %2; PDFs can be at most %3.").arg(out.name, sizeText(data.size()), sizeText(MAX_PDF_BYTES));
             return false;
         }
+        // A damaged PDF is refused here: sent, it fails the whole message (Gemini answers a bare "HTTP 400"), and a
+        // retry puts it back in the box to fail again.
+#ifdef LC_AI_PDF
+        QPdfDocument::Error status = QPdfDocument::Error::None;
+        const bool opened = withPdf(data, [&out](QPdfDocument& doc) {
+            out.pages = doc.pageCount();
+            out.preview = renderPage(doc, 0, PDF_PREVIEW_HEIGHT);
+        }, &status);
+        if (!opened && (status == QPdfDocument::Error::IncorrectPassword || status == QPdfDocument::Error::UnsupportedSecurityScheme)) {
+            error = QObject::tr("%1 is password-protected; the AI cannot read it.").arg(out.name);
+            return false;
+        }
+        if (!opened && status != QPdfDocument::Error::None) {
+            error = QObject::tr("%1 cannot be read (damaged PDF).").arg(out.name);
+            return false;
+        }
+#else
+        // without Qt Pdf, at least a cut-off file: a PDF ends with %%EOF (some writers add a few bytes after it)
+        if (!data.right(1024).contains("%%EOF")) {
+            error = QObject::tr("%1 cannot be read (damaged PDF).").arg(out.name);
+            return false;
+        }
+#endif
         out.kind = LC_AIAttachment::Kind::Pdf;
         out.id = newId();
         out.mimeType = "application/pdf";
         out.data = data;
-#ifdef LC_AI_PDF
-        withPdf(data, [&out](QPdfDocument& doc) {
-            out.pages = doc.pageCount();
-            out.preview = renderPage(doc, 0, PDF_PREVIEW_HEIGHT);
-        });
-#endif
         return true;
     }
 }
