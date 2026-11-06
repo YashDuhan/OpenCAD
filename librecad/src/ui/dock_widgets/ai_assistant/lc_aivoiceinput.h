@@ -48,6 +48,9 @@ public:
     void cancel();
     /** The mic's look and tooltip: ready, or what is missing. Call it when keys may have changed (Providers). */
     void refresh();
+    /** The mic and its chevron, also while the chevron is left out for want of room. */
+    QSize sizeHint() const override;
+    QSize minimumSizeHint() const override;
 
 signals:
     /** A transcript is in the message box and the user asked to send it at once. */
@@ -59,6 +62,7 @@ signals:
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
     void hideEvent(QHideEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
     void showEvent(QShowEvent* event) override;
 
 private:

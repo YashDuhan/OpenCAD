@@ -607,6 +607,9 @@ LC_AIVoiceInput::LC_AIVoiceInput(const LC_AITheme& theme, QPlainTextEdit* input,
     connect(m_mic, &QToolButton::pressed, this, [this] { press(false); });
     connect(m_mic, &QToolButton::released, this, &LC_AIVoiceInput::release);
     connect(m_menuButton, &QToolButton::clicked, this, &LC_AIVoiceInput::openMenu);
+    // the voice menu also on a right-click on the mic: the narrowest panel leaves out the chevron for want of room
+    m_mic->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_mic, &QWidget::customContextMenuRequested, this, &LC_AIVoiceInput::openMenu);
     connect(m_recorder, &LC_AIVoiceRecorder::level, this, [this](const qreal rms) { static_cast<LevelStrip*>(m_strip)->push(rms); });
     connect(m_recorder, &LC_AIVoiceRecorder::failed, this, [this](const QString& error) {
         setState(State::Idle);
@@ -922,6 +925,21 @@ void LC_AIVoiceInput::openMenu() {
     auto* menu = new VoiceMenu(m_theme, this, [this] { refresh(); }, [this] { emit providersRequested(); });
     m_menu = menu;
     menu->popup(this);
+}
+
+QSize LC_AIVoiceInput::sizeHint() const {
+    return {m_mic->width() + m_menuButton->width(), m_mic->height()};
+}
+
+QSize LC_AIVoiceInput::minimumSizeHint() const {
+    return sizeHint();
+}
+
+void LC_AIVoiceInput::resizeEvent(QResizeEvent* event) {
+    QWidget::resizeEvent(event);
+    // squeezed below the mic and its chevron (a full actions row in the narrowest panel): the chevron goes rather than
+    // being drawn over the mic, and comes back with the room (the size hints still ask for both)
+    m_menuButton->setVisible(width() >= m_mic->width() + m_menuButton->width());
 }
 
 void LC_AIVoiceInput::hideEvent(QHideEvent* event) {
