@@ -845,19 +845,26 @@ void LC_AIVoiceInput::cancel() {
 }
 
 void LC_AIVoiceInput::insertTranscript(const QString& text) {
-    // appended after what is typed, with one space between (Cypher's editorText with append)
+    // at the text cursor, as dictation does elsewhere (at the end, as Cypher appends, when the cursor was not moved).
+    // After a word, the spaces and tabs before the cursor become one space; at the start of the message or of a line
+    // ("Steps:" and a newline) nothing is taken away. A word right after the cursor gets a space before it.
     const QString current = m_input->toPlainText();
-    qsizetype trailing = 0;
-    while (trailing < current.size() && current.at(current.size() - 1 - trailing).isSpace()) {
-        ++trailing;
+    const int end = qBound(0, m_input->textCursor().position(), int(current.size()));
+    int start = end;
+    while (start > 0 && (current.at(start - 1) == ' ' || current.at(start - 1) == '\t')) {
+        --start;
     }
+    const bool afterWord = start > 0 && current.at(start - 1) != '\n';
+    if (!afterWord) {
+        start = end;
+    }
+    const bool beforeWord = end < current.size() && current.at(end).isLetterOrNumber();
     QTextCursor cursor(m_input->document());
     cursor.beginEditBlock();
-    cursor.movePosition(QTextCursor::End);
-    cursor.movePosition(QTextCursor::Left, QTextCursor::KeepAnchor, int(trailing));
-    cursor.insertText(current.trimmed().isEmpty() ? text : " " + text);
+    cursor.setPosition(start);
+    cursor.setPosition(end, QTextCursor::KeepAnchor);
+    cursor.insertText((afterWord ? QStringLiteral(" ") : QString()) + text + (beforeWord ? QStringLiteral(" ") : QString()));
     cursor.endEditBlock();
-    cursor.movePosition(QTextCursor::End);
     m_input->setTextCursor(cursor);
     m_input->setFocus();
 }
