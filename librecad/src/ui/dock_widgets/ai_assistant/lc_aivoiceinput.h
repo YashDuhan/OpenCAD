@@ -74,6 +74,8 @@ private:
     void insertTranscript(const QString& text);
     /** A short note in the level strip, gone after a few seconds. */
     void showNote(const QString& text);
+    /** Reports an error in the conversation; the same one again only as a note, so retries do not pile up bubbles. */
+    void fail(const QString& error);
     bool panelHasFocus() const;
 
     LC_AITheme m_theme;
@@ -89,11 +91,13 @@ private:
     QTimer* m_tick {nullptr};
     State m_state {State::Idle};
     int m_generation {0};          // a transcription that comes back after cancel() is dropped
+    int m_note {0};                // the note shown last: an older one's timer leaves it alone
     bool m_held {false};           // the mic button or the push-to-talk key is down
     bool m_startedByPress {false}; // ... and that press started the recording
     bool m_spaceDown {false};      // the push-to-talk Space is down: its repeats and key-up are ours
     bool m_menuOnRelease {false};  // a click on the mic while nothing is set up: the voice menu opens on release
     QElapsedTimer m_pressed;
+    QString m_lastError;           // the error last reported in the conversation, until a recording works
 };
 
 #endif

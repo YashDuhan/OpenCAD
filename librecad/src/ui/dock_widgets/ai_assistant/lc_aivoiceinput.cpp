@@ -609,7 +609,7 @@ LC_AIVoiceInput::LC_AIVoiceInput(const LC_AITheme& theme, QPlainTextEdit* input,
     connect(m_recorder, &LC_AIVoiceRecorder::level, this, [this](const qreal rms) { static_cast<LevelStrip*>(m_strip)->push(rms); });
     connect(m_recorder, &LC_AIVoiceRecorder::failed, this, [this](const QString& error) {
         setState(State::Idle);
-        emit failed(error);
+        fail(error);
     });
     connect(m_tick, &QTimer::timeout, this, [this] {
         m_strip->update(); // the clock and the pulse
@@ -772,9 +772,10 @@ void LC_AIVoiceInput::transcribe(const QByteArray& wav) {
         m_reply = nullptr;
         setState(State::Idle);
         if (!error.isEmpty()) {
-            emit failed(error);
+            fail(error);
             return;
         }
+        m_lastError.clear(); // voice input works: a later error is news again
         if (text.isEmpty()) {
             showNote(tr("No speech was recognized."));
             return;
@@ -789,11 +790,21 @@ void LC_AIVoiceInput::transcribe(const QByteArray& wav) {
 void LC_AIVoiceInput::showNote(const QString& text) {
     static_cast<LevelStrip*>(m_strip)->showText(text);
     const int run = m_generation;
-    QTimer::singleShot(NOTE_MS, this, [this, run] {
-        if (m_state == State::Idle && run == m_generation) {
+    const int note = ++m_note;
+    QTimer::singleShot(qMax(NOTE_MS, int(text.size()) * 60), this, [this, run, note] { // time to read a longer one
+        if (m_state == State::Idle && run == m_generation && note == m_note) { // not a newer note's time
             m_strip->hide();
         }
     });
+}
+
+void LC_AIVoiceInput::fail(const QString& error) {
+    if (error == m_lastError) {
+        showNote(error); // clicked again with no microphone: one bubble says it, the strip answers the retries
+        return;
+    }
+    m_lastError = error;
+    emit failed(error);
 }
 
 void LC_AIVoiceInput::cancel() {
