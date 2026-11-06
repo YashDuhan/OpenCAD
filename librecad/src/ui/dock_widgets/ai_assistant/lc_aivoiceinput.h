@@ -98,6 +98,7 @@ private:
     bool m_spaceDown {false};      // the push-to-talk Space is down: its repeats and key-up are ours
     bool m_menuOnRelease {false};  // a click on the mic while nothing is set up: the voice menu opens on release
     QElapsedTimer m_pressed;
+    QElapsedTimer m_recording;     // since the recording started: tells a silent device from a short tap
     QString m_lastError;           // the error last reported in the conversation, until a recording works
 };
 

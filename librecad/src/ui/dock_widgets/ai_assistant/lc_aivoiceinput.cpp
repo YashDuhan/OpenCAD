@@ -41,6 +41,7 @@ namespace {
     constexpr qreal MIN_SECONDS = 0.3;   // anything shorter is a slip of the finger, not speech
     constexpr qreal MAX_SECONDS = 600;   // 10 minutes is ~19 MB of WAV, under the 25 MB upload limit of OpenAI and Groq
     constexpr int NOTE_MS = 2800;        // how long a short note ("No speech was recognized") stays
+    constexpr int NO_AUDIO_MS = 1000;    // recording this long with under MIN_SECONDS of sound: the device sends nothing
     constexpr int MENU_WIDTH = 300;
 #ifdef Q_OS_MACOS
     constexpr Qt::KeyboardModifier PTT_MODIFIER = Qt::MetaModifier; // the Control key: Cmd+Space is Spotlight
@@ -736,8 +737,10 @@ void LC_AIVoiceInput::press(const bool fromKey) {
     }
     m_held = true;
     m_startedByPress = true;
-    m_pressed.start();
     startRecording();
+    // the hold counts from when the microphone is open: a sound server slow to open it (a busy machine) must not turn
+    // a click into a hold whose release stops the recording at once
+    m_pressed.start();
 }
 
 void LC_AIVoiceInput::release() {
@@ -759,6 +762,7 @@ void LC_AIVoiceInput::release() {
 void LC_AIVoiceInput::startRecording() {
     setState(State::Recording);
     m_recorder->start(); // failed() sets the state back
+    m_recording.start(); // also from when the device is open: a slow sound server is not a silent microphone
 }
 
 void LC_AIVoiceInput::stopRecording() {
@@ -773,7 +777,14 @@ void LC_AIVoiceInput::transcribe(const QByteArray& wav) {
     const qreal seconds = qMax(0, int(wav.size()) - 44) / (2.0 * LC_AIVoice::SAMPLE_RATE);
     if (seconds < MIN_SECONDS) {
         setState(State::Idle);
-        showNote(tr("Too short. Hold the mic or %1 while you talk.").arg(shortcutText()));
+        // the clock ran but the device delivered (next to) nothing: it is muted, suspended or not connected, and
+        // holding the key longer would not help
+        if (m_recording.isValid() && m_recording.elapsed() >= NO_AUDIO_MS) {
+            showNote(tr("The microphone sent no sound. Is it muted?"));
+        }
+        else {
+            showNote(tr("Too short. Hold the mic or %1 while you talk.").arg(shortcutText()));
+        }
         return;
     }
     setState(State::Transcribing);
