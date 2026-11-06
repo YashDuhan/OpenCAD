@@ -31,6 +31,9 @@ class LC_AIControlBanner;
  *    itself after a few seconds without input (or on Resume), and is told what the user changed meanwhile.
  * The AI keeps its own view of the drawing: screenshots show what it last looked at, even when the user has
  * moved the visible view, and the view comes back to it before the AI acts.
+ * A run also keeps its drawing: the one in front when it started, or one the AI opened or brought to the front
+ * itself. When the user looks at another drawing meanwhile, the run's drawing comes back to the front before the
+ * AI acts, so its tools never edit a drawing the run's chat is not about.
  */
 class LC_AIControl : public QObject {
     Q_OBJECT
@@ -60,6 +63,8 @@ public:
 
     /** The AI's own view of this drawing when the visible one differs (the user moved it): offset and zoom. */
     bool aiView(RS_GraphicView* view, int& offsetX, int& offsetY, double& factor) const;
+    /** The drawing the run works on (what LC_AITools::view() gives during a run); nullptr while idle or once it is closed. */
+    RS_GraphicView* runView() const;
 
     /** Mouse and key events the AI's tools send pass the lock while one of these lives. */
     struct AIInput {
@@ -71,11 +76,18 @@ public:
 signals:
     void stopRequested();
     void stateChanged(LC_AIControl::State state);
+    /** The run moved to another drawing (one the AI opened or brought to the front); not sent when a run starts. */
+    void runViewChanged(RS_GraphicView* view);
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
+    /** What a tool call found when it started, to tell afterwards whether the AI itself moved to another drawing. */
+    struct ToolStart {
+        QPointer<RS_GraphicView> front;
+        int takeOvers {0};
+    };
     struct View {
         int offsetX {0};
         int offsetY {0};
@@ -100,9 +112,14 @@ private:
     void restoreView();
     static Drawing drawingNow();
     QString changesSince(const Drawing& before) const;
+    ToolStart toolStarts(const QString& toolName);
+    void toolEnded(const ToolStart& start);
+    void setRunView(RS_GraphicView* view);
 
     State m_state {State::Idle};
     QPointer<QMainWindow> m_window;
+    QPointer<RS_GraphicView> m_runView;     // the drawing of the run
+    int m_takeOvers {0};                    // times the user took the drawing (a switch then is the user's)
     QPointer<LC_AIControlBanner> m_banner;
     QList<QPointer<LC_AIControlBanner>> m_dialogBanners; // in dialogs the AI has open (they block the main window)
     QTimer* m_idle {nullptr};

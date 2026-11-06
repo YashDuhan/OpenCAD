@@ -25,7 +25,7 @@ class RS_Layer;
 
 /** What one AI run changed in the drawing it worked on. Entity ids are the ones list_entities shows. */
 struct LC_AIRunChanges {
-    int run {0};                       // 1, 2, ... in the order the runs started; 0: no run
+    int run {0};                       // the checkpoint: 1, 2, ... in the order they were taken; 0: no run
     QList<unsigned long long> added;   // entities the run drew that were still there when it ended
     QList<unsigned long long> removed; // entities it deleted (an edit deletes the entities it changes and adds new ones)
     QStringList layersAdded;
@@ -46,8 +46,11 @@ struct LC_AIRunChanges {
  * Checkpoints of the drawing around every AI run, so what the AI did can be taken back. When a run starts
  * (LC_AIControl leaves Idle) the drawing it works on is recorded: its position in the undo history and the
  * ids of its entities, its layers and blocks; when the run ends, what the run added and removed.
+ * A run that moves to another drawing (one the AI opened or switched to) gets a checkpoint there too, with a
+ * number of its own: each drawing is reverted on its own, and the numbers below name checkpoints.
  * A run is reverted by undoing back to its checkpoint when nothing changed after it; otherwise only its own
  * changes can be taken back, as one new undo step that leaves later changes alone. Nothing goes to disk.
+ * Undo and Redo in the Edit menu can bring reverted changes back: the checkpoint then counts as not reverted.
  */
 class LC_AICheckpoints : public QObject {
     Q_OBJECT
@@ -73,8 +76,17 @@ public:
     LC_AIRunChanges changesOf(int run) const;
     /** The drawing a run worked on, or nullptr once it is closed (or when no drawing was open). */
     RS_GraphicView* viewOf(int run) const;
+    /** The drawing's name when the run changed more than one drawing (so each bar says which), else empty. */
+    QString drawingLabelOf(int run) const;
     /** The run in progress, 0 when the AI is not working. */
     int currentRun() const { return m_current; }
+    /** Only the last checkpoints are kept; older ones cannot be reverted any more. */
+    bool isKept(int run) const;
+    bool isReverted(int run) const;
+    /** What the run's revert took back (less than changesOf().count() when some changes could not come back)... */
+    int revertedCount(int run) const;
+    /** ... and what it said about that. */
+    QString revertMessage(int run) const;
 
     Check check(int run) const;
     /** Undoes back to the run's checkpoint; only while nothing changed after the run (check() says Unchanged). */
@@ -94,10 +106,13 @@ signals:
     void runStarted(int run);
     /** The run ended and what it changed is known (also when it changed nothing). */
     void runRecorded(int run);
-    /** A run was reverted (true) or restored (false). */
+    /** A run was reverted (true) or restored (false), also by Undo or Redo in the Edit menu. */
     void runReverted(int run, bool reverted);
+    /** A drawing with checkpoints changed (an edit, Undo, Redo): whether a run can be restored may have changed. */
+    void drawingChanged();
 
 private:
+    class Watch; // the drawings' undo history tells it about every change
     struct Snapshot {
         QSet<unsigned long long> entities; // the live entities, by id
         QStringList layers;
@@ -108,6 +123,8 @@ private:
     enum class Reverted { No, Undone, OwnStep };
     struct Checkpoint {
         LC_AIRunChanges changes;
+        int group {0};                     // the run it belongs to: the number of the run's first checkpoint
+        QString name;                      // the drawing's name when the run ended
         QPointer<RS_GraphicView> view;
         RS_Document* document {nullptr};   // only used while view still shows it
         Snapshot before;
@@ -118,17 +135,27 @@ private:
         Snapshot beforeRevert;             // for Restore: the drawing just before and just after the revert
         Snapshot afterRevert;
         QList<std::shared_ptr<RS_Layer>> removedLayers; // empty layers it added, taken out by the revert
+        int revertedCount {0};
+        QString revertMessage;
+        int endedAt {0};                   // when the run ended and when it was reverted, in m_clock's ticks
+        int revertedAt {0};
     };
 
     LC_AICheckpoints();
     void begin();
+    void addDrawing(RS_GraphicView* view);
+    void start(int run, int group, RS_GraphicView* view);
     void end();
+    void record(Checkpoint& checkpoint);
+    void scheduleUpdate();
+    void update();
     static Snapshot snapshot(RS_Document* document);
     static bool alive(const Checkpoint& checkpoint);
     static void refresh(const Checkpoint& checkpoint);
     static void activateLayer(RS_Document* document, const QString& from, const QString& to);
     static void removeEmptyLayers(Checkpoint& checkpoint);
     static void addRemovedLayers(Checkpoint& checkpoint);
+    static QString endCommand(RS_GraphicView* view);
     QString changedSinceText(int run, const Checkpoint& checkpoint, const Snapshot& now) const;
     QString leftOverText(const Checkpoint& checkpoint) const;
 
@@ -136,6 +163,10 @@ private:
     int m_current {0};
     int m_last {0};
     int m_next {1};
+    int m_clock {0};                    // counts ends and reverts, to tell which came first
+    Watch* m_watch {nullptr};
+    QList<RS_Document*> m_watched;      // drawings m_watch listens to (taken out when their view goes)
+    bool m_updateQueued {false};
 };
 
 #endif

@@ -17,6 +17,8 @@
 #include <QJsonArray>
 #include <QLabel>
 #include <QMap>
+#include <QMdiArea>
+#include <QMdiSubWindow>
 #include <QPixmap>
 #include <QTextEdit>
 #include <cmath>
@@ -24,6 +26,7 @@
 #include "lc_aicontrol.h"
 #include "lc_aiproperties.h"
 #include "lc_aidrawingchecker.h"
+#include "lc_aitoolbar.h"
 #include "lc_graphicviewport.h"
 #include "lc_printviewportrenderer.h"
 #include "rs_painter.h"
@@ -79,12 +82,22 @@ namespace {
 
     RS_GraphicView* g_viewForTests = nullptr;
 
-    RS_GraphicView* currentView() {
+    RS_GraphicView* frontView() {
         if (g_viewForTests != nullptr) {
             return g_viewForTests;
         }
         auto& app = QC_ApplicationWindow::getAppWindow();
         return app ? app->getCurrentGraphicView() : nullptr;
+    }
+
+    RS_GraphicView* currentView() {
+        // during a run its tools stay with the run's drawing when the user looks at another one; the button tests
+        // (test_toolbar_buttons) work on scratch drawings of their own, which they bring to the front
+        if (RS_GraphicView* run = LC_AIControl::instance().runView();
+            run != nullptr && g_viewForTests == nullptr && !LC_AIToolbar::testsRunning()) {
+            return run;
+        }
+        return frontView();
     }
 
     const QString NO_DRAWING = QStringLiteral("No drawing is open in OpenCAD. Ask the user to open or create one.");
@@ -201,6 +214,11 @@ namespace {
         double factor = 0;
         if (LC_AIControl::instance().aiView(view, ox, oy, factor)) {
             pixmap = renderAIView(view, ox, oy, factor);
+        }
+        else if (view != frontView() && view->getViewPort() != nullptr && view->getViewPort()->getFactor().x > 0) {
+            // the run's drawing while the user looks at another one: drawn off-screen, as it stands
+            const LC_GraphicViewport* vp = view->getViewPort();
+            pixmap = renderAIView(view, vp->getOffsetX(), vp->getOffsetY(), vp->getFactor().x);
         }
         else {
             view->redraw(RS2::RedrawAll, true);
@@ -741,7 +759,7 @@ namespace {
             }
             app->openFile(info.absoluteFilePath());
             QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
-            RS_GraphicView* view = currentView();
+            RS_GraphicView* view = frontView(); // the opened drawing; it becomes the run's drawing after this call
             if (view == nullptr || view->getGraphic() == nullptr
                 || QFileInfo(view->getGraphic()->getFilename()).absoluteFilePath() != info.absoluteFilePath()) {
                 return LC_AIToolResult::error(QStringLiteral("OpenCAD could not open %1.").arg(info.fileName()));
@@ -936,6 +954,26 @@ namespace {
 
 RS_GraphicView* LC_AITools::view() {
     return currentView();
+}
+
+RS_GraphicView* LC_AITools::frontView() {
+    return ::frontView();
+}
+
+void LC_AITools::bringToFront(RS_GraphicView* view) {
+    auto& app = QC_ApplicationWindow::getAppWindow();
+    if (!app || view == nullptr || g_viewForTests != nullptr || app->getCurrentGraphicView() == view) {
+        return;
+    }
+    for (QWidget* w = view; w != nullptr; w = w->parentWidget()) {
+        if (auto* window = qobject_cast<QMdiSubWindow*>(w)) {
+            app->activateWindow(window);
+            if (app->getMdiArea()->currentSubWindow() != window) { // the drawing area follows the focus, which may be elsewhere
+                app->getMdiArea()->setActiveSubWindow(window);
+            }
+            return;
+        }
+    }
 }
 
 LC_AIContent LC_AITools::screenshot(RS_GraphicView* view) {
