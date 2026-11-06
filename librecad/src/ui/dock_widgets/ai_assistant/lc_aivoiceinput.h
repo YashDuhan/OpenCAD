@@ -42,7 +42,7 @@ public:
     /** The live level strip, for the composer's layout under its actions row. Hidden while there is nothing to show. */
     QWidget* levelStrip() const;
     State state() const { return m_state; }
-    /** The voice menu: speech endpoint and model, send after transcribing. */
+    /** The voice menu: speech endpoint and model, send after transcribing. One at a time. */
     void openMenu();
     /** Drops a recording, or a transcription on its way. */
     void cancel();
@@ -88,6 +88,7 @@ private:
     LC_AIVoiceRecorder* m_recorder {nullptr};
     QNetworkAccessManager* m_network {nullptr};
     QPointer<QNetworkReply> m_reply;
+    QPointer<QWidget> m_menu;      // the voice menu while it is open
     QTimer* m_tick {nullptr};
     State m_state {State::Idle};
     int m_generation {0};          // a transcription that comes back after cancel() is dropped

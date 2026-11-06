@@ -663,6 +663,9 @@ bool LC_AIVoiceInput::eventFilter(QObject* watched, QEvent* event) {
     const bool pushToTalk = key->key() == Qt::Key_Space && modifiers == PTT_MODIFIER;
     const bool escape = key->key() == Qt::Key_Escape && modifiers == Qt::NoModifier && m_state != State::Idle;
     const bool space = key->key() == Qt::Key_Space;
+    // an open popup gets the keys (Qt sends them to it while the focus stays in the message box): Esc is for closing
+    // it, not for dropping the recording behind it, and push-to-talk closes the voice menu rather than stacking another
+    QWidget* popup = QApplication::activePopupWidget();
     if (event->type() == QEvent::KeyRelease) {
         // letting go of Space or of Ctrl ends push-to-talk, whichever comes first
         const bool ours = space && m_spaceDown;
@@ -677,6 +680,17 @@ bool LC_AIVoiceInput::eventFilter(QObject* watched, QEvent* event) {
     }
     if (event->type() == QEvent::KeyPress && space && m_spaceDown && key->isAutoRepeat()) {
         return true; // the held key repeating, also after Ctrl was let go first: no spaces in the message
+    }
+    if (popup != nullptr && (!pushToTalk || popup != m_menu)) {
+        return false;
+    }
+    if (popup != nullptr) {
+        if (event->type() == QEvent::KeyPress && !key->isAutoRepeat()) {
+            m_spaceDown = true; // its repeats and key-up are ours: no spaces in the message once the menu is gone
+            popup->close();
+        }
+        event->accept();
+        return true;
     }
     if ((!pushToTalk && !escape) || !panelHasFocus()) {
         return false;
@@ -884,7 +898,11 @@ void LC_AIVoiceInput::refresh() {
 }
 
 void LC_AIVoiceInput::openMenu() {
+    if (m_menu != nullptr && m_menu->isVisible()) {
+        return; // already open: a second one would stack on it
+    }
     auto* menu = new VoiceMenu(m_theme, this, [this] { refresh(); }, [this] { emit providersRequested(); });
+    m_menu = menu;
     menu->popup(this);
 }
 
