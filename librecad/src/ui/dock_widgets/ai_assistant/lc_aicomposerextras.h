@@ -53,6 +53,8 @@ private:
     /** The cursor never stops inside a mention: it goes to the end it was heading for. */
     void stepOverMentions();
     const LC_AIMention* mentionAround(int position, bool includeEnds) const;
+    /** `typed`, put at the cursor, would end right against the "@" of a mention and so unmake it. */
+    bool gluesToMention(const QString& typed);
 
     QList<LC_AIMention> m_mentions;
     int m_revision {-1};      // the document revision m_mentions were found in

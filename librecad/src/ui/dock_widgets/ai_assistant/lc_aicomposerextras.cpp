@@ -476,7 +476,33 @@ void LC_AIComposerInput::keyPressEvent(QKeyEvent* event) {
             }
         }
     }
+    // a letter typed right before a pill would join its "@" to a word and turn it into plain text: a space keeps them apart
+    if (!(event->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier)) && gluesToMention(event->text())) {
+        QTextCursor typed = textCursor();
+        typed.insertText(event->text() + QLatin1Char(' '));
+        typed.movePosition(QTextCursor::PreviousCharacter);
+        setTextCursor(typed);
+        event->accept();
+        return;
+    }
     QPlainTextEdit::keyPressEvent(event);
+}
+
+bool LC_AIComposerInput::gluesToMention(const QString& typed) {
+    if (typed.isEmpty() || !typed.back().isPrint() || textCursor().hasSelection()) {
+        return false;
+    }
+    const QChar last = typed.back();
+    if (!last.isLetterOrNumber() && last != '_' && last != '@' && last != '.') { // what LC_AIMentions::find() reads as joined
+        return false;
+    }
+    const int position = textCursor().position();
+    for (const LC_AIMention& m : mentions()) {
+        if (m.start == position) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void LC_AIComposerInput::paintEvent(QPaintEvent* event) {
@@ -519,6 +545,13 @@ void LC_AIComposerInput::insertFromMimeData(const QMimeData* source) {
             emit imageOffered(image);
             return;
         }
+    }
+    if (source->hasText() && gluesToMention(source->text())) { // as when typing: the pill after it stays a pill
+        QTextCursor pasted = textCursor();
+        pasted.insertText(source->text() + QLatin1Char(' '));
+        pasted.movePosition(QTextCursor::PreviousCharacter);
+        setTextCursor(pasted);
+        return;
     }
     QPlainTextEdit::insertFromMimeData(source);
 }
