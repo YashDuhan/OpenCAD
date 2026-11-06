@@ -111,6 +111,25 @@ namespace {
         return true;
     }
 
+    /** Whether the open drawing has an entity with this id (no drawing: it cannot be told, so yes). */
+    bool entityExists(const QString& idText) {
+        RS_Graphic* graphic = currentGraphic();
+        if (graphic == nullptr) {
+            return true;
+        }
+        bool ok = false;
+        const unsigned long long id = idText.toULongLong(&ok);
+        if (!ok) {
+            return false;
+        }
+        for (RS_Entity* e : *graphic) {
+            if (e != nullptr && !e->isDeleted() && e->getId() == id) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     QString truncate(const QString& text) {
         return text.size() > MAX_CONTEXT_CHARS ? text.left(MAX_CONTEXT_CHARS) + QStringLiteral("\n... (cut)") : text;
     }
@@ -317,7 +336,8 @@ QList<LC_AIMention> LC_AIMentions::find(const QString& text) {
         if (word == "entity") {
             const QRegularExpressionMatch id = entityId.match(text, m.capturedEnd(), QRegularExpression::NormalMatch,
                                                               QRegularExpression::AnchorAtOffsetMatchOption);
-            if (id.hasMatch()) {
+            // an id that is not in the drawing stays plain text, as an unknown layer name does: the pill would promise context
+            if (id.hasMatch() && entityExists(id.captured(1))) {
                 mention.kind = Kind::Entity;
                 mention.argument = id.captured(1);
                 mention.length = int(id.capturedEnd() - mention.start);
