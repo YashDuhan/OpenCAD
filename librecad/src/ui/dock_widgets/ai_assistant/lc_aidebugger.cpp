@@ -13,6 +13,7 @@
 #include <QHash>
 #include <QJsonDocument>
 #include <QLabel>
+#include <QPainter>
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QTimer>
@@ -55,6 +56,21 @@ namespace {
     bool bookkeeping(const QString& toolName) {
         return LC_AIPlanMode::isPlanTool(toolName) || toolName == "request_clarification";
     }
+
+    /** The reason in the section's header: shortened with "…" when the panel is narrow, in full in the tooltip. */
+    class ElidedLabel : public QLabel {
+    public:
+        using QLabel::QLabel;
+        QSize minimumSizeHint() const override { return {0, QLabel::minimumSizeHint().height()}; }
+
+    protected:
+        void paintEvent(QPaintEvent*) override {
+            QPainter p(this);
+            p.setPen(palette().color(foregroundRole()));
+            p.drawText(contentsRect(), Qt::AlignLeft | Qt::AlignVCenter,
+                       fontMetrics().elidedText(text(), Qt::ElideRight, contentsRect().width()));
+        }
+    };
 }
 
 // ------------------------------------------------------------------------------------------------ section
@@ -83,11 +99,11 @@ LC_AIDebuggerSection::LC_AIDebuggerSection(const QString& reason, const LC_AIThe
     icon->setPixmap(LC_AIIcons::lucide("bug", 13, BLUE, devicePixelRatioF()));
     auto* title = new QLabel(tr("Debugger"), header);
     title->setObjectName("debugTitle");
-    auto* why = new QLabel(reason, header);
+    auto* why = new ElidedLabel(reason, header);
     why->setObjectName("debugReason");
     why->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
-    why->setToolTip(tr("The debugger reviews the run against your request, inspects the drawing, fixes what is wrong "
-                       "and ends with a verdict."));
+    why->setToolTip(tr("Debugger: %1. It reviews the run against your request, inspects the drawing, fixes what is wrong "
+                       "and ends with a verdict.").arg(reason));
     m_statusIcon = new LC_AIStatusIcon(theme, 12, header);
     m_statusIcon->setSpinning(BLUE);
     m_status = new QLabel(header);
@@ -149,11 +165,16 @@ LC_AIDebugger::Report LC_AIDebugger::inspect(const QList<LC_AIChatMessage>& hist
     Report report;
     for (int i = qMax(0, start); i < history.size(); ++i) {
         const LC_AIChatMessage& m = history[i];
-        if (m.role != LC_AIChatMessage::Role::ToolResult || bookkeeping(m.toolName)) {
+        // only the work on the drawing is checked: reads, web lookups and questions leave nothing to review
+        if (m.role != LC_AIChatMessage::Role::ToolResult || bookkeeping(m.toolName) || !LC_AIPlanMode::changesDrawing(m.toolName)) {
+            continue;
+        }
+        // a change that was refused (the user, plan mode) or stopped before it ran changed nothing
+        if (m.result.isError && (refused(m.result.joinedText()) || LC_AIInferenceManager::isStoppedResult(m))) {
             continue;
         }
         ++report.toolCalls;
-        if (m.result.isError && !refused(m.result.joinedText())) {
+        if (m.result.isError) {
             ++report.failures;
         }
     }
@@ -193,44 +214,61 @@ QString LC_AIDebugger::reviewerPrompt(const QList<LC_AITool>& tools) {
 
 QString LC_AIDebugger::reviewRequest(const QList<LC_AIChatMessage>& history, const int start, const QString& reason) {
     const QString request = start >= 0 && start < history.size() ? history[start].text.trimmed() : QString();
+    // the run's calls, then those of each debugger pass after it ("Check again"), counted apart
+    struct Part {
+        QStringList lines;
+        int total {0};
+        int failed {0};
+    };
+    QList<Part> parts{Part()};
     QHash<QString, LC_AIToolCall> calls;
-    QStringList lines;
-    int total = 0;
-    int failed = 0;
     for (int i = qMax(0, start + 1); i < history.size(); ++i) {
         const LC_AIChatMessage& m = history[i];
+        if (m.role == LC_AIChatMessage::Role::User) {
+            parts << Part(); // a debugger pass's request: what follows is the pass's work
+            continue;
+        }
         if (m.role == LC_AIChatMessage::Role::Assistant) {
             for (const LC_AIToolCall& c : m.toolCalls) {
                 calls.insert(c.id, c);
             }
             continue;
         }
-        if (m.role != LC_AIChatMessage::Role::ToolResult || m.toolName == "update_plan") {
+        if (m.toolName == "update_plan") {
             continue; // the plan's ticks say nothing about the drawing
         }
+        Part& part = parts.last();
         const LC_AIToolCall call = calls.value(m.toolCallId);
         const QString args = oneLine(QString::fromUtf8(QJsonDocument(call.arguments).toJson(QJsonDocument::Compact)), MAX_ARGS_CHARS);
         const QString text = m.result.joinedText();
-        const bool error = m.result.isError && !refused(text);
-        ++total;
-        failed += error ? 1 : 0;
-        lines << QStringLiteral("%1. %2 %3 -> %4: %5")
-                     .arg(total)
-                     .arg(m.toolName, args, error ? QStringLiteral("FAILED") : m.result.isError ? QStringLiteral("refused") : QStringLiteral("ok"),
-                          oneLine(text.isEmpty() ? QStringLiteral("(no text)") : text, MAX_RESULT_CHARS));
+        const bool stopped = LC_AIInferenceManager::isStoppedResult(m);
+        const bool error = m.result.isError && !refused(text) && !stopped;
+        ++part.total;
+        part.failed += error ? 1 : 0;
+        const QString outcome = error ? QStringLiteral("FAILED") : stopped ? QStringLiteral("stopped")
+                                : m.result.isError ? QStringLiteral("refused") : QStringLiteral("ok");
+        part.lines << QStringLiteral("%1. %2 %3 -> %4: %5")
+                          .arg(part.total)
+                          .arg(m.toolName, args, outcome, oneLine(text.isEmpty() ? QStringLiteral("(no text)") : text, MAX_RESULT_CHARS));
     }
-    QString digest;
-    if (lines.size() > MAX_DIGEST_CALLS) {
-        digest = QStringLiteral("(%1 earlier calls left out)\n").arg(lines.size() - MAX_DIGEST_CALLS);
-        lines = lines.mid(lines.size() - MAX_DIGEST_CALLS);
+    QStringList sections;
+    for (int p = 0; p < parts.size(); ++p) {
+        QStringList lines = parts[p].lines;
+        QString digest;
+        if (lines.size() > MAX_DIGEST_CALLS) {
+            digest = QStringLiteral("(%1 earlier calls left out)\n").arg(lines.size() - MAX_DIGEST_CALLS);
+            lines = lines.mid(lines.size() - MAX_DIGEST_CALLS);
+        }
+        digest += lines.isEmpty() ? QStringLiteral("(no tool calls)") : lines.join('\n');
+        const QString who = p == 0 ? QStringLiteral("What the run did") : QStringLiteral("What debugger pass %1 then did").arg(p);
+        sections << QStringLiteral("%1: %2 tool calls, %3 failed.\n%4").arg(who).arg(parts[p].total).arg(parts[p].failed).arg(digest);
     }
-    digest += lines.isEmpty() ? QStringLiteral("(no tool calls)") : lines.join('\n');
     return QStringLiteral("[Debugger] Check and fix the work of the last run (%1).\n\n"
                           "The user's request:\n\"\"\"\n%2\n\"\"\"\n\n"
-                          "What the run did: %3 tool calls, %4 failed.\n%5\n\n"
+                          "%3\n\n"
                           "Inspect the drawing now, list the problems you find, fix them, and end with \"Verdict: ...\".")
-        .arg(reason, request.isEmpty() ? QStringLiteral("(not available)") : request, QString::number(total),
-             QString::number(failed), digest); // in one go: a "%1" in the request stays as it is
+        .arg(reason, request.isEmpty() ? QStringLiteral("(not available)") : request,
+             sections.join(QStringLiteral("\n\n"))); // in one go: a "%1" in the request stays as it is
 }
 
 void LC_AIDebugger::clearOffer() {
@@ -266,9 +304,8 @@ void LC_AIDebugger::runEnded(LC_AIChatTranscript* transcript, const QList<LC_AIC
             }
         }
         m_section = nullptr;
-        if (end == End::Finished) {
-            offer(transcript, true); // never on its own again: no loops of checks
-        }
+        // never on its own again (no loops of checks), but a pass that was stopped or failed can be tried again
+        offer(transcript, true);
         return;
     }
     if (end != End::Finished) {
@@ -276,7 +313,7 @@ void LC_AIDebugger::runEnded(LC_AIChatTranscript* transcript, const QList<LC_AIC
     }
     const Report report = inspect(history, start);
     if (report.toolCalls == 0) {
-        return; // an answer without tools: nothing in the drawing to check
+        return; // nothing changed in the drawing (an answer, reads, web lookups, refused changes): nothing to check
     }
     if (report.failures > 0 || autoCheck()) {
         const QString reason = report.failures == 1 ? tr("a tool call failed")
@@ -320,7 +357,7 @@ QPushButton#debugAuto:checked { color: %6; }
     automatic->setChecked(autoCheck());
     automatic->setIconSize(QSize(13, 13));
     automatic->setCursor(Qt::PointingHandCursor);
-    automatic->setToolTip(tr("Run the debugger after every run that used tools (it always runs when a tool call failed)"));
+    automatic->setToolTip(tr("Run the debugger after every run that changed the drawing (it always runs when a change failed)"));
     const auto refresh = [automatic, t] {
         automatic->setIcon(LC_AIIcons::lucideIcon(automatic->isChecked() ? "circle-check" : "circle", 13,
                                                   automatic->isChecked() ? BLUE : t.textMuted));
