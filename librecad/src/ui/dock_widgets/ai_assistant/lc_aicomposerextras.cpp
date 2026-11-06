@@ -897,6 +897,10 @@ void LC_AIComposerExtras::startMention() {
 }
 
 void LC_AIComposerExtras::updatePopup() {
+    // Escape closed the popup for one "@": once that "@" is deleted, a new one typed in its place opens it again
+    if (m_dismissedAt >= 0 && m_input->document()->characterAt(m_dismissedAt) != QLatin1Char('@')) {
+        m_dismissedAt = -1;
+    }
     const QTextCursor cursor = m_input->textCursor();
     if (cursor.hasSelection()) {
         hidePopup();

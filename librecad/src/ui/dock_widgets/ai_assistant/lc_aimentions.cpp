@@ -18,6 +18,7 @@
 #include <QSet>
 #include <QTimer>
 #include <QUuid>
+#include <algorithm>
 #include <cmath>
 
 #include "lc_aicomposerextras.h"
@@ -128,6 +129,26 @@ namespace {
             }
         }
         return false;
+    }
+
+    /**
+     * How closely a popup row fits the typed words, lower first: its words no typed word starts, then its words a typed
+     * word only starts. "lay wal" puts "@layer Walls" before "@layer Wall outlines", and "13" puts #13 before #131.
+     */
+    QPair<int, int> matchDistance(const QStringList& terms, const QString& rowText) {
+        int unmatched = 0;
+        int partly = 0;
+        for (const QString& w : words(rowText)) {
+            bool exact = false;
+            bool prefix = false;
+            for (const QString& term : terms) {
+                exact = exact || w == term;
+                prefix = prefix || w.startsWith(term);
+            }
+            unmatched += prefix ? 0 : 1;
+            partly += prefix && !exact ? 1 : 0;
+        }
+        return {unmatched, partly};
     }
 
     QString truncate(const QString& text) {
@@ -472,6 +493,17 @@ QList<LC_AIMentions::Candidate> LC_AIMentions::candidates(const QString& query) 
         RS_Entity* e = graphic->entityAt(i);
         if (e != nullptr && !e->isDeleted()) {
             offerEntity(e);
+        }
+    }
+    // within each group the closest match first (Enter takes it); equally close rows keep their order
+    if (!browsing) {
+        for (auto begin = rows.begin(); begin != rows.end();) {
+            const QString group = begin->group;
+            const auto end = std::find_if(begin, rows.end(), [&group](const Candidate& c) { return c.group != group; });
+            std::stable_sort(begin, end, [&terms](const Candidate& a, const Candidate& b) {
+                return matchDistance(terms, a.text) < matchDistance(terms, b.text);
+            });
+            begin = end;
         }
     }
     return rows;
