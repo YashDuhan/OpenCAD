@@ -27,6 +27,7 @@
 #include "lc_aicontrol.h"
 #include "lc_aicredentials.h"
 #include "lc_aiicons.h"
+#include "lc_aitool.h"
 #include "lc_graphicviewport.h"
 #include "lc_overlayentitiescontainer.h"
 #include "lc_overlayentity.h"
@@ -113,6 +114,11 @@ LC_AIChangePreview::LC_AIChangePreview() {
     connect(m_watch, &QTimer::timeout, this, [this] { rebuild(); }); // undo, redo and the user's edits change what is left
     LC_AICheckpoints& checkpoints = LC_AICheckpoints::instance();
     connect(&checkpoints, &LC_AICheckpoints::runRecorded, this, [this](const int run) {
+        // an answer that changed several drawings records one checkpoint each, one after the other (a new run closes
+        // any review first): the review stays with the drawing in front
+        if (isOpen() && m_view != nullptr && m_view == LC_AITools::frontView()) {
+            return;
+        }
         if (reviewAfterRuns() && !LC_AICheckpoints::instance().changesOf(run).isEmpty()) {
             show(run);
         }

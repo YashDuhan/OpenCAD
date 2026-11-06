@@ -36,6 +36,19 @@ namespace {
         return count == 1 ? QObject::tr("1 change") : QObject::tr("%1 changes").arg(count);
     }
 
+    /** "3 changes", "1 of 3 changes" after a revert that could not take back everything, with the drawing's name
+     *  when the answer changed more than one drawing (each has its own bar). */
+    QString countText(const int run, const bool reverted) {
+        const LC_AICheckpoints& checkpoints = LC_AICheckpoints::instance();
+        const int total = checkpoints.changesOf(run).count();
+        const int back = checkpoints.revertedCount(run);
+        QString text = reverted && back < total ? QObject::tr("%1 of %2").arg(back).arg(changesText(total)) : changesText(total);
+        if (const QString drawing = checkpoints.drawingLabelOf(run); !drawing.isEmpty()) {
+            text = drawing + QStringLiteral(" · ") + text;
+        }
+        return text;
+    }
+
     /** The main window a widget belongs to, also when it sits in a floating dock. */
     QWidget* mainWindowOf(QWidget* widget) {
         for (QWidget* w = widget; w != nullptr; w = w->parentWidget()) {
@@ -67,22 +80,27 @@ LC_AIRevertBar::LC_AIRevertBar(const int run, const LC_AITheme& theme, QWidget* 
     : QWidget(parent), m_run(run), m_theme(theme) {
     setObjectName("aiRevertBar");
     const LC_AITheme& t = theme;
+    // "faded": the button cannot be used now (the AI is working, or the checkpoint is gone), and looks it
     setStyleSheet(QStringLiteral(R"(
 #aiRevertButton { border: 1px solid %1; border-radius: 7px; background: transparent; padding: 0; min-height: 24px; max-height: 24px; }
 #aiRevertButton:hover { background: %2; border-color: %3; }
 #aiRevertButton[reverted="true"] { border-color: transparent; }
+#aiRevertButton[faded="true"] { border-color: %9; }
 #aiRevertButton QLabel { background: transparent; font-size: 12px; }
 #aiRevertText { color: %4; }
 #aiRevertCount { color: %5; }
+#aiRevertText[faded="true"], #aiRevertCount[faded="true"] { color: %10; }
 #aiRevertRestore { border: none; border-radius: 7px; background: transparent; color: %6; font-size: 12px; padding: 0 8px;
                    min-height: 24px; max-height: 24px; }
 #aiRevertRestore:hover { background: %2; color: %4; }
+#aiRevertRestore:disabled { color: %10; }
 #aiRevertCard { background: %7; border: 1px solid %8; border-radius: 10px; }
 #aiRevertCardText { color: %4; font-size: 12px; background: transparent; }
 #aiRevertNote { color: %6; font-size: 11.5px; }
 )")
                       .arg(t.borderDefault.name(QColor::HexArgb), t.bgHover.name(QColor::HexArgb), t.borderHover.name(QColor::HexArgb),
-                           t.textSecondary.name(), t.textFaint.name(), t.textMuted.name(), t.bgElevated.name(), rgba(YELLOW, 0.3)));
+                           t.textSecondary.name(), t.textFaint.name(), t.textMuted.name(), t.bgElevated.name(), rgba(YELLOW, 0.3),
+                           t.borderSubtle.name(QColor::HexArgb), rgba(t.textFaint, 0.55)));
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(2, 2, 2, 6);
     layout->setSpacing(6);
@@ -100,7 +118,7 @@ LC_AIRevertBar::LC_AIRevertBar(const int run, const LC_AITheme& theme, QWidget* 
     m_icon = new QLabel(m_button);
     m_text = new QLabel(m_button);
     m_text->setObjectName("aiRevertText");
-    m_count = new QLabel(changesText(LC_AICheckpoints::instance().changesOf(run).count()), m_button);
+    m_count = new QLabel(countText(run, false), m_button);
     m_count->setObjectName("aiRevertCount");
     for (QLabel* l : {m_icon, m_text, m_count}) {
         l->setAttribute(Qt::WA_TransparentForMouseEvents);
@@ -177,13 +195,18 @@ LC_AIRevertBar::LC_AIRevertBar(const int run, const LC_AITheme& theme, QWidget* 
     // while the AI works on the drawing, nothing is reverted under its feet
     connect(&LC_AICheckpoints::instance(), &LC_AICheckpoints::runStarted, this, &LC_AIRevertBar::updateEnabled);
     connect(&LC_AICheckpoints::instance(), &LC_AICheckpoints::runRecorded, this, &LC_AIRevertBar::updateEnabled);
-    // reverted or restored elsewhere too (the change preview's Reject): the row shows how the run stands
+    // Restore is offered only while it can work: as the drawing changes (another answer reverted or restored, an
+    // edit, Undo, Redo) it comes and goes
+    connect(&LC_AICheckpoints::instance(), &LC_AICheckpoints::drawingChanged, this, &LC_AIRevertBar::updateEnabled);
+    // reverted or restored elsewhere too (the change preview's Reject, Undo or Redo in the Edit menu): the row
+    // shows how the run stands
     connect(&LC_AICheckpoints::instance(), &LC_AICheckpoints::runReverted, this, [this](const int run, const bool reverted) {
         if (run != m_run || reverted == m_reverted) {
             return;
         }
         if (reverted) {
-            showReverted(tr("Taken back."));
+            const QString message = LC_AICheckpoints::instance().revertMessage(m_run);
+            showReverted(message.isEmpty() ? tr("Taken back.") : message);
         }
         else {
             showReady();
@@ -216,23 +239,61 @@ void LC_AIRevertBar::fitButton() {
 }
 
 void LC_AIRevertBar::updateEnabled() {
-    const bool working = LC_AICheckpoints::instance().currentRun() != 0;
-    m_button->setEnabled(!working && !m_reverted);
-    m_restore->setEnabled(!working);
+    const LC_AICheckpoints& checkpoints = LC_AICheckpoints::instance();
+    const bool working = checkpoints.currentRun() != 0;
+    const bool kept = checkpoints.isKept(m_run); // only the last answers keep their checkpoint
+    const bool restorable = m_reverted && !working && checkpoints.canRestore(m_run);
+    m_button->setEnabled(!working && !m_reverted && kept);
+    m_restore->setVisible(m_reverted && kept && (restorable || working));
+    m_restore->setEnabled(restorable);
+    m_review->setVisible(!m_reverted && kept);
     m_review->setEnabled(!working);
     m_own->setEnabled(!working);
-    m_button->setToolTip(working ? tr("Available when the AI has finished")
-                                 : m_reverted ? QString()
-                                              : tr("Undo what the AI changed in the drawing in this answer: %1")
-                                                    .arg(LC_AICheckpoints::instance().changesOf(m_run).summary()));
+    if (!kept) {
+        m_card->hide();
+    }
+    QString tip;
+    if (!kept) {
+        tip = tr("This checkpoint is no longer kept (only the last 50 are), so these changes cannot be reverted from here.");
+    }
+    else if (working) {
+        tip = tr("Available when the AI has finished");
+    }
+    else if (!m_reverted) {
+        tip = tr("Undo what the AI changed in the drawing in this answer: %1").arg(checkpoints.changesOf(m_run).summary());
+    }
+    else if (!restorable) {
+        tip = tr("The drawing changed after the revert, so Restore is not offered. Undo and Redo in the Edit menu can "
+                 "still bring these changes back.");
+    }
+    m_button->setToolTip(tip);
+    if (restorable && m_staleNote) { // a failed Restore's note: Restore works again
+        m_staleNote = false;
+        showNote(checkpoints.revertMessage(m_run));
+    }
+    // a button that cannot be used now looks it (a reverted one reads as a status line, not as a button)
+    const bool faded = !m_reverted && (working || !kept);
+    for (QWidget* w : {static_cast<QWidget*>(m_button), static_cast<QWidget*>(m_text), static_cast<QWidget*>(m_count)}) {
+        if (w->property("faded").toBool() != faded) {
+            w->setProperty("faded", faded);
+            w->style()->unpolish(w);
+            w->style()->polish(w);
+        }
+    }
+    if (!m_reverted && faded != m_iconFaded) {
+        m_iconFaded = faded;
+        m_icon->setPixmap(LC_AIIcons::lucide("undo-2", 13, faded ? m_theme.textFaint : m_theme.textSecondary, devicePixelRatioF()));
+    }
 }
 
 void LC_AIRevertBar::showReady() {
     m_reverted = false;
+    m_staleNote = false;
+    m_iconFaded = false;
     m_icon->setPixmap(LC_AIIcons::lucide("undo-2", 13, m_theme.textSecondary, devicePixelRatioF()));
     m_text->setText(tr("Revert AI changes"));
-    m_restore->hide();
-    m_review->show();
+    m_count->setText(countText(m_run, false));
+    m_card->hide();
     m_note->hide();
     fitButton();
     updateEnabled();
@@ -240,11 +301,11 @@ void LC_AIRevertBar::showReady() {
 
 void LC_AIRevertBar::showReverted(const QString& note) {
     m_reverted = true;
+    m_staleNote = false;
     m_card->hide();
     m_icon->setPixmap(LC_AIIcons::lucide("check", 13, GREEN, devicePixelRatioF()));
     m_text->setText(tr("Reverted"));
-    m_restore->show();
-    m_review->hide();
+    m_count->setText(countText(m_run, true));
     fitButton();
     updateEnabled();
     showNote(note);
@@ -302,9 +363,12 @@ void LC_AIRevertBar::restore() {
     QString message;
     if (LC_AICheckpoints::instance().restore(m_run, message)) {
         showReady();
+        showNote(message); // a command in progress that had to end
     }
     else {
-        m_restore->hide();
+        // Restore comes back by itself once the drawing is again as the revert left it (updateEnabled)
+        updateEnabled();
         showNote(message);
+        m_staleNote = true;
     }
 }

@@ -46,6 +46,8 @@ private:
     int m_run {0};
     LC_AITheme m_theme;
     bool m_reverted {false};
+    bool m_staleNote {false};  // the note is a failed Restore's, not the revert's own
+    bool m_iconFaded {false};
     QPushButton* m_button {nullptr};  // icon, "Revert AI changes", and the number of changes in a fainter tone
     QLabel* m_icon {nullptr};
     QLabel* m_text {nullptr};
