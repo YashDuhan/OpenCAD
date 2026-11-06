@@ -56,6 +56,7 @@
 #include "lc_aivoiceinput.h"
 #include "lc_aidebugger.h"
 #include "lc_aiplanmode.h"
+#include "lc_aicheckpoints.h"
 
 namespace {
     constexpr int MIN_INPUT_HEIGHT = 64; // about two lines
@@ -289,6 +290,28 @@ LC_AIAssistantWidget::LC_AIAssistantWidget(QWidget* parent)
     m_transcript->setCardFactory([this](const LC_AIToolCall& call) { return m_plan->cardFor(call); });
     m_debugger = new LC_AIDebugger(m_theme, this);
     connect(m_debugger, &LC_AIDebugger::checkRequested, this, &LC_AIAssistantWidget::startDebugger);
+
+    // "Revert AI changes" (and the change preview's Reject) take back what a run drew: the model hears of it with the
+    // next message, or it would go on as if its circle were still there
+    connect(&LC_AICheckpoints::instance(), &LC_AICheckpoints::runStarted, this, [this](const int run) {
+        if (m_busy) { // a run of this panel (it is busy before the run starts)
+            if (m_chats->chatId().isEmpty()) {
+                m_chats->flush(); // the first question of a new chat: written now, so the chat has the id it keeps
+            }
+            m_aiRuns.insert(run, {m_chats->chatId(), m_debugging ? QString() : m_messages.value(m_runStart).text});
+        }
+    });
+    connect(&LC_AICheckpoints::instance(), &LC_AICheckpoints::runReverted, this, [this](const int run, const bool reverted) {
+        if (!m_aiRuns.contains(run)) {
+            return;
+        }
+        if (m_revertNotes.contains(run) && m_revertNotes.value(run) != reverted) {
+            m_revertNotes.remove(run); // reverted and restored again before the model heard of it: nothing to tell
+        }
+        else {
+            m_revertNotes.insert(run, reverted);
+        }
+    });
 
     updateModelButton();
     updateSendButton();
@@ -554,6 +577,10 @@ void LC_AIAssistantWidget::onSend() {
     question.role = LC_AIChatMessage::Role::User;
     question.text = text;
     m_extras->fill(question); // the attached files, and the drawing context the @-mentions stand for
+    if (const QString note = revertNote(); !note.isEmpty()) {
+        // sent with the message, not shown in its bubble
+        question.context = question.context.isEmpty() ? note : note + QStringLiteral("\n\n") + question.context;
+    }
     m_messages.append(question);
     m_runTools = LC_AIControl::withControl(m_tools + LC_MCPManager::instance().aiTools());
     m_inference->setTools(m_runTools);
@@ -596,6 +623,13 @@ void LC_AIAssistantWidget::onDelta(const QString& text) {
 
 void LC_AIAssistantWidget::onMessageAdded(const LC_AIChatMessage& message) {
     m_messages.append(message);
+    // the model has read the request, and with it the note about reverted runs
+    for (auto it = m_toldNotes.cbegin(); it != m_toldNotes.cend(); ++it) {
+        if (m_revertNotes.value(it.key(), !it.value()) == it.value()) {
+            m_revertNotes.remove(it.key());
+        }
+    }
+    m_toldNotes.clear();
     m_chats->save(m_messages);
     if (message.role == LC_AIChatMessage::Role::Assistant) {
         m_transcript->addAssistant(message);
@@ -690,6 +724,9 @@ void LC_AIAssistantWidget::startDebugger(const QString& reason) {
     LC_AIChatMessage review;
     review.role = LC_AIChatMessage::Role::User;
     review.text = LC_AIDebugger::reviewRequest(m_messages, m_runStart, reason);
+    if (const QString note = revertNote(); !note.isEmpty()) {
+        review.text += QStringLiteral("\n\n") + note; // e.g. the user reverted the run before asking for the check
+    }
     m_messages.append(review);
     m_runTools = LC_AIControl::withControl(m_tools + LC_MCPManager::instance().aiTools());
     m_runTools += m_plan->tools();
@@ -703,6 +740,34 @@ void LC_AIAssistantWidget::startDebugger(const QString& reason) {
         m_transcript->setThinking(true);
         LC_AIControl::instance().begin(qobject_cast<QMainWindow*>(window()));
     }
+}
+
+QString LC_AIAssistantWidget::revertNote() {
+    m_toldNotes.clear();
+    QStringList lines;
+    for (auto it = m_revertNotes.cbegin(); it != m_revertNotes.cend(); ++it) {
+        const AIRun run = m_aiRuns.value(it.key());
+        if (run.chatId != m_chats->chatId()) {
+            continue; // a run of another chat: that chat is told
+        }
+        QString request = run.request.simplified();
+        if (request.size() > 80) {
+            request = request.left(79) + QString::fromUtf8("…");
+        }
+        const QString answer = request.isEmpty() ? QStringLiteral("your debugger check")
+                                                 : QStringLiteral("your answer to \"%1\"").arg(request);
+        const QString changes = LC_AICheckpoints::instance().changesOf(it.key()).summary();
+        // for the model, so not translated
+        lines << (it.value() ? QStringLiteral("- The user reverted the drawing changes of %1 (%2): they are no longer in the drawing.")
+                             : QStringLiteral("- The user restored the drawing changes of %1 (%2) after reverting them: they are in the drawing again."))
+                     .arg(answer, changes.isEmpty() ? QStringLiteral("no details") : changes);
+        m_toldNotes.insert(it.key(), it.value());
+    }
+    if (lines.isEmpty()) {
+        return {};
+    }
+    return QStringLiteral("[Note from OpenCAD, not typed by the user, about the drawing since your last answer]\n") + lines.join('\n')
+           + QStringLiteral("\nDo not assume the drawing is still as those answers left it.");
 }
 
 void LC_AIAssistantWidget::afterRun(const bool stopped, const bool failed) {
