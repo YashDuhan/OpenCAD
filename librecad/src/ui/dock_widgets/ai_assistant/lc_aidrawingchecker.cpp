@@ -1047,8 +1047,8 @@ namespace {
 
     // --- endpoints that nearly meet
 
-    /** A point lies on some other entity (a T-junction): it is connected, though not to an endpoint. */
-    bool liesOnOther(Context& c, const RS_Vector& p, const RS_Entity* self) {
+    /** The entities whose boxes are near this point (within a grid cell around it), built on first use. */
+    QList<RS_Entity*> entitiesNear(Context& c, const RS_Vector& p) {
         if (c.gridCell <= 0) {
             c.gridCell = std::max(c.size / 64.0, c.gap * 4);
             for (RS_Entity* e : std::as_const(c.all)) {
@@ -1072,14 +1072,125 @@ namespace {
                 }
             }
         }
-        const QList<RS_Entity*> near = c.grid.value({qint64(std::floor(p.x / c.gridCell)), qint64(std::floor(p.y / c.gridCell))})
-                                       + c.gridBig;
-        for (RS_Entity* e : near) {
+        // the cell and its neighbours: anything within a gap of the point (a cell is at least 4 gaps wide)
+        const qint64 cx = qint64(std::floor(p.x / c.gridCell));
+        const qint64 cy = qint64(std::floor(p.y / c.gridCell));
+        QList<RS_Entity*> near = c.gridBig;
+        QSet<RS_Entity*> seen(c.gridBig.begin(), c.gridBig.end());
+        for (qint64 dx = -1; dx <= 1; ++dx) {
+            for (qint64 dy = -1; dy <= 1; ++dy) {
+                for (RS_Entity* e : c.grid.value({cx + dx, cy + dy})) {
+                    if (!seen.contains(e)) {
+                        seen.insert(e);
+                        near << e;
+                    }
+                }
+            }
+        }
+        return near;
+    }
+
+    /** A point lies on some other entity (a T-junction): it is connected, though not to an endpoint. */
+    bool liesOnOther(Context& c, const RS_Vector& p, const RS_Entity* self) {
+        for (RS_Entity* e : entitiesNear(c, p)) {
             if (e != self && e->rtti() != RS2::EntityText && e->rtti() != RS2::EntityMText && e->getDistanceToPoint(p) <= c.eps) {
                 return true;
             }
         }
         return false;
+    }
+
+    /** Where an end can move without changing the shape of its entity: along its line, or around its arc's circle. */
+    struct Path {
+        enum Kind { None, Straight, Round } kind {None};
+        RS_Vector a;   // Straight: a point of the line; Round: the centre
+        RS_Vector dir; // Straight: the unit direction
+        double radius {0};
+    };
+
+    Path pathOf(const RS_Entity* segment) {
+        Path p;
+        if (segment == nullptr) {
+            return p;
+        }
+        if (segment->rtti() == RS2::EntityLine) {
+            const RS_Vector d = segment->getEndpoint() - segment->getStartpoint();
+            if (d.magnitude() > 0) {
+                p.kind = Path::Straight;
+                p.a = segment->getStartpoint();
+                p.dir = d / d.magnitude();
+            }
+        }
+        else if (segment->rtti() == RS2::EntityArc || segment->rtti() == RS2::EntityCircle) {
+            p.kind = Path::Round;
+            p.a = segment->getCenter();
+            p.radius = segment->getRadius();
+        }
+        return p;
+    }
+
+    /** The path of one end of a line, an arc or a polyline (whose arc ends have none: moving them changes the bulge). */
+    Path pathAt(RS_Entity* e, const bool start) {
+        if (e->rtti() != RS2::EntityPolyline) {
+            return e->rtti() == RS2::EntityCircle ? Path{} : pathOf(e);
+        }
+        RS_Entity* first = nullptr;
+        RS_Entity* last = nullptr;
+        for (RS_Entity* s : *static_cast<RS_Polyline*>(e)) {
+            if (s != nullptr) {
+                first = first != nullptr ? first : s;
+                last = s;
+            }
+        }
+        RS_Entity* segment = start ? first : last;
+        return segment != nullptr && segment->rtti() == RS2::EntityLine ? pathOf(segment) : Path{};
+    }
+
+    /** An arc end: moving it anywhere but around its circle would change its radius or centre. */
+    bool roundEnd(RS_Entity* e, const bool start) {
+        return e->rtti() == RS2::EntityArc || (e->rtti() == RS2::EntityPolyline && pathAt(e, start).kind == Path::None);
+    }
+
+    /** Where two paths cross: none, one or two points (a line touching a circle within eps counts). */
+    QList<RS_Vector> crossings(const Path& p, const Path& q, const double eps) {
+        if (p.kind == Path::None || q.kind == Path::None) {
+            return {};
+        }
+        if (p.kind == Path::Round && q.kind == Path::Straight) {
+            return crossings(q, p, eps);
+        }
+        if (p.kind == Path::Straight && q.kind == Path::Straight) {
+            const double sine = p.dir.x * q.dir.y - p.dir.y * q.dir.x;
+            if (std::abs(sine) < 1e-9) {
+                return {}; // parallel
+            }
+            const RS_Vector w = q.a - p.a;
+            return {p.a + p.dir * ((w.x * q.dir.y - w.y * q.dir.x) / sine)};
+        }
+        if (p.kind == Path::Straight) { // a line and a circle
+            const RS_Vector foot = p.a + p.dir * (q.a - p.a).dotP(p.dir);
+            const double d = foot.distanceTo(q.a);
+            if (d > q.radius + eps) {
+                return {};
+            }
+            const double h = std::sqrt(std::max(0.0, q.radius * q.radius - d * d));
+            return {foot + p.dir * h, foot - p.dir * h};
+        }
+        // two circles
+        const double d = p.a.distanceTo(q.a);
+        if (d <= eps || d > p.radius + q.radius + eps || d < std::abs(p.radius - q.radius) - eps) {
+            return {};
+        }
+        const double x = (d * d + p.radius * p.radius - q.radius * q.radius) / (2 * d);
+        const double h = std::sqrt(std::max(0.0, p.radius * p.radius - x * x));
+        const RS_Vector u = (q.a - p.a) / d;
+        const RS_Vector m = p.a + u * x;
+        const RS_Vector n(-u.y, u.x);
+        return {m + n * h, m - n * h};
+    }
+
+    QString endName(const bool start) {
+        return start ? QStringLiteral("start") : QStringLiteral("end");
     }
 
     void checkGaps(Context& c) {
@@ -1138,10 +1249,21 @@ namespace {
             }
             return onOther.value(k);
         };
+        const auto rebuildable = [](RS_Entity* e) {
+            QList<Vertex> points;
+            return e->rtti() != RS2::EntityPolyline || vertices(static_cast<RS_Polyline*>(e), points);
+        };
         QSet<QPair<int, int>> reported;
+        QList<int> loose; // free ends with no other end close by: they may stop short of a line instead
         for (int i = 0; i < ends.size(); ++i) {
             const int j = nearest[i];
-            if (j < 0 || attached(i)) {
+            if (j < 0) {
+                if (!attached(i)) {
+                    loose << i;
+                }
+                continue;
+            }
+            if (attached(i)) {
                 continue;
             }
             const QPair<int, int> pair{std::min(i, j), std::max(i, j)};
@@ -1149,34 +1271,112 @@ namespace {
                 continue;
             }
             reported.insert(pair);
-            // the loose end moves onto the attached one; of two loose ends, the newer entity's
+            // the loose end moves onto the attached one; of two loose ends, a line's rather than an arc's (that would
+            // change its radius), else the newer entity's
+            const bool bothFree = !attached(j);
             int mover = i;
             int target = j;
-            if (!attached(j) && ends[j].e->getId() > ends[i].e->getId()) {
-                mover = j;
-                target = i;
+            if (bothFree) {
+                const bool iRound = roundEnd(ends[i].e, ends[i].start);
+                const bool jRound = roundEnd(ends[j].e, ends[j].start);
+                if (iRound != jRound ? iRound : ends[j].e->getId() > ends[i].e->getId()) {
+                    mover = j;
+                    target = i;
+                }
             }
             const End& m = ends[mover];
             const End& t = ends[target];
-            bool rebuildable = true;
-            if (m.e->rtti() == RS2::EntityPolyline) {
-                QList<Vertex> points;
-                rebuildable = vertices(static_cast<RS_Polyline*>(m.e), points);
+            // Both free: they meet where their lines or arcs cross, if that is close by, so each keeps its direction or
+            // its circle (two orthogonal lines stay orthogonal). Otherwise the loose end comes onto the other end.
+            RS_Vector meet(false);
+            if (bothFree) {
+                double best = c.gap;
+                for (const RS_Vector& p : crossings(pathAt(m.e, m.start), pathAt(t.e, t.start), c.eps)) {
+                    const double far = std::max(p.distanceTo(m.p), p.distanceTo(t.p));
+                    if (far <= best) {
+                        best = far;
+                        meet = p;
+                    }
+                }
             }
+            const bool corner = meet.valid && meet.distanceTo(t.p) > c.eps;
+            if (!meet.valid) {
+                meet = t.p;
+            }
+            // an arc end only moves around its circle: one that would have to leave it is left to the user
+            const Path mp = pathAt(m.e, m.start);
+            const bool keepsShape = !roundEnd(m.e, m.start)
+                                    || (mp.kind == Path::Round && std::abs(meet.distanceTo(mp.a) - mp.radius) <= c.eps);
             Issue issue;
             issue.rule = QStringLiteral("endpoint_gap");
             issue.ids = {m.e->getId(), t.e->getId()};
             issue.position = (m.p + t.p) * 0.5;
             issue.moveFrom = m.p;
-            issue.moveTo = t.p;
+            issue.moveTo = meet;
+            issue.alsoFrom = corner ? t.p : RS_Vector(false);
             issue.message = QStringLiteral("%1 %2 %3 is %4 from #%5 %6 %7 %8 but does not meet it")
-                                .arg(ref(m.e), m.start ? QStringLiteral("start") : QStringLiteral("end"), fmt(m.p), fmt(m.p.distanceTo(t.p)))
+                                .arg(ref(m.e), endName(m.start), fmt(m.p), fmt(m.p.distanceTo(t.p)))
                                 .arg(t.e->getId())
-                                .arg(LC_AITools::typeName(t.e), t.start ? QStringLiteral("start") : QStringLiteral("end"), fmt(t.p));
-            issue.fix = QStringLiteral("move #%1's %2 onto %3")
-                            .arg(m.e->getId())
-                            .arg(m.start ? QStringLiteral("start") : QStringLiteral("end"), fmt(t.p));
-            issue.fixable = rebuildable && editable(m.e);
+                                .arg(LC_AITools::typeName(t.e), endName(t.start), fmt(t.p));
+            if (corner) {
+                issue.fix = QStringLiteral("move #%1's %2 and #%3's %4 to where they meet, %5")
+                                .arg(m.e->getId()).arg(endName(m.start)).arg(t.e->getId()).arg(endName(t.start), fmt(meet));
+            }
+            else if (keepsShape) {
+                issue.fix = QStringLiteral("move #%1's %2 onto %3").arg(m.e->getId()).arg(endName(m.start), fmt(meet));
+            }
+            else {
+                issue.fix = QStringLiteral("join them by hand (moving the arc's %1 onto %2 would change its radius)")
+                                .arg(endName(m.start), fmt(meet));
+            }
+            issue.fixable = keepsShape && rebuildable(m.e) && editable(m.e) && (!corner || (rebuildable(t.e) && editable(t.e)));
+            c.add(issue);
+        }
+        // a free end that stops just short of (or runs just past) the middle of a line or arc: it moves along its own
+        // line or arc onto it
+        for (const int i : std::as_const(loose)) {
+            const End& m = ends[i];
+            const Path mp = pathAt(m.e, m.start);
+            if (mp.kind == Path::None) {
+                continue;
+            }
+            RS_Entity* best = nullptr;
+            RS_Vector meet(false);
+            double bestDistance = c.gap;
+            for (RS_Entity* e : entitiesNear(c, m.p)) {
+                const RS2::EntityType type = e->rtti();
+                if (e == m.e || c.skip.contains(e->getId())
+                    || (type != RS2::EntityLine && type != RS2::EntityArc && type != RS2::EntityCircle && type != RS2::EntityPolyline)
+                    || e->getDistanceToPoint(m.p) > c.gap) {
+                    continue;
+                }
+                const RS_Entity* segment = type == RS2::EntityPolyline
+                                               ? static_cast<RS_Polyline*>(e)->getNearestEntity(m.p, nullptr, RS2::ResolveNone)
+                                               : e;
+                for (const RS_Vector& p : crossings(mp, pathOf(segment), c.eps)) {
+                    const double d = p.distanceTo(m.p);
+                    if (d > c.eps && d <= bestDistance && segment->getDistanceToPoint(p) <= c.eps * 10) {
+                        bestDistance = d;
+                        best = e;
+                        meet = p;
+                    }
+                }
+            }
+            if (best == nullptr) {
+                continue;
+            }
+            Issue issue;
+            issue.rule = QStringLiteral("endpoint_gap");
+            issue.ids = {m.e->getId(), best->getId()};
+            issue.position = (m.p + meet) * 0.5;
+            issue.moveFrom = m.p;
+            issue.moveTo = meet;
+            issue.message = QStringLiteral("%1 %2 %3 is %4 from #%5 %6 but does not end on it")
+                                .arg(ref(m.e), endName(m.start), fmt(m.p), fmt(bestDistance))
+                                .arg(best->getId())
+                                .arg(LC_AITools::typeName(best));
+            issue.fix = QStringLiteral("move #%1's %2 onto #%3 at %4").arg(m.e->getId()).arg(endName(m.start)).arg(best->getId()).arg(fmt(meet));
+            issue.fixable = rebuildable(m.e) && editable(m.e);
             c.add(issue);
         }
     }
@@ -1819,6 +2019,38 @@ namespace {
         return clone;
     }
 
+    /**
+     * A copy of e with its end at `from` moved to `to`: a line's end, a polyline's end vertex, an arc's end around its
+     * circle (nullptr when `to` is off the circle: that would change its radius).
+     */
+    RS_Entity* withEndMoved(RS_Entity* e, const RS_Vector& from, const RS_Vector& to, const double eps) {
+        const bool atStart = from.distanceTo(e->getStartpoint()) <= from.distanceTo(e->getEndpoint());
+        if (e->rtti() == RS2::EntityLine) {
+            auto* line = static_cast<RS_Line*>(e->clone());
+            atStart ? line->setStartpoint(to) : line->setEndpoint(to);
+            return line;
+        }
+        if (e->rtti() == RS2::EntityArc) {
+            auto* arc = static_cast<RS_Arc*>(e);
+            if (std::abs(to.distanceTo(arc->getCenter()) - arc->getRadius()) > eps) {
+                return nullptr;
+            }
+            arc = static_cast<RS_Arc*>(e->clone());
+            const double angle = arc->getCenter().angleTo(to);
+            atStart ? arc->setAngle1(angle) : arc->setAngle2(angle);
+            return arc;
+        }
+        if (e->rtti() == RS2::EntityPolyline) {
+            QList<Vertex> points;
+            if (!vertices(static_cast<RS_Polyline*>(e), points)) {
+                return nullptr;
+            }
+            (atStart ? points.first() : points.last()).point = to;
+            return rebuiltPolyline(static_cast<RS_Polyline*>(e), points, false);
+        }
+        return nullptr;
+    }
+
     /** The line through both, oriented like keep, or nullptr when keep already covers other. */
     RS_Entity* mergedLine(RS_Entity* keep, RS_Entity* other, const double eps) {
         const RS_Vector s = keep->getStartpoint();
@@ -2055,38 +2287,35 @@ namespace {
                         QSet<Id> used;
                         for (const Issue& issue : c.issues) {
                             RS_Entity* e = f.byId.value(issue.ids.first());
-                            if (e == nullptr || !f.wants(issue) || used.contains(e->getId()) || !issue.moveFrom.valid || !issue.moveTo.valid) {
+                            // a corner: the other entity's end moves to the meeting point too
+                            RS_Entity* other = issue.alsoFrom.valid ? f.byId.value(issue.ids.value(1)) : nullptr;
+                            if (e == nullptr || !f.wants(issue) || used.contains(e->getId()) || !issue.moveFrom.valid || !issue.moveTo.valid
+                                || (issue.alsoFrom.valid && (other == nullptr || used.contains(other->getId())))) {
                                 continue;
                             }
                             const bool atStart = issue.moveFrom.distanceTo(e->getStartpoint()) <= issue.moveFrom.distanceTo(e->getEndpoint());
-                            RS_Entity* moved = nullptr;
-                            if (e->rtti() == RS2::EntityLine) {
-                                auto* line = static_cast<RS_Line*>(e->clone());
-                                atStart ? line->setStartpoint(issue.moveTo) : line->setEndpoint(issue.moveTo);
-                                moved = line;
-                            }
-                            else if (e->rtti() == RS2::EntityArc) {
-                                auto* arc = static_cast<RS_Arc*>(e->clone());
-                                atStart ? arc->moveStartpoint(issue.moveTo) : arc->moveEndpoint(issue.moveTo);
-                                moved = arc;
-                            }
-                            else if (e->rtti() == RS2::EntityPolyline) {
-                                QList<Vertex> points;
-                                if (!vertices(static_cast<RS_Polyline*>(e), points)) {
-                                    continue;
-                                }
-                                (atStart ? points.first() : points.last()).point = issue.moveTo;
-                                moved = rebuiltPolyline(static_cast<RS_Polyline*>(e), points, false);
-                            }
-                            if (moved == nullptr) {
+                            RS_Entity* moved = withEndMoved(e, issue.moveFrom, issue.moveTo, f.base.eps);
+                            RS_Entity* otherMoved = other != nullptr ? withEndMoved(other, issue.alsoFrom, issue.moveTo, f.base.eps) : nullptr;
+                            if (moved == nullptr || (other != nullptr && otherMoved == nullptr)) {
+                                delete moved;
+                                delete otherMoved;
                                 continue;
                             }
                             used << e->getId();
                             ++applied;
                             edit.replace(e, moved);
-                            f.note(QStringLiteral("moved the %1 of %2 from %3 onto #%4 at %5 (now #%6)")
-                                       .arg(atStart ? QStringLiteral("start") : QStringLiteral("end"), ref(e), fmt(issue.moveFrom))
-                                       .arg(issue.ids.value(1)).arg(fmt(issue.moveTo)).arg(moved->getId()));
+                            if (other == nullptr) {
+                                f.note(QStringLiteral("moved the %1 of %2 from %3 onto #%4 at %5 (now #%6)")
+                                           .arg(endName(atStart), ref(e), fmt(issue.moveFrom))
+                                           .arg(issue.ids.value(1)).arg(fmt(issue.moveTo)).arg(moved->getId()));
+                                continue;
+                            }
+                            const bool otherAtStart = issue.alsoFrom.distanceTo(other->getStartpoint()) <= issue.alsoFrom.distanceTo(other->getEndpoint());
+                            used << other->getId();
+                            edit.replace(other, otherMoved);
+                            f.note(QStringLiteral("moved the %1 of %2 and the %3 of %4 to where they meet, %5 (now #%6 and #%7)")
+                                       .arg(endName(atStart), ref(e), endName(otherAtStart), ref(other), fmt(issue.moveTo))
+                                       .arg(moved->getId()).arg(otherMoved->getId()));
                         }
                     });
                     if (applied == 0) {
