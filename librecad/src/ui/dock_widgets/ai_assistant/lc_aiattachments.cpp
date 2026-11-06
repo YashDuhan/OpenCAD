@@ -211,8 +211,13 @@ bool LC_AIAttachments::fromFile(const QString& path, LC_AIAttachment& out, QStri
     const QFileInfo info(path);
     out = LC_AIAttachment();
     out.name = info.fileName();
+    // the name only, as in the other notices: a full path wraps over several lines of the narrow strip
+    if (!info.exists()) {
+        error = QObject::tr("%1 was not found.").arg(out.name);
+        return false;
+    }
     if (!info.isFile()) {
-        error = QObject::tr("%1 is not a file.").arg(path);
+        error = info.isDir() ? QObject::tr("%1 is a folder, not a file.").arg(out.name) : QObject::tr("%1 is not a file.").arg(out.name);
         return false;
     }
     const QString suffix = info.suffix().toLower();
@@ -251,8 +256,25 @@ bool LC_AIAttachments::fromImage(const QImage& image, const QString& name, LC_AI
 }
 
 bool LC_AIAttachments::isAttachable(const QString& path) {
-    const QString suffix = QFileInfo(path).suffix().toLower();
-    return suffix == "pdf" || IMAGE_SUFFIXES.contains(suffix);
+    const QFileInfo info(path);
+    const QString suffix = info.suffix().toLower();
+    if (suffix == "pdf" || IMAGE_SUFFIXES.contains(suffix)) {
+        return true;
+    }
+    // a file without a known suffix is judged by its first bytes, as fromFile() reads it
+    if (!info.isFile()) {
+        return false;
+    }
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return false;
+    }
+    const QByteArray head = file.peek(64);
+    if (head.startsWith("%PDF")) {
+        return true;
+    }
+    const QString format = QString::fromLatin1(QImageReader::imageFormat(&file)).toLower();
+    return IMAGE_SUFFIXES.contains(format);
 }
 
 QStringList LC_AIAttachments::attachableFiles(const QMimeData* mime) {
@@ -269,7 +291,8 @@ QStringList LC_AIAttachments::attachableFiles(const QMimeData* mime) {
 }
 
 QString LC_AIAttachments::fileDialogFilter() {
-    return QObject::tr("Images and PDFs (*.png *.jpg *.jpeg *.webp *.gif *.bmp *.pdf);;Images (*.png *.jpg *.jpeg *.webp *.gif *.bmp);;PDF documents (*.pdf)");
+    // "All files": a PDF or picture saved without its suffix is recognised by its bytes
+    return QObject::tr("Images and PDFs (*.png *.jpg *.jpeg *.webp *.gif *.bmp *.pdf);;Images (*.png *.jpg *.jpeg *.webp *.gif *.bmp);;PDF documents (*.pdf);;All files (*)");
 }
 
 QString LC_AIAttachments::sizeText(const qint64 bytes) {

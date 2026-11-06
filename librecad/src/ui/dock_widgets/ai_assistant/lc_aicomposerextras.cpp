@@ -672,23 +672,32 @@ void LC_AIComposerExtras::addFiles(const QStringList& paths) {
             break;
         }
         if (!LC_AIAttachments::isAttachable(path)) {
-            problems << tr("%1: only images (PNG, JPEG, WebP) and PDFs can be attached.").arg(QFileInfo(path).fileName());
+            problems << tr("%1: only images (PNG, JPEG, WebP, GIF, BMP) and PDFs can be attached.").arg(QFileInfo(path).fileName());
             continue;
         }
         LC_AIAttachment attachment;
         QString error;
-        if (LC_AIAttachments::fromFile(path, attachment, error)) {
-            m_attachments << attachment;
-        }
-        else {
+        if (!LC_AIAttachments::fromFile(path, attachment, error)) {
             problems << error;
+            continue;
         }
+        // the same file twice would only be sent twice (a drop repeated by mistake)
+        const auto same = std::find_if(m_attachments.cbegin(), m_attachments.cend(), [&attachment](const LC_AIAttachment& a) {
+            return !a.fromMention && a.kind == attachment.kind && a.data == attachment.data;
+        });
+        if (same != m_attachments.cend()) {
+            problems << (same->name == attachment.name ? tr("%1 is already attached.").arg(attachment.name)
+                                                       : tr("%1 is already attached (as %2).").arg(attachment.name, same->name));
+            continue;
+        }
+        m_attachments << attachment;
     }
     rebuildStrip();
     if (const QString note = blindModelNote(); !note.isEmpty() && !m_attachments.isEmpty()) {
         problems << note;
     }
     if (!problems.isEmpty()) {
+        problems.removeDuplicates(); // one line for a file dropped five times
         showNotice(problems.join('\n'));
     }
     emit changed();
