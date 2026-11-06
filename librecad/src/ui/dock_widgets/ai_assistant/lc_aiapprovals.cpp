@@ -47,7 +47,9 @@ namespace {
         if (call.name == "run_command") {
             QStringList lines;
             for (const QJsonValue& v : a.value("commands").toArray()) {
-                lines << v.toString();
+                if (!v.toString().trimmed().isEmpty()) {
+                    lines << v.toString().trimmed(); // as run_command types them: blank entries are skipped
+                }
             }
             text = lines.isEmpty() ? a.value("commands").toString() : lines.join('\n');
         }
@@ -64,6 +66,28 @@ namespace {
                 lines << QStringLiteral("\"%1\" at (%2, %3)").arg(l.value("text").toString().replace('\n', " / "))
                              .arg(l.value("x").toDouble()).arg(l.value("y").toDouble());
             }
+            text = lines.join('\n');
+        }
+        else if (call.name == "fix_drawing_issues") {
+            // which of the checker's fixes, and where: "{ }" told the user nothing
+            const auto list = [&a](const QString& key) {
+                QStringList items;
+                for (const QJsonValue& v : a.value(key).toArray()) {
+                    items << (v.isDouble() ? QStringLiteral("#%1").arg(v.toInteger()) : v.toString().replace('_', ' '));
+                }
+                return items.join(", ");
+            };
+            QStringList lines;
+            const QString rules = list("rules");
+            lines << (rules.isEmpty() ? QObject::tr("Fixes: all (zero length, duplicate, overlap, endpoint gap, nearly closed, bylayer)")
+                                      : QObject::tr("Fixes: %1").arg(rules));
+            if (const QString ids = list("ids"); !ids.isEmpty()) {
+                lines << QObject::tr("Only issues with: %1").arg(ids);
+            }
+            const QString scope = a.value("scope").toString();
+            lines << (scope == "selection" ? QObject::tr("In: the selected entities")
+                      : scope == "layer"   ? QObject::tr("In: layer \"%1\"").arg(a.value("layer").toString())
+                                           : QObject::tr("In: the whole drawing"));
             text = lines.join('\n');
         }
         else if (a.value("path").isString()) {
@@ -158,6 +182,9 @@ namespace {
         if (call.name == "add_text") {
             return lines == 1 ? QObject::tr("Adds 1 text label to the drawing")
                               : QObject::tr("Adds %1 text labels to the drawing").arg(lines);
+        }
+        if (call.name == "fix_drawing_issues") {
+            return QObject::tr("Changes the drawing in one undo step, and may delete entities (duplicates, zero length)");
         }
         if (call.name.startsWith("mcp__")) {
             return QObject::tr("Calls the MCP server \"%1\"").arg(call.name.section("__", 1, 1));
