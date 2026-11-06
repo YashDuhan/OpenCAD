@@ -11,6 +11,7 @@
 
 #include <QAction>
 #include <QDialog>
+#include <QDir>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QFileDialog>
@@ -39,6 +40,9 @@
 #include "lc_aiicons.h"
 #include "lc_aiinferencemanager.h"
 #include "lc_aiprovider.h"
+#include "lc_aitool.h"
+#include "rs_graphic.h"
+#include "rs_graphicview.h"
 
 namespace {
     constexpr int TILE_EDGE = 56;          // Cypher's .attachment
@@ -852,7 +856,14 @@ void LC_AIComposerExtras::showNotice(const QString& text) {
 
 void LC_AIComposerExtras::openFileDialog() {
     static QString lastFolder;
-    const QStringList files = QFileDialog::getOpenFileNames(m_panel->window(), tr("Attach images or PDFs"), lastFolder,
+    QString folder = lastFolder;
+    if (folder.isEmpty()) { // the first time: the open drawing's folder (its references are often next to it), or home
+        RS_GraphicView* view = LC_AITools::view();
+        const RS_Graphic* graphic = view != nullptr ? view->getGraphic() : nullptr;
+        const QString drawing = graphic != nullptr ? graphic->getFilename() : QString();
+        folder = !drawing.isEmpty() && QFileInfo(drawing).absoluteDir().exists() ? QFileInfo(drawing).absolutePath() : QDir::homePath();
+    }
+    const QStringList files = QFileDialog::getOpenFileNames(m_panel->window(), tr("Attach images or PDFs"), folder,
                                                             LC_AIAttachments::fileDialogFilter());
     if (!files.isEmpty()) {
         lastFolder = QFileInfo(files.first()).absolutePath();
