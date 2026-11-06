@@ -11,6 +11,7 @@
 #define LC_AIASSISTANTWIDGET_H
 
 #include <QHash>
+#include <QMap>
 #include <QSet>
 #include <functional>
 #include <QWidget>
@@ -109,6 +110,17 @@ private:
     LC_AIDebugger* m_debugger {nullptr};
     int m_runStart {-1};      // index in m_messages of the request the last run answered
     bool m_debugging {false}; // the run is the debugger's pass
+
+    // the model is told, with the next message, when the user reverted or restored what one of its runs changed
+    struct AIRun {
+        QString chatId;
+        QString request; // the user's request it answered; empty for a debugger pass
+    };
+    QHash<int, AIRun> m_aiRuns;    // the checkpoint runs (LC_AICheckpoints) of this panel
+    QMap<int, bool> m_revertNotes; // runs reverted (true) or restored (false) since the model last heard of them
+    QMap<int, bool> m_toldNotes;   // ...those the request in progress tells about: done once the model answers
+    /** The note about reverted and restored runs of the chat shown, for the next request; empty when there is none. */
+    QString revertNote();
 };
 
 #endif

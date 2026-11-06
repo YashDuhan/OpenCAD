@@ -13,6 +13,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QSet>
 #include <QTimer>
 #include <QUrl>
 #include <exception>
@@ -32,6 +33,21 @@ namespace {
     const QString GENERATED_ID_PREFIX = QStringLiteral("gen_");
     // Gemini 3 accepts this in place of a thought signature for calls it did not produce itself
     const QString SKIP_SIGNATURE = QStringLiteral("skip_thought_signature_validator");
+
+    // the result of a tool call the user stopped: OpenAI and Anthropic refuse a conversation with an unanswered call
+    // (for the model, so not translated; isStoppedResult() knows them by the start)
+    const QString STOPPED_PREFIX = QStringLiteral("Stopped by the user ");
+    const QString STOPPED_BEFORE = QStringLiteral("Stopped by the user before this ran.");
+    const QString STOPPED_WHILE = QStringLiteral("Stopped by the user before this finished."); // running, or waiting for the user
+
+    LC_AIChatMessage stoppedResult(const LC_AIToolCall& call, const QString& text) {
+        LC_AIChatMessage message;
+        message.role = LC_AIChatMessage::Role::ToolResult;
+        message.toolCallId = call.id;
+        message.toolName = call.name;
+        message.result = LC_AIToolResult::error(text);
+        return message;
+    }
 
     QString joinUrl(QString base, const QString& path) {
         while (base.endsWith('/')) {
@@ -331,11 +347,69 @@ void LC_AIInferenceManager::cancel() {
         m_reply->abort(); // onFinished() ends the run
     }
     else {
-        // waiting for a tool (e.g. an MCP server): stop now, its late answer is ignored
+        // waiting for a tool (e.g. an MCP server) or for the user (an approval, a plan, a question): stop now, its
+        // late answer is ignored; the calls that got no result are answered as stopped
         ++m_generation;
         m_running = false;
+        answerUnrunCalls();
         emit finished();
     }
+}
+
+void LC_AIInferenceManager::answerUnrunCalls() {
+    if (!m_callsInHistory) {
+        return; // the turn being streamed is not in the history: its calls are dropped with it
+    }
+    const QList<LC_AIToolCall> calls = m_turn.toolCalls;
+    for (int i = m_answered; i < calls.size(); ++i) {
+        const LC_AIChatMessage message = stoppedResult(calls[i], i == m_answered && m_executing ? STOPPED_WHILE : STOPPED_BEFORE);
+        m_history.append(message);
+        emit messageAdded(message);
+    }
+    m_answered = int(calls.size());
+    m_executing = false;
+}
+
+bool LC_AIInferenceManager::isStoppedResult(const LC_AIChatMessage& message) {
+    return message.role == LC_AIChatMessage::Role::ToolResult && message.result.isError
+           && message.result.joinedText().startsWith(STOPPED_PREFIX);
+}
+
+QList<LC_AIChatMessage> LC_AIInferenceManager::paired(const QList<LC_AIChatMessage>& history) {
+    QList<LC_AIChatMessage> out;
+    out.reserve(history.size());
+    for (int i = 0; i < history.size(); ++i) {
+        const LC_AIChatMessage& m = history[i];
+        if (m.role == LC_AIChatMessage::Role::ToolResult) {
+            continue; // a result whose call is not right before it: the providers refuse it on its own
+        }
+        out << m;
+        if (m.role != LC_AIChatMessage::Role::Assistant || m.toolCalls.isEmpty()) {
+            continue;
+        }
+        // the results that follow the call (ids only count within one message: Gemini's made-up ids repeat per turn)
+        QSet<QString> ids;
+        for (const LC_AIToolCall& c : m.toolCalls) {
+            ids.insert(c.id);
+        }
+        QSet<QString> answered;
+        int next = i + 1;
+        for (; next < history.size() && history[next].role == LC_AIChatMessage::Role::ToolResult; ++next) {
+            const LC_AIChatMessage& r = history[next];
+            if (ids.contains(r.toolCallId) && !answered.contains(r.toolCallId)) {
+                out << r;
+                answered.insert(r.toolCallId);
+            }
+        }
+        for (const LC_AIToolCall& c : m.toolCalls) {
+            if (!answered.contains(c.id)) {
+                out << stoppedResult(c, STOPPED_BEFORE); // e.g. stopped at an approval in an older version
+                answered.insert(c.id);
+            }
+        }
+        i = next - 1;
+    }
+    return out;
 }
 
 // ------------------------------------------------------------------------------------------------ requests
@@ -355,7 +429,8 @@ QJsonObject LC_AIInferenceManager::buildOpenAI() const {
         messages.append(QJsonObject{{"role", "user"}, {"content", content}});
         pendingImages = QJsonArray();
     };
-    for (const LC_AIChatMessage& m : m_history) {
+    const QList<LC_AIChatMessage> history = paired(m_history); // an assistant message with tool_calls needs their results
+    for (const LC_AIChatMessage& m : history) {
         if (m.role != LC_AIChatMessage::Role::ToolResult) {
             flushImages();
         }
@@ -416,7 +491,8 @@ QJsonObject LC_AIInferenceManager::buildAnthropic() const {
             pendingResults = QJsonArray();
         }
     };
-    for (const LC_AIChatMessage& m : m_history) {
+    const QList<LC_AIChatMessage> history = paired(m_history); // every tool_use needs its tool_result
+    for (const LC_AIChatMessage& m : history) {
         if (m.role != LC_AIChatMessage::Role::ToolResult) {
             flushResults();
         }
@@ -504,7 +580,8 @@ QJsonObject LC_AIInferenceManager::buildGoogle() const {
             pendingImages = QJsonArray();
         }
     };
-    for (const LC_AIChatMessage& m : m_history) {
+    const QList<LC_AIChatMessage> history = paired(m_history); // each functionCall answered by a functionResponse
+    for (const LC_AIChatMessage& m : history) {
         if (m.role != LC_AIChatMessage::Role::ToolResult) {
             flush();
         }
@@ -588,6 +665,9 @@ void LC_AIInferenceManager::startTurn() {
     m_turn = LC_AIChatMessage();
     m_turn.role = LC_AIChatMessage::Role::Assistant;
     m_turn.origin = m_target.origin();
+    m_callsInHistory = false;
+    m_answered = 0;
+    m_executing = false;
 
     QNetworkRequest request;
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
@@ -840,6 +920,8 @@ void LC_AIInferenceManager::onFinished() {
         if (!m_turn.text.isEmpty()) {
             m_turn.toolCalls.clear(); // half-streamed calls are not run
             m_turn.raw = QJsonArray();
+            // the answer was cut off: marked, for the user and for the model when the chat goes on
+            m_turn.text += QStringLiteral("\n\n*(stopped)*"); // italic: Qt draws _text_ underlined, like a link
             m_history.append(m_turn);
             emit messageAdded(m_turn);
         }
@@ -980,6 +1062,8 @@ void LC_AIInferenceManager::finishTurn() {
         return;
     }
     m_history.append(m_turn);
+    m_callsInHistory = true; // from now on each of its calls gets a result, a stopped one at the latest
+    m_answered = 0;
     emit messageAdded(m_turn);
 
     if (m_turn.toolCalls.isEmpty()) {
@@ -998,6 +1082,7 @@ void LC_AIInferenceManager::runTools(const int index) {
     if (m_cancelled || index >= calls.size()) {
         if (m_cancelled) {
             m_running = false;
+            answerUnrunCalls();
             emit finished();
             return;
         }
@@ -1055,6 +1140,7 @@ void LC_AIInferenceManager::runTools(const int index) {
 
 void LC_AIInferenceManager::executeTool(const int index, const LC_AITool* tool) {
     const LC_AIToolCall call = m_turn.toolCalls.value(index);
+    m_executing = true;
     if (tool->executeAsync) {
         const int generation = m_generation;
         QPointer<LC_AIInferenceManager> self(this);
@@ -1065,12 +1151,16 @@ void LC_AIInferenceManager::executeTool(const int index, const LC_AITool* tool) 
         });
         return;
     }
+    const int generation = m_generation;
     LC_AIToolResult result;
     try {
         result = tool->execute(call.arguments);
     }
     catch (const std::exception& e) {
         result = LC_AIToolResult::error(tr("The tool failed: %1").arg(QString::fromUtf8(e.what())));
+    }
+    if (!m_running || m_generation != generation) {
+        return; // stopped while the tool ran (it waited for the user): the stop has answered the call already
     }
     finishTool(index, result);
 }
@@ -1083,6 +1173,8 @@ void LC_AIInferenceManager::finishTool(const int index, const LC_AIToolResult& r
     message.toolName = call.name;
     message.result = result;
     m_history.append(message);
+    m_answered = index + 1;
+    m_executing = false;
     emit messageAdded(message);
     // let the UI repaint between tools (screenshots need an up-to-date view)
     QTimer::singleShot(0, this, [this, index] { runTools(index + 1); });

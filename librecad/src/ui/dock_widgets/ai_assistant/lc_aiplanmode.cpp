@@ -14,6 +14,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPlainTextEdit>
@@ -72,12 +73,15 @@ namespace {
         return text.simplified();
     }
 
-    /** The steps of a plan as the model sent them: strings, objects with a text, or one string with a step per line. */
+    /**
+     * The steps of a plan as the model sent them: strings, objects with a text, or one string with a step per line.
+     * All of them: a plan longer than MAX_STEPS is refused, not cut short behind the user's back.
+     */
     QStringList stepsFrom(const QJsonValue& value) {
         QStringList steps;
         const auto addStep = [&steps](const QString& text) {
             const QString step = stepText(text);
-            if (!step.isEmpty() && steps.size() < MAX_STEPS) {
+            if (!step.isEmpty()) {
                 steps << step;
             }
         };
@@ -216,7 +220,7 @@ void LC_AIStatusIcon::hideEvent(QHideEvent* event) {
 // ------------------------------------------------------------------------------------------------ plan card
 
 LC_AIPlanCard::LC_AIPlanCard(const QString& title, const QStringList& steps, const LC_AITheme& theme, QWidget* parent)
-    : QFrame(parent), m_theme(theme), m_steps(steps) {
+    : QFrame(parent), m_theme(theme), m_title(title.trimmed().isEmpty() ? tr("Plan") : title.trimmed()), m_steps(steps) {
     setObjectName("planCard");
     const LC_AITheme& t = theme;
     setStyleSheet(QStringLiteral(R"(
@@ -226,8 +230,8 @@ LC_AIPlanCard::LC_AIPlanCard(const QString& title, const QStringList& steps, con
 #planBadge { background: %5; color: %6; border-radius: 5px; font-size: 11.5px; font-weight: 600; }
 #planStep { font-size: 13px; color: %7; }
 #planStep[dim="true"] { color: %3; }
-#planEditor { background: %8; border: 1px solid %2; border-radius: 8px; padding: 4px 6px; font-size: 13px; color: %7; }
-#planEditor:focus { border-color: %9; }
+#planEditor, #planTitleEdit { background: %8; border: 1px solid %2; border-radius: 8px; padding: 4px 6px; font-size: 13px; color: %7; }
+#planEditor:focus, #planTitleEdit:focus { border-color: %9; }
 #planHint { font-size: 11.5px; color: %3; }
 #planStatus { font-size: 12px; }
 )")
@@ -261,12 +265,19 @@ LC_AIPlanCard::LC_AIPlanCard(const QString& title, const QStringList& steps, con
     head->addStretch(1);
     head->addWidget(m_statusRow);
     layout->addLayout(head);
-    auto* titleLabel = new QLabel(title.trimmed().isEmpty() ? tr("Plan") : title.trimmed(), this);
-    titleLabel->setObjectName("planTitle");
-    titleLabel->setWordWrap(true);
-    titleLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    titleLabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
-    layout->addWidget(titleLabel);
+    m_titleLabel = new QLabel(m_title, this);
+    m_titleLabel->setObjectName("planTitle");
+    m_titleLabel->setWordWrap(true);
+    m_titleLabel->setTextFormat(Qt::PlainText);
+    m_titleLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    m_titleLabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    layout->addWidget(m_titleLabel);
+    // Edit: the title too, or it would still name the plan the user changed
+    m_titleEdit = new QLineEdit(this);
+    m_titleEdit->setObjectName("planTitleEdit");
+    m_titleEdit->setPlaceholderText(tr("Title"));
+    m_titleEdit->hide();
+    layout->addWidget(m_titleEdit);
 
     m_stepList = new QWidget(this);
     auto* list = new QVBoxLayout(m_stepList);
@@ -282,10 +293,11 @@ LC_AIPlanCard::LC_AIPlanCard(const QString& title, const QStringList& steps, con
     pal.setColor(QPalette::Text, t.textPrimary);
     pal.setColor(QPalette::PlaceholderText, t.textPlaceholder);
     m_editor->setPalette(pal);
+    m_titleEdit->setPalette(pal);
     m_editor->setPlaceholderText(tr("One step per line"));
     m_editor->hide();
     layout->addWidget(m_editor);
-    m_editHint = new QLabel(tr("One step per line, in order. The AI follows the plan as you leave it."), this);
+    m_editHint = new QLabel(editHint(), this);
     m_editHint->setObjectName("planHint");
     m_editHint->setWordWrap(true);
     m_editHint->hide();
@@ -298,7 +310,7 @@ LC_AIPlanCard::LC_AIPlanCard(const QString& title, const QStringList& steps, con
     QPushButton* approve = actionButton(tr("Approve"), "check", GREEN, true, m_actions);
     approve->setToolTip(tr("Let the AI carry out this plan"));
     QPushButton* edit = actionButton(tr("Edit"), "pencil", BLUE, false, m_actions);
-    edit->setToolTip(tr("Change the steps before the AI starts"));
+    edit->setToolTip(tr("Change the title and steps before the AI starts"));
     QPushButton* reject = actionButton(tr("Reject"), "x", RED, false, m_actions);
     reject->setToolTip(tr("Turn the plan down; the AI changes nothing and asks what you want instead"));
     actions->addWidget(approve);
@@ -326,7 +338,7 @@ LC_AIPlanCard::LC_AIPlanCard(const QString& title, const QStringList& steps, con
     connect(approveEdited, &QPushButton::clicked, this, [this] {
         QStringList steps;
         for (const QString& line : m_editor->toPlainText().split('\n')) {
-            if (const QString step = stepText(line); !step.isEmpty() && steps.size() < MAX_STEPS) {
+            if (const QString step = stepText(line); !step.isEmpty()) {
                 steps << step;
             }
         }
@@ -334,10 +346,26 @@ LC_AIPlanCard::LC_AIPlanCard(const QString& title, const QStringList& steps, con
             m_editHint->setText(tr("Write at least one step, or Reject the plan."));
             return;
         }
-        answer(steps == m_steps ? Answer::Approved : Answer::Edited, steps);
+        if (steps.size() > MAX_STEPS) {
+            m_editHint->setText(tr("%1 steps: at most %2 fit. Merge some, or Reject the plan.").arg(steps.size()).arg(MAX_STEPS));
+            return;
+        }
+        const QString title = m_titleEdit->text().simplified();
+        const bool retitled = !title.isEmpty() && title != m_title;
+        if (retitled) {
+            m_title = title;
+        }
+        answer(steps == m_steps && !retitled ? Answer::Approved : Answer::Edited, steps);
     });
     connect(m_editor, &QPlainTextEdit::textChanged, this, &LC_AIPlanCard::fitEditor);
+    connect(m_editor, &QPlainTextEdit::textChanged, this, [this] {
+        m_editHint->setText(editHint()); // a complaint about the steps goes once they are changed
+    });
     m_editor->installEventFilter(this); // a new width wraps the steps differently
+}
+
+QString LC_AIPlanCard::editHint() {
+    return tr("One step per line, in order. The AI follows the plan as you leave it.");
 }
 
 void LC_AIPlanCard::fitEditor() {
@@ -405,9 +433,12 @@ void LC_AIPlanCard::setEditing(const bool editing) {
         return;
     }
     if (editing) {
+        m_titleEdit->setText(m_title);
         m_editor->setPlainText(m_steps.join('\n'));
-        m_editHint->setText(tr("One step per line, in order. The AI follows the plan as you leave it."));
+        m_editHint->setText(editHint());
     }
+    m_titleLabel->setVisible(!editing);
+    m_titleEdit->setVisible(editing);
     m_stepList->setVisible(!editing);
     m_actions->setVisible(!editing);
     m_editor->setVisible(editing);
@@ -436,7 +467,10 @@ void LC_AIPlanCard::answer(const Answer answer, const QStringList& steps) {
     if (answer == Answer::Edited) {
         m_steps = steps;
         showSteps(steps);
+        m_titleLabel->setText(m_title);
     }
+    m_titleEdit->hide();
+    m_titleLabel->show();
     m_editor->hide();
     m_editHint->hide();
     m_editActions->hide();
@@ -477,6 +511,8 @@ void LC_AIPlanCard::setStopped() {
     }
     m_answered = true;
     m_stopped = true;
+    m_titleEdit->hide();
+    m_titleLabel->show();
     m_editor->hide();
     m_editHint->hide();
     m_editActions->hide();
@@ -486,9 +522,24 @@ void LC_AIPlanCard::setStopped() {
 }
 
 void LC_AIPlanCard::setProgress(const QList<LC_AIPlanStep>& steps) {
+    m_progress = steps;
     for (int i = 0; i < m_stepIcons.size() && i < steps.size(); ++i) {
         m_stepIcons[i]->setStatus(steps[i].status);
         m_stepIcons[i]->setToolTip(steps[i].note);
+    }
+}
+
+void LC_AIPlanCard::endProgress(const bool stopped) {
+    // nothing works on the plan any more: a spinner would say otherwise
+    for (int i = 0; i < m_stepIcons.size() && i < m_progress.size(); ++i) {
+        if (m_progress[i].status != LC_AIPlanStep::Status::InProgress) {
+            continue;
+        }
+        // the stop square for a stopped run, else an open circle: started, never marked done
+        m_stepIcons[i]->setIcon(stopped ? "square" : "circle", m_theme.textFaint);
+        const QString why = stopped ? tr("Not finished: the run stopped during this step.")
+                                    : tr("Not finished: the AI did not mark this step done.");
+        m_stepIcons[i]->setToolTip(m_progress[i].note.isEmpty() ? why : m_progress[i].note + "\n" + why);
     }
 }
 
@@ -715,7 +766,7 @@ bool LC_AIPlanMode::changesDrawing(const QString& toolName) {
 }
 
 QList<LC_AITool> LC_AIPlanMode::tools() {
-    if (!m_enabled && !m_proposedInChat) {
+    if (!offersTools()) {
         return {};
     }
     LC_AITool propose;
@@ -739,6 +790,11 @@ QList<LC_AITool> LC_AIPlanMode::tools() {
             done(LC_AIToolResult::error(tr("steps must be a non-empty array of strings, one step each.")));
             return;
         }
+        if (steps.size() > MAX_STEPS) { // no card was shown for it (cardFor)
+            done(LC_AIToolResult::error(tr("The plan has %1 steps; at most %2 fit. Merge steps so the plan has 2-12, and call "
+                                           "propose_plan again.").arg(steps.size()).arg(MAX_STEPS)));
+            return;
+        }
         LC_AIPlanCard* card = nullptr;
         for (const QPointer<LC_AIPlanCard>& c : std::as_const(m_cards)) {
             if (c != nullptr && !c->isActivated()) {
@@ -755,7 +811,7 @@ QList<LC_AITool> LC_AIPlanMode::tools() {
         QPointer<LC_AIPlanCard> cardRef(card);
         card->activate([self, title, cardRef, done](const LC_AIPlanCard::Answer answer, const QStringList& chosen) {
             if (self != nullptr) {
-                done(self->propose(title, answer, chosen, cardRef));
+                done(self->propose(cardRef != nullptr ? cardRef->title() : title, answer, chosen, cardRef)); // Edit may retitle it
             }
         });
     };
@@ -799,8 +855,11 @@ QWidget* LC_AIPlanMode::cardFor(const LC_AIToolCall& call) {
     if (call.name != PROPOSE_PLAN) {
         return nullptr;
     }
+    if ((m_running || m_reviewing) && !m_runOffers) {
+        return nullptr; // the run has no propose_plan: a plain tool row shows the call and its "Unknown tool"
+    }
     const QStringList steps = stepsFrom(call.arguments.value("steps"));
-    if (steps.isEmpty()) {
+    if (steps.isEmpty() || steps.size() > MAX_STEPS) {
         return nullptr; // a plain tool row shows the call, and its error
     }
     auto* card = new LC_AIPlanCard(call.arguments.value("title").toString(), steps, m_theme);
@@ -813,20 +872,31 @@ bool LC_AIPlanMode::gate(const LC_AIToolCall& call, const std::function<void(boo
         answer(true, QString()); // the plan card is where the user approves
         return true;
     }
-    if (!m_enabled || m_reviewing || m_approved || !changesDrawing(call.name)) {
+    if (!changesDrawing(call.name)) {
         return false;
     }
     // for the model, so not translated; "Plan mode:" also tells the debugger this was no mistake of the run
     if (m_rejected) {
+        // the user said no: that holds until a new plan is approved, also for the debugger's pass after the run
         answer(false, QStringLiteral("Plan mode: the user rejected your plan, so nothing may change the drawing now. Ask the "
                                      "user what they want instead, or call propose_plan with a different plan."));
+        return true;
     }
-    else {
-        answer(false, QStringLiteral("Plan mode: \"%1\" changes the drawing and is refused until the user approves a plan. "
-                                     "Call propose_plan {title, steps} first and wait for the answer. Read tools (capture_view, "
-                                     "list_entities, get_drawing_info, ...) work without a plan.").arg(call.name));
+    // the toggle counts from the next request on, like the tools and the instructions the run was given
+    if (!m_runPlans || m_reviewing || m_approved) {
+        return false;
     }
+    answer(false, QStringLiteral("Plan mode: \"%1\" changes the drawing and is refused until the user approves a plan. "
+                                 "Call propose_plan {title, steps} first and wait for the answer. Read tools (capture_view, "
+                                 "list_entities, get_drawing_info, ...) work without a plan.").arg(call.name));
     return true;
+}
+
+void LC_AIPlanMode::setReviewing(const bool reviewing) {
+    m_reviewing = reviewing;
+    if (reviewing) {
+        m_runOffers = offersTools(); // the pass gets the plan tools on the same terms
+    }
 }
 
 LC_AIToolResult LC_AIPlanMode::propose(const QString& title, const LC_AIPlanCard::Answer answer, const QStringList& steps,
@@ -845,10 +915,14 @@ LC_AIToolResult LC_AIPlanMode::propose(const QString& title, const LC_AIPlanCard
     }
     m_approved = true;
     m_rejected = false;
+    if (m_planCard != nullptr && m_planCard != card) {
+        m_planCard->endProgress(false); // a new plan replaces it: nothing works on its steps any more
+    }
     m_planCard = card;
     publish();
     const QString intro = answer == LC_AIPlanCard::Answer::Edited
-                              ? QStringLiteral("The user edited the plan and approved it. Follow these steps exactly, in order:\n")
+                              ? QStringLiteral("The user edited the plan (now \"%1\") and approved it. Follow these steps exactly, "
+                                               "in order:\n").arg(m_title)
                               : QStringLiteral("The user approved the plan. Carry it out, in order:\n");
     return LC_AIToolResult::text(intro + numbered(steps)
                                  + QStringLiteral("\nCall update_plan with \"in_progress\" when you start a step and \"done\" "
@@ -922,12 +996,14 @@ void LC_AIPlanMode::newRequest() {
     m_approved = false;
     m_rejected = false;
     m_running = true;
+    m_runPlans = m_enabled;
+    m_runOffers = offersTools();
     m_planCard = nullptr; // an old plan's card keeps the ticks it had
     m_cards.clear();
     publish();
 }
 
-void LC_AIPlanMode::runEnded(const bool) {
+void LC_AIPlanMode::runEnded(const bool stopped) {
     m_running = false;
     for (const QPointer<LC_AIPlanCard>& card : std::as_const(m_cards)) {
         if (card != nullptr && !card->isAnswered()) {
@@ -936,6 +1012,9 @@ void LC_AIPlanMode::runEnded(const bool) {
     }
     m_cards.clear();
     publish();
+    if (m_planCard != nullptr) {
+        m_planCard->endProgress(stopped); // the card stays as a checklist: no step left spinning
+    }
 }
 
 void LC_AIPlanMode::reset() {
@@ -943,6 +1022,8 @@ void LC_AIPlanMode::reset() {
     m_rejected = false;
     m_running = false;
     m_reviewing = false;
+    m_runPlans = false;
+    m_runOffers = false;
     m_proposedInChat = false;
     m_title.clear();
     m_steps.clear();

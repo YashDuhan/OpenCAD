@@ -15,6 +15,7 @@
 #include <QJsonDocument>
 #include <QLabel>
 #include <QMouseEvent>
+#include <QResizeEvent>
 #include <QScreen>
 #include <QScrollArea>
 #include <QStyle>
@@ -46,7 +47,9 @@ namespace {
         if (call.name == "run_command") {
             QStringList lines;
             for (const QJsonValue& v : a.value("commands").toArray()) {
-                lines << v.toString();
+                if (!v.toString().trimmed().isEmpty()) {
+                    lines << v.toString().trimmed(); // as run_command types them: blank entries are skipped
+                }
             }
             text = lines.isEmpty() ? a.value("commands").toString() : lines.join('\n');
         }
@@ -65,6 +68,28 @@ namespace {
             }
             text = lines.join('\n');
         }
+        else if (call.name == "fix_drawing_issues") {
+            // which of the checker's fixes, and where: "{ }" told the user nothing
+            const auto list = [&a](const QString& key) {
+                QStringList items;
+                for (const QJsonValue& v : a.value(key).toArray()) {
+                    items << (v.isDouble() ? QStringLiteral("#%1").arg(v.toInteger()) : v.toString().replace('_', ' '));
+                }
+                return items.join(", ");
+            };
+            QStringList lines;
+            const QString rules = list("rules");
+            lines << (rules.isEmpty() ? QObject::tr("Fixes: all (zero length, duplicate, overlap, endpoint gap, nearly closed, bylayer)")
+                                      : QObject::tr("Fixes: %1").arg(rules));
+            if (const QString ids = list("ids"); !ids.isEmpty()) {
+                lines << QObject::tr("Only issues with: %1").arg(ids);
+            }
+            const QString scope = a.value("scope").toString();
+            lines << (scope == "selection" ? QObject::tr("In: the selected entities")
+                      : scope == "layer"   ? QObject::tr("In: layer \"%1\"").arg(a.value("layer").toString())
+                                           : QObject::tr("In: the whole drawing"));
+            text = lines.join('\n');
+        }
         else if (a.value("path").isString()) {
             text = a.value("path").toString();
         }
@@ -73,6 +98,44 @@ namespace {
         }
         return text.size() > MAX_PREVIEW ? text.left(MAX_PREVIEW) + "\n…" : text;
     }
+
+    /**
+     * A one-line label that never makes its row wider than the box: shortened with "…" when there is no room (the
+     * whole text in its tooltip). A long reason ("Safety rule: deletes entities ...") pushed Deny out of view.
+     */
+    class ElidedLabel : public QLabel {
+    public:
+        /** `keep`: how many characters stay before it is shortened (the title keeps more than the reason beside it). */
+        ElidedLabel(const QString& text, const int keep, QWidget* parent) : QLabel(parent), m_full(text), m_keep(keep) {
+            QLabel::setText(text);
+            setToolTip(text);
+            setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+        }
+        QSize sizeHint() const override { return withTextWidth(fontMetrics().horizontalAdvance(m_full)); }
+        QSize minimumSizeHint() const override {
+            return withTextWidth(qMin(fontMetrics().horizontalAdvance(m_full),
+                                      fontMetrics().horizontalAdvance(m_full.left(m_keep) + QString::fromUtf8("…"))));
+        }
+
+    protected:
+        void resizeEvent(QResizeEvent* event) override {
+            QLabel::resizeEvent(event);
+            const QString shown = fontMetrics().elidedText(m_full, Qt::ElideRight, contentsRect().width());
+            if (shown != text()) {
+                QLabel::setText(shown); // the size hints use the full text, so this does not lay the row out again
+            }
+        }
+
+    private:
+        /** The label's size with a text this wide: its padding and frame (style sheet) stay as they are. */
+        QSize withTextWidth(const int width) const {
+            const QSize current = QLabel::sizeHint();
+            return {current.width() - fontMetrics().horizontalAdvance(text()) + width, current.height()};
+        }
+
+        QString m_full;
+        int m_keep;
+    };
 
     class ClickFrame : public QFrame {
     public:
@@ -119,6 +182,9 @@ namespace {
         if (call.name == "add_text") {
             return lines == 1 ? QObject::tr("Adds 1 text label to the drawing")
                               : QObject::tr("Adds %1 text labels to the drawing").arg(lines);
+        }
+        if (call.name == "fix_drawing_issues") {
+            return QObject::tr("Changes the drawing in one undo step, and may delete entities (duplicates, zero length)");
         }
         if (call.name.startsWith("mcp__")) {
             return QObject::tr("Calls the MCP server \"%1\"").arg(call.name.section("__", 1, 1));
@@ -217,14 +283,13 @@ void LC_AIApprovalBox::add(const LC_AIToolCall& call, const QString& label, cons
 
     auto* title = new QHBoxLayout();
     title->setSpacing(8);
-    auto* name = new QLabel(tr("Approve %1?").arg(label), item);
+    auto* name = new ElidedLabel(tr("Approve %1?").arg(label), 24, item); // "Approve Run command?" stays whole
     name->setObjectName("pendingTool");
     title->addWidget(name);
     if (!decision.reason.isEmpty()) {
-        auto* reason = new QLabel(decision.reason, item);
+        auto* reason = new ElidedLabel(decision.reason, 6, item);
         reason->setObjectName("pendingReason");
-        reason->setToolTip(decision.reason);
-        title->addWidget(reason);
+        title->addWidget(reason, 0, Qt::AlignVCenter);
     }
     title->addStretch(1);
     layout->addLayout(title);
@@ -233,6 +298,8 @@ void LC_AIApprovalBox::add(const LC_AIToolCall& call, const QString& label, cons
     const QStringList lines = text.split('\n');
     auto* what = new QLabel(whatItDoes(call, int(lines.size())), item);
     what->setObjectName("pendingWhat");
+    what->setWordWrap(true); // e.g. a long MCP server name
+    what->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     layout->addWidget(what);
 
     // a few lines, then "Show all": long command lists no longer fill the panel

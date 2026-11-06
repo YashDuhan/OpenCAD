@@ -13,6 +13,7 @@
 #include <QHBoxLayout>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMouseEvent>
@@ -771,6 +772,7 @@ namespace {
             setObjectName("choiceRow");
             setAttribute(Qt::WA_Hover);
             setCursor(Qt::PointingHandCursor);
+            setFocusPolicy(Qt::StrongFocus); // Tab to a choice, Enter or Space picks it
             auto* layout = new QHBoxLayout(this);
             layout->setContentsMargins(10, 8, 10, 8);
             layout->setSpacing(10);
@@ -793,9 +795,38 @@ namespace {
             }
         }
 
+        void keyPressEvent(QKeyEvent* event) override {
+            const int key = event->key();
+            if (isEnabled() && (key == Qt::Key_Return || key == Qt::Key_Enter || key == Qt::Key_Space)) {
+                m_onClick();
+                return;
+            }
+            QFrame::keyPressEvent(event);
+        }
+
     private:
         std::function<void()> m_onClick;
     };
+}
+
+QStringList LC_AIClarificationCard::choicesOf(const QJsonObject& arguments) {
+    QStringList choices;
+    for (const QJsonValue& v : arguments.value("choices").toArray()) {
+        if (!v.toString().trimmed().isEmpty()) {
+            choices << v.toString().trimmed();
+        }
+    }
+    return choices;
+}
+
+QString LC_AIClarificationCard::problemWith(const QJsonObject& arguments) {
+    if (arguments.value("question").toString().trimmed().isEmpty()) {
+        return tr("question must be a non-empty string.");
+    }
+    if (const qsizetype count = choicesOf(arguments).size(); count > MAX_CHOICES) {
+        return tr("There are %1 choices; give at most %2 (the user can also type an answer).").arg(count).arg(MAX_CHOICES);
+    }
+    return {};
 }
 
 LC_AIClarificationCard::LC_AIClarificationCard(const QString& question, const QStringList& choices, const LC_AITheme& theme,
@@ -815,7 +846,7 @@ LC_AIClarificationCard::LC_AIClarificationCard(const QString& question, const QS
 #clarChoices { border: 1px solid %2; border-radius: 8px; background: transparent; }
 #choiceRow { border: none; border-top: 1px solid %4; border-radius: 0; }
 #choiceRow[first="true"] { border-top: none; }
-#choiceRow:hover { background: %5; }
+#choiceRow:hover, #choiceRow:focus { background: %5; }
 #choiceRow[chosen="true"] { background: %6; }
 #choiceBadge { background: #4b5563; color: #ffffff; border-radius: 5px; font-size: 12px; font-weight: 600; }
 #choiceText { font-size: 13px; color: %3; }
@@ -994,6 +1025,22 @@ void LC_AIClarificationCard::setStopped() {
         m_status->show();
         collapse(QString(), false);
     }
+}
+
+void LC_AIClarificationCard::setFailed(const QString& reason) {
+    if (!m_answer.isEmpty()) {
+        return;
+    }
+    m_answer = QStringLiteral(" "); // locks the card: a later question does not take its place
+    for (QWidget* row : std::as_const(m_choiceRows)) {
+        row->setEnabled(false);
+    }
+    m_input->setEnabled(false);
+    m_continue->setEnabled(false);
+    m_status->setText(tr("Not asked: %1").arg(reason));
+    m_status->setWordWrap(true);
+    m_status->show();
+    collapse(tr("Not asked"), false);
 }
 
 void LC_AIClarificationCard::focusInput() {
@@ -1234,14 +1281,13 @@ void LC_AIChatTranscript::addAssistant(const LC_AIChatMessage& message) {
         add(textBlock(message.text));
     }
     for (const LC_AIToolCall& call : message.toolCalls) {
-        if (call.name == "request_clarification") { // a question card instead of a tool row
-            QStringList choices;
-            for (const QJsonValue& v : call.arguments.value("choices").toArray()) {
-                if (!v.toString().trimmed().isEmpty()) {
-                    choices << v.toString().trimmed();
-                }
-            }
-            auto* card = new LC_AIClarificationCard(call.arguments.value("question").toString(), choices.mid(0, 8), m_theme, m_content);
+        // a question card instead of a tool row; a call that cannot ask (blank question, bad JSON, too many choices)
+        // stays a tool row that shows its error, so no empty card waits for an answer that never comes
+        if (call.name == "request_clarification" && call.argumentsError.isEmpty()
+            && LC_AIClarificationCard::problemWith(call.arguments).isEmpty()) {
+            auto* card = new LC_AIClarificationCard(call.arguments.value("question").toString(),
+                                                    LC_AIClarificationCard::choicesOf(call.arguments), m_theme, m_content);
+            card->setCallId(call.id);
             m_cards << card;
             closeGroup();
             add(card);
@@ -1278,21 +1324,45 @@ void LC_AIChatTranscript::toolAwaitingApproval(const QString& callId) {
     stickToBottom();
 }
 
-void LC_AIChatTranscript::activateClarification(std::function<void(const QString&)> deliver) {
+bool LC_AIChatTranscript::activateClarification(std::function<void(const QString&)> deliver) {
     for (LC_AIClarificationCard* card : std::as_const(m_cards)) {
         if (!card->isActivated()) {
             card->activate(std::move(deliver));
             card->focusInput();
             setThinking(false);
             stickToBottom();
-            return;
+            return true;
         }
     }
+    return false;
+}
+
+bool LC_AIChatTranscript::answerClarification(const QString& answer) {
+    for (LC_AIClarificationCard* card : std::as_const(m_cards)) {
+        if (card->isActivated() && !card->isAnswered()) {
+            card->showAnswer(answer); // as if typed in the card
+            return true;
+        }
+    }
+    return false;
 }
 
 void LC_AIChatTranscript::toolResult(const LC_AIChatMessage& message) {
+    if (LC_AIInferenceManager::isStoppedResult(message)) {
+        // the user stopped the run before (or while) the call ran: finishRun() shows it as stopped, not failed
+        return;
+    }
     if (LC_AIToolCallWidget* w = m_tools.value(message.toolCallId)) {
         w->setResult(message.result);
+    }
+    if (message.toolName == QStringLiteral("request_clarification") && message.result.isError) {
+        // refused before it asked (tool permissions, a bad call): its card closes, so the next question gets the next answer
+        for (int i = 0; i < m_cards.size(); ++i) {
+            if (m_cards[i]->callId() == message.toolCallId && !m_cards[i]->isAnswered()) {
+                m_cards.takeAt(i)->setFailed(message.result.joinedText());
+                break;
+            }
+        }
     }
     stickToBottom();
 }

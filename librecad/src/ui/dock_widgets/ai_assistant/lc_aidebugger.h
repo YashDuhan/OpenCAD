@@ -57,11 +57,14 @@ public:
 
     LC_AIDebugger(const LC_AITheme& theme, QObject* parent = nullptr);
 
-    /** "Check my work automatically": the debugger runs after every run that used tools. Off by default. */
+    /** "Check my work automatically": the debugger runs after every run that changed the drawing. Off by default. */
     static bool autoCheck();
     static void setAutoCheck(bool on);
 
-    /** What a run did, from the request at `start` on: its tool calls, and those that failed on their own. */
+    /**
+     * What a run did to the drawing, from the request at `start` on: its calls that change the drawing and ran (not
+     * reads, web lookups, questions, refused or stopped calls), and those of them that failed on their own.
+     */
     struct Report {
         int toolCalls {0};
         int failures {0};

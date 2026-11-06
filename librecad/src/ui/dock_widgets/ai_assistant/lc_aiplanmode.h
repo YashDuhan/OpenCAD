@@ -21,6 +21,7 @@
 #include "lc_aiprovidersdialog.h"
 
 class QLabel;
+class QLineEdit;
 class QPlainTextEdit;
 class QScrollArea;
 class QTimer;
@@ -79,10 +80,14 @@ public:
     void activate(Deliver deliver);
     bool isActivated() const { return m_activated; }
     bool isAnswered() const { return m_answered; }
+    /** The plan's title, as the user left it (Edit can change it). */
+    QString title() const { return m_title; }
     /** The run stopped before the user answered: the card locks. */
     void setStopped();
     /** Shows the status of every step (the plan is being worked on). */
     void setProgress(const QList<LC_AIPlanStep>& steps);
+    /** The run ended: a step still in progress shows that it was not finished, instead of a spinner. */
+    void endProgress(bool stopped);
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
@@ -93,9 +98,14 @@ private:
     void showSteps(const QStringList& steps);
     void setEditing(bool editing);
     void setStatus(const QString& icon, const QString& text, const QColor& color);
+    static QString editHint();
 
     LC_AITheme m_theme;
+    QString m_title;
     QStringList m_steps;
+    QList<LC_AIPlanStep> m_progress; // as setProgress() showed it
+    QLabel* m_titleLabel {nullptr};
+    QLineEdit* m_titleEdit {nullptr}; // Edit: the title, above the steps
     QWidget* m_stepList {nullptr};
     QList<LC_AIStatusIcon*> m_stepIcons; // right of each step: in progress, done or skipped
     QList<QLabel*> m_stepLabels;
@@ -171,8 +181,8 @@ public:
      * answered the call; false leaves it to the normal approval.
      */
     bool gate(const LC_AIToolCall& call, const std::function<void(bool, const QString&)>& answer);
-    /** The debugger's pass checks and fixes the work outside the plan: no gate meanwhile. */
-    void setReviewing(bool reviewing) { m_reviewing = reviewing; }
+    /** The debugger's pass checks and fixes the work outside the plan: no gate meanwhile (but a rejected plan holds). */
+    void setReviewing(bool reviewing);
 
     /** A new request from the user: it needs a plan of its own. */
     void newRequest();
@@ -188,6 +198,7 @@ public:
 private:
     void setEnabled(bool enabled);
     void refreshToggle();
+    bool offersTools() const { return m_enabled || m_proposedInChat; } // what tools() gives a run that starts now
     void publish(); // the current plan's progress to its card and the tracker
     LC_AIToolResult propose(const QString& title, LC_AIPlanCard::Answer answer, const QStringList& steps, LC_AIPlanCard* card);
     LC_AIToolResult update(const QJsonObject& args);
@@ -200,6 +211,8 @@ private:
     bool m_approved {false};          // the current request has an approved plan
     bool m_rejected {false};          // ...or the user turned its plan down
     bool m_running {false};
+    bool m_runPlans {false};          // plan mode was on when the request was sent: the gate holds for its run
+    bool m_runOffers {false};         // the run (or the debugger's pass) was given the plan tools
     bool m_proposedInChat {false};    // the conversation has plan tool calls: keep the tools it refers to
     QString m_title;
     QList<LC_AIPlanStep> m_steps;
