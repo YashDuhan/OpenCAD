@@ -43,6 +43,13 @@ public:
     void focusInput();
     /** Puts a task in the message box (sent at once when send is true), ready for the user to finish. */
     void startTask(const QString& prompt, bool send = false);
+    /**
+     * Sends a task as your next message without touching the message box, so a draft in it stays (the drawing check's
+     * Fix all). While the AI is busy the task waits for the run to end; one waits at a time, a newer one takes its
+     * place. done(true): it was sent; done(false): it was not (the run was stopped, the chat moved to another
+     * drawing, a newer task took its place, or the request could not start).
+     */
+    void sendTask(const QString& prompt, const std::function<void(bool sent)>& done = {});
     /** The tools the AI can use now: OpenCAD's own and those of connected MCP servers. */
     QList<LC_AITool> availableTools() const;
     /** Opens the AI sidebar of this window and starts a task in it. */
@@ -109,6 +116,12 @@ private:
     LC_AIDebugger* m_debugger {nullptr};
     int m_runStart {-1};      // index in m_messages of the request the last run answered
     bool m_debugging {false}; // the run is the debugger's pass
+
+    // sendTask(): the task waiting for the AI to be free, the drawing whose chat it belongs to, who hears how it went
+    QString m_queuedTask;
+    QString m_queuedDrawing;
+    std::function<void(bool)> m_queuedDone;
+    void sendQueuedTask();
 };
 
 #endif

@@ -21,6 +21,7 @@
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QSet>
+#include <QTimer>
 #include <QVBoxLayout>
 #include <algorithm>
 #include <cmath>
@@ -2501,20 +2502,29 @@ namespace {
      */
     QString fixPrompt(const Report& r) {
         QMap<QString, int> counts;
+        int fixable = 0;
         for (const Issue& issue : r.issues) {
             counts[issue.rule] += 1;
+            fixable += issue.fixable ? 1 : 0;
         }
+        // the rules by their titles, as the card shows them (the bubble is the user's message)
         QStringList found;
         for (const Rule& rule : RULES) {
             if (const int n = counts.value(QString::fromLatin1(rule.id)); n > 0) {
-                found << QStringLiteral("%1 %2").arg(n).arg(QString::fromLatin1(rule.id));
+                const QString title = QObject::tr(rule.title);
+                found << QStringLiteral("%1 (%2)").arg(title.left(1).toLower() + title.mid(1)).arg(n);
             }
         }
         const QString scope = r.scopeText == "the selection" ? QStringLiteral(" (scope \"selection\")") : QString();
+        const QString what = r.issues.size() == 1 ? QStringLiteral("issue") : QStringLiteral("%1 issues").arg(r.issues.size());
+        if (fixable == 0) {
+            return QStringLiteral("Help me fix the %1 the drawing check found in %2: %3. None can be fixed automatically: run "
+                                  "check_drawing%4 for the details, then ask me before each change.")
+                .arg(what, r.scopeText, found.join(", "), scope);
+        }
         return QStringLiteral("Fix the %1 the drawing check found in %2: %3. Use fix_drawing_issues%4 for the safe fixes, then "
                               "check_drawing%4 for what is left; ask me before anything that needs a decision.")
-            .arg(r.issues.size() == 1 ? QStringLiteral("issue") : QStringLiteral("%1 issues").arg(r.issues.size()),
-                 r.scopeText, found.join(", "), scope);
+            .arg(what, r.scopeText, found.join(", "), scope);
     }
 
     /** Selects the issue's entities and zooms to where it is, in the drawing that was checked. */
@@ -2678,23 +2688,42 @@ namespace {
                 addGroup(rule, mine, t, dpr, layout);
             }
 
-            if (report.error.isEmpty()) {
+            { // the buttons: Check again on every card, also on "No drawing is open"
                 layout->addSpacing(6);
                 auto* buttons = new QHBoxLayout();
                 buttons->setSpacing(8);
-                if (!clean) {
-                    auto* fix = new QPushButton(QObject::tr("Fix all"), this);
+                if (!clean && report.error.isEmpty()) {
+                    // none fixable by itself: the AI can still help, asking about each one
+                    const QString label = fixable > 0 ? QObject::tr("Fix all") : QObject::tr("Ask the AI");
+                    auto* fix = new QPushButton(label, this);
                     fix->setObjectName("checkFix");
                     fix->setIcon(LC_AIIcons::lucideIcon("wrench", 13, t.bgRoot));
                     fix->setCursor(Qt::PointingHandCursor);
-                    fix->setToolTip(QObject::tr("Ask the AI to fix these issues (safe fixes first, as one undo step)"));
-                    QObject::connect(fix, &QPushButton::clicked, this, [this, fix] {
+                    fix->setToolTip(fixable > 0 ? QObject::tr("Ask the AI to fix these issues (safe fixes first, as one undo step)")
+                                                : QObject::tr("None of these can be fixed automatically: ask the AI to help, "
+                                                              "it asks you before each change"));
+                    QObject::connect(fix, &QPushButton::clicked, this, [this, fix, label] {
                         if (!m_chat) {
                             return;
                         }
+                        // an old card after its drawing was closed: there is nothing to fix now
+                        const RS_GraphicView* view = LC_AITools::view();
+                        if (view == nullptr || view->getGraphic() == nullptr) {
+                            fix->setText(QObject::tr("No drawing is open"));
+                            QTimer::singleShot(2500, fix, [fix, label] { fix->setText(label); });
+                            return;
+                        }
+                        // sent as a message of its own, so a draft in the message box stays; while the AI works it
+                        // waits for the run to end, and the button comes back if it is not sent after all
                         fix->setEnabled(false);
-                        fix->setText(QObject::tr("Asked the AI"));
-                        m_chat->startTask(fixPrompt(m_report), true);
+                        fix->setText(QObject::tr("Waiting for the AI..."));
+                        const QPointer<QPushButton> button(fix);
+                        m_chat->sendTask(fixPrompt(m_report), [button, label](const bool sent) {
+                            if (button) {
+                                button->setText(sent ? QObject::tr("Asked the AI") : label);
+                                button->setEnabled(!sent);
+                            }
+                        });
                     });
                     buttons->addWidget(fix);
                 }
