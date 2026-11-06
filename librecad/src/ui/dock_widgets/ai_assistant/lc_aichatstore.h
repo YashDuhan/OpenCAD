@@ -15,6 +15,7 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QObject>
+#include <QSet>
 
 #include "lc_aiinferencemanager.h"
 
@@ -27,20 +28,23 @@ struct LC_AIChatInfo {
     bool renamed {false};
     QDateTime created;
     QDateTime updated;
-    int count {0};        // questions and answers; tool calls and their results are not counted
+    int count {0};        // questions and answers; tool calls, their results and the lines between them are not counted
     QString questions;    // the start of every question, for the search
 };
 
 /**
  * The saved AI chats: one JSON file per chat in <app data>/ai-chats/, filed under the drawing they belong to.
  * A chat keeps what continuing it needs (tool calls and results, the provider's raw blocks such as thinking
- * signatures); screenshots are scaled down and only the newest ones are kept, so the files stay small.
+ * signatures); screenshots are scaled down and only the newest ones are kept, so the files stay small. The files
+ * attached to questions (images, PDFs) are kept as they were sent, in a folder next to the chat: <id>.files/.
  */
 class LC_AIChatStore : public QObject {
     Q_OBJECT
 public:
     static constexpr int MAX_IMAGE_EDGE = 640; // px: saved screenshots are scaled down to this
     static constexpr int MAX_IMAGES = 40;      // per chat, the newest; older ones are left out of the file
+    // per chat, the attached files of the newest questions; older ones are left out (the chat says so)
+    static constexpr qint64 MAX_FILE_BYTES = 64 * 1024 * 1024;
 
     static LC_AIChatStore& instance();
 
@@ -54,7 +58,8 @@ public:
     /** The chat of this drawing that changed last, or an empty id. */
     QString latest(const QString& drawing) const;
 
-    QList<LC_AIChatMessage> load(const QString& id) const;
+    /** The conversation; when the chat's file cannot be read, an empty one and the reason in `error`. */
+    QList<LC_AIChatMessage> load(const QString& id, QString* error = nullptr) const;
     /** Writes the conversation; an empty or unknown id makes a new chat. Returns the chat's id. */
     QString save(const QString& id, const QString& drawing, const QString& drawingName, const QList<LC_AIChatMessage>& messages);
     /** A new name for the chat; an empty one brings back the first question. */
@@ -71,7 +76,11 @@ public:
     static QString newUnsavedKey();
     static bool isUnsavedKey(const QString& key);
 
-    static LC_AIChatMessage messageFromJson(const QJsonObject& json);
+    /**
+     * Tool calls without a result (the run was stopped while they waited for approval, or before they ran) get one
+     * that says so, marked stopped: providers refuse a conversation with unanswered calls. Returns true when it added any.
+     */
+    static bool closeOpenCalls(QList<LC_AIChatMessage>& messages);
 
 signals:
     void changed();
@@ -79,13 +88,26 @@ signals:
 private:
     LC_AIChatStore();
     QString chatFile(const QString& id) const;
+    /** The folder of the chat's attached files. */
+    QString filesDir(const QString& id) const;
     void loadIndex();
     void writeIndex() const;
     bool writeChat(const LC_AIChatInfo& info, const QJsonArray& messages) const;
-    QJsonObject readChat(const QString& id) const;
-    QJsonArray messagesToJson(const QList<LC_AIChatMessage>& messages);
+    /** The chat's JSON; empty, with the reason in `error`, when its file is missing or damaged. */
+    QJsonObject readChat(const QString& id, QString* error = nullptr) const;
+    /** `files`: the attached files the JSON refers to (written to the chat's folder on the way). */
+    QJsonArray messagesToJson(const QString& id, const QList<LC_AIChatMessage>& messages, QSet<QString>& files);
+    LC_AIChatMessage messageFromJson(const QJsonObject& json, const QString& id) const;
     /** A screenshot as the file keeps it: scaled down, as PNG or JPEG, whichever is smaller. */
     QJsonObject smallImage(const LC_AIContent& image);
+    /** An attached file's name in the chat's folder: a hash of its bytes, so a file attached twice is kept once. */
+    QString fileNameOf(const LC_AIAttachment& attachment);
+    bool writeFile(const QString& id, const QString& name, const QByteArray& data) const;
+    /** An attached file as it was sent, read back from the chat's folder; false when it is gone or unreadable. */
+    bool readAttachment(const QString& id, const QJsonObject& json, LC_AIAttachment& out) const;
+    /** Takes the files the chat no longer refers to out of its folder. */
+    void removeUnusedFiles(const QString& id, const QSet<QString>& used) const;
+    bool copyFiles(const QString& from, const QString& to) const;
 
     static QJsonObject infoToJson(const LC_AIChatInfo& info);
     static LC_AIChatInfo infoFromJson(const QJsonObject& json);
@@ -94,6 +116,9 @@ private:
     QString m_dir;
     QHash<QString, LC_AIChatInfo> m_chats;
     QHash<QByteArray, QJsonObject> m_images; // screenshot hash -> its saved form, so a chat is not re-encoded on every save
+    QHash<QString, QString> m_fileNames;     // attachment id -> its file name, so its bytes are hashed once
+    mutable QHash<QString, LC_AIAttachment> m_files; // file path -> the attachment read from it, its preview drawn once
+    mutable qint64 m_filesBytes {0};
 };
 
 #endif

@@ -45,6 +45,10 @@ struct LC_AIChatMessage {
     // User: files sent with the text, and the drawing context its @-mentions stood for when it was sent
     QList<LC_AIAttachment> attachments;
     QString context;
+    // User: a request OpenCAD wrote itself rather than the user: "debugger" for the debugger's review request (the
+    // chat shows it as the Debugger's section, not as a bubble, and does not count it as a question); empty otherwise
+    QString internal;
+    QString internalReason; // why it was made, as its section says it ("you asked", "a tool call failed")
 
     // Assistant
     QList<LC_AIToolCall> toolCalls;
@@ -55,6 +59,11 @@ struct LC_AIChatMessage {
     QString toolCallId;
     QString toolName;
     LC_AIToolResult result;
+    bool stopped {false}; // the call never ran: the run was stopped (Stop, New Chat) before it; the result says so
+
+    // Assistant and ToolResult: the AI run (LC_AICheckpoints) it was part of, so a chat shown again in the same session
+    // gets its "Revert AI changes" bars back; 0 when unknown (an older chat, or one from an earlier session)
+    int run {0};
 };
 
 /**

@@ -14,12 +14,14 @@
 #include <QJsonDocument>
 #include <QMdiArea>
 #include <QMdiSubWindow>
+#include <QSet>
 #include <QTimer>
 #include <QToolButton>
 
 #include "lc_aichathistorypopup.h"
 #include "lc_aichatstore.h"
 #include "lc_aichattranscript.h"
+#include "lc_aicheckpoints.h"
 #include "lc_aiicons.h"
 #include "qc_applicationwindow.h"
 #include "qc_mdiwindow.h"
@@ -212,16 +214,43 @@ void LC_AIChatSession::show(const QString& chatId) {
     m_saveTimer->stop();
     m_dirty = false;
     m_chatId = store.contains(chatId) ? chatId : QString();
-    m_messages = m_chatId.isEmpty() ? QList<LC_AIChatMessage>() : store.load(m_chatId);
+    QString error;
+    m_messages = m_chatId.isEmpty() ? QList<LC_AIChatMessage>() : store.load(m_chatId, &error);
+    const QString unreadable = error.isEmpty() ? QString() : store.info(m_chatId).title;
+    if (!error.isEmpty()) {
+        m_chatId.clear(); // its file is left as it is: what is asked now goes into a new chat, not over it
+        m_messages.clear();
+    }
     remember();
     emit showMessages(m_messages);
+    if (!error.isEmpty()) {
+        if (auto* transcript = m_panel->findChild<LC_AIChatTranscript*>()) {
+            transcript->addError(tr("The chat \"%1\" could not be read: %2. Its file is left as it is; what you ask now "
+                                    "starts a new chat.")
+                                     .arg(unreadable.isEmpty() ? tr("Untitled chat") : unreadable, error));
+        }
+    }
 }
 
 void LC_AIChatSession::save(const QList<LC_AIChatMessage>& messages) {
     if (!m_dirty && sameConversation(messages, m_messages)) {
         return; // e.g. a request that could not start: the saved chat is unchanged (and keeps its date)
     }
-    m_messages = messages;
+    // the AI run each answer and result belongs to, so a chat shown again gets its "Revert AI changes" bars back:
+    // the messages saved before keep theirs, the ones new since the last save are of the run in progress
+    // (the panel saves as each one arrives)
+    QList<LC_AIChatMessage> stamped = messages;
+    const int run = LC_AICheckpoints::instance().currentRun();
+    for (int i = 0; i < stamped.size(); ++i) {
+        LC_AIChatMessage& m = stamped[i];
+        if (m.run == 0 && i < m_messages.size() && m_messages[i].role == m.role && m_messages[i].toolCallId == m.toolCallId) {
+            m.run = m_messages[i].run;
+        }
+        else if (m.run == 0 && i >= m_messages.size() && m.role != LC_AIChatMessage::Role::User) {
+            m.run = run;
+        }
+    }
+    m_messages = stamped;
     m_dirty = true;
     if (!m_saveTimer->isActive()) { // not restarted on every message, so a long run is still saved as it goes
         m_saveTimer->start();
@@ -243,6 +272,9 @@ void LC_AIChatSession::flush() {
             remember();
         }
         return;
+    }
+    if (!m_running) {
+        LC_AIChatStore::closeOpenCalls(m_messages); // a call stopped while it waited for approval is saved as stopped
     }
     m_chatId = store.save(m_chatId, m_drawing, m_drawingName, m_messages);
     remember();
@@ -377,7 +409,7 @@ void LC_AIChatSession::replay(LC_AIChatTranscript* transcript, const QList<LC_AI
                 if (!first) {
                     transcript->finishRun(); // each question started a run: close the one before, as it was closed then
                 }
-                transcript->addUser(m.text);
+                transcript->addUser(m.text, m.attachments);
                 break;
             case LC_AIChatMessage::Role::Assistant:
                 transcript->addAssistant(m);
@@ -393,7 +425,9 @@ void LC_AIChatSession::replay(LC_AIChatTranscript* transcript, const QList<LC_AI
                         }
                     }
                 }
-                transcript->toolResult(m);
+                if (!m.stopped) { // a call stopped before it ran keeps its row "Stopped" (finishRun)
+                    transcript->toolResult(m);
+                }
                 break;
         }
         first = false;

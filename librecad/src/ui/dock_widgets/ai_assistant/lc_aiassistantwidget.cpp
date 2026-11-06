@@ -681,6 +681,8 @@ void LC_AIAssistantWidget::startDebugger(const QString& reason) {
     // the pass goes on in the same conversation, so it sees the request and every call and screenshot of the run
     LC_AIChatMessage review;
     review.role = LC_AIChatMessage::Role::User;
+    review.internal = QStringLiteral("debugger"); // a chat shown again shows it as the Debugger's section, as now
+    review.internalReason = reason;
     review.text = LC_AIDebugger::reviewRequest(m_messages, m_runStart, reason);
     m_messages.append(review);
     m_runTools = LC_AIControl::withControl(m_tools + LC_MCPManager::instance().aiTools());

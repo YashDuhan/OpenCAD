@@ -66,6 +66,7 @@ private:
     void onWindowActivated(QMdiSubWindow* window);
     /** Shows the chat this drawing showed last, else its latest one (an empty one when it has none). */
     void follow(QC_MDIWindow* window);
+    /** Shows a saved chat; one whose file cannot be read is not shown (a note says so) and a new chat starts. */
     void show(const QString& chatId);
     /** The drawing's window keeps which chat it shows, for when it comes back to the front. */
     void remember();
