@@ -111,6 +111,9 @@ namespace {
         if (!std::isfinite(v)) {
             return QStringLiteral("n/a");
         }
+        if (v != 0 && std::abs(v) < 1e-6) {
+            return QString::number(v, 'g', 3); // 1e-09 (eight decimals would round it to 0)
+        }
         QString s = QString::number(v, 'f', std::abs(v) < 0.01 && v != 0 ? 8 : 4);
         if (s.contains('.')) {
             while (s.endsWith('0')) {
@@ -1665,9 +1668,11 @@ namespace {
                 issue.rule = QStringLiteral("layer0");
                 issue.ids = ids;
                 issue.position = min.valid ? (min + max) * 0.5 : RS_Vector(false);
-                issue.message = QStringLiteral("%1 entities (%2) are on layer 0 although the drawing has other layers (%3)")
+                issue.message = (ids.size() == 1 ? QStringLiteral("%1 entity (%2) is on layer 0 although the drawing has other layers (%3)")
+                                                 : QStringLiteral("%1 entities (%2) are on layer 0 although the drawing has other layers (%3)"))
                                     .arg(ids.size()).arg(idList(ids), others.join(", "));
-                issue.fix = QStringLiteral("move them to the layers they belong on; keep layer 0 for block contents");
+                issue.fix = ids.size() == 1 ? QStringLiteral("move it to the layer it belongs on; keep layer 0 for block contents")
+                                            : QStringLiteral("move them to the layers they belong on; keep layer 0 for block contents");
                 c.add(issue);
             }
         }
@@ -2866,8 +2871,8 @@ QString LC_AIDrawingChecker::format(const Report& report, const int limit) {
         return report.error;
     }
     QStringList out;
-    out << QStringLiteral("Checked %1: %2 entities (units: %3). Gaps under %4 should meet; points within %5 are the same point.")
-               .arg(report.scopeText).arg(report.checked)
+    out << QStringLiteral("Checked %1: %2 (units: %3). Gaps under %4 should meet; points within %5 are the same point.")
+               .arg(report.scopeText, report.checked == 1 ? QStringLiteral("1 entity") : QStringLiteral("%1 entities").arg(report.checked))
                .arg(report.unit.isEmpty() ? QStringLiteral("none set") : report.unit, fmt(report.tolerance), fmt(report.precision));
     int errors = 0;
     int warnings = 0;
@@ -2883,12 +2888,24 @@ QString LC_AIDrawingChecker::format(const Report& report, const int limit) {
     }
     out << QStringLiteral("Found %1 issue(s): %2 error(s), %3 warning(s), %4 note(s); %5 can be fixed with fix_drawing_issues.")
                .arg(report.issues.size()).arg(errors).arg(warnings).arg(int(report.issues.size()) - errors - warnings).arg(fixable);
-    // every rule gets a share of the lines, so one noisy rule does not hide the rest
+    // every rule gets a share of the lines, so one noisy rule does not hide the rest: one line each in turn until the
+    // limit is used up (a rule with fewer issues leaves its turns to the others)
     QMap<QString, QList<const Issue*>> byRule;
     for (const Issue& issue : report.issues) {
         byRule[issue.rule] << &issue;
     }
-    const int share = std::max(3, limit / std::max(1, int(byRule.size())));
+    QHash<QString, int> shares;
+    for (int left = std::max(0, limit), given = 1; left > 0 && given > 0;) {
+        given = 0;
+        for (const Rule& r : RULES) {
+            const QString id = QString::fromLatin1(r.id);
+            if (left > 0 && report.rules.contains(id) && shares.value(id) < byRule.value(id).size()) {
+                ++shares[id];
+                ++given;
+                --left;
+            }
+        }
+    }
     QStringList clean;
     for (const Rule& r : RULES) {
         const QString id = QString::fromLatin1(r.id);
@@ -2901,21 +2918,27 @@ QString LC_AIDrawingChecker::format(const Report& report, const int limit) {
             continue;
         }
         out << QString() << QStringLiteral("[%1] %2: %3").arg(id, QString::fromLatin1(r.title)).arg(issues.size());
+        const int share = shares.value(id);
         for (int i = 0; i < issues.size() && i < share; ++i) {
             const Issue* issue = issues[i];
             static const QRegularExpression hasPoint(QStringLiteral("\\(-?\\d"));
-            out << QStringLiteral("- %1: %2%3. Fix: %4%5.")
-                       .arg(issue->severity, issue->message,
-                            issue->position.valid && !hasPoint.match(issue->message).hasMatch() ? QStringLiteral(" (at %1)").arg(fmt(issue->position))
-                                                                                                 : QString(),
-                            issue->fix, issue->fixable ? QStringLiteral(" (fixable)") : QString());
+            QString what = issue->message;
+            if (issue->position.valid && !hasPoint.match(what).hasMatch()) {
+                what += QStringLiteral(" (at %1)").arg(fmt(issue->position));
+            }
+            if (!what.endsWith('?') && !what.endsWith('.')) {
+                what += '.'; // a message that asks a question keeps its question mark alone
+            }
+            out << QStringLiteral("- %1: %2 Fix: %3%4.")
+                       .arg(issue->severity, what, issue->fix, issue->fixable ? QStringLiteral(" (fixable)") : QString());
         }
         if (issues.size() > share) {
             QList<Id> rest;
             for (int i = share; i < issues.size(); ++i) {
                 rest << issues[i]->ids.value(0);
             }
-            out << QStringLiteral("- ... and %1 more of these: %2").arg(issues.size() - share).arg(idList(rest, 40));
+            out << (share == 0 ? QStringLiteral("- not listed (limit reached): %1").arg(idList(rest, 40))
+                               : QStringLiteral("- ... and %1 more of these: %2").arg(issues.size() - share).arg(idList(rest, 40)));
         }
     }
     if (!clean.isEmpty()) {
