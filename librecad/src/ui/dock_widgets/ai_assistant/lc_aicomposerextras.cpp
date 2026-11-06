@@ -11,6 +11,7 @@
 
 #include <QAction>
 #include <QDialog>
+#include <QDir>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QFileDialog>
@@ -39,6 +40,9 @@
 #include "lc_aiicons.h"
 #include "lc_aiinferencemanager.h"
 #include "lc_aiprovider.h"
+#include "lc_aitool.h"
+#include "rs_graphic.h"
+#include "rs_graphicview.h"
 
 namespace {
     constexpr int TILE_EDGE = 56;          // Cypher's .attachment
@@ -288,17 +292,21 @@ namespace {
                 p.drawText(QRect(4, height() / 2 + 6, width() - 8, 14), Qt::AlignCenter,
                            p.fontMetrics().elidedText(m_a.name, Qt::ElideMiddle, width() - 8));
             }
-            // a label on pictures that are not plain images: "PDF", "@view"
-            const QString badge = !m_a.isImage() && !m_a.preview.isNull() ? QStringLiteral("PDF") : m_a.fromMention ? m_a.name : QString();
+            // a label on pictures that are not plain images: "PDF", "@view"; on a tile, "scaled" for a picture sent
+            // smaller than the file (the tooltip says from what size)
+            const QString badge = !m_a.isImage() && !m_a.preview.isNull()     ? QStringLiteral("PDF")
+                                  : m_a.fromMention                             ? m_a.name
+                                  : m_mode == Mode::Tile && !m_a.note.isEmpty() ? QObject::tr("scaled")
+                                                                                : QString();
             if (!badge.isEmpty()) {
                 p.setFont(pxFont(font(), 9.5, QFont::DemiBold));
-                const int bw = p.fontMetrics().horizontalAdvance(badge) + 8;
+                const int bw = qMin(p.fontMetrics().horizontalAdvance(badge) + 8, width() - 8);
                 const QRectF box(4, height() - 4 - 15, bw, 15);
                 p.setPen(Qt::NoPen);
                 p.setBrush(QColor(0, 0, 0, 150));
                 p.drawRoundedRect(box, 4, 4);
                 p.setPen(Qt::white);
-                p.drawText(box, Qt::AlignCenter, badge);
+                p.drawText(box, Qt::AlignCenter, p.fontMetrics().elidedText(badge, Qt::ElideRight, bw - 6));
             }
             p.restore();
             p.setPen(QPen(m_theme.borderDefault, 1));
@@ -476,7 +484,33 @@ void LC_AIComposerInput::keyPressEvent(QKeyEvent* event) {
             }
         }
     }
+    // a letter typed right before a pill would join its "@" to a word and turn it into plain text: a space keeps them apart
+    if (!(event->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier)) && gluesToMention(event->text())) {
+        QTextCursor typed = textCursor();
+        typed.insertText(event->text() + QLatin1Char(' '));
+        typed.movePosition(QTextCursor::PreviousCharacter);
+        setTextCursor(typed);
+        event->accept();
+        return;
+    }
     QPlainTextEdit::keyPressEvent(event);
+}
+
+bool LC_AIComposerInput::gluesToMention(const QString& typed) {
+    if (typed.isEmpty() || !typed.back().isPrint() || textCursor().hasSelection()) {
+        return false;
+    }
+    const QChar last = typed.back();
+    if (!last.isLetterOrNumber() && last != '_' && last != '@' && last != '.') { // what LC_AIMentions::find() reads as joined
+        return false;
+    }
+    const int position = textCursor().position();
+    for (const LC_AIMention& m : mentions()) {
+        if (m.start == position) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void LC_AIComposerInput::paintEvent(QPaintEvent* event) {
@@ -486,18 +520,30 @@ void LC_AIComposerInput::paintEvent(QPaintEvent* event) {
         p.setRenderHint(QPainter::Antialiasing);
         p.setPen(Qt::NoPen);
         p.setBrush(m_mentionBackground);
-        for (const LC_AIMention& m : std::as_const(m_mentions)) {
+        const auto rectAt = [this](const int position) {
             QTextCursor at(document());
-            at.setPosition(m.start);
-            QRect from = cursorRect(at);
-            at.setPosition(m.start + m.length);
-            const QRect to = cursorRect(at);
+            at.setPosition(position);
+            return cursorRect(at);
+        };
+        // 2 px around the text, less between two pills one space apart: padded fully they touch and read as one
+        const auto padBetween = [&rectAt](const LC_AIMention& a, const LC_AIMention& b) -> qreal {
+            const QRect end = rectAt(a.start + a.length);
+            const QRect start = rectAt(b.start);
+            return end.top() != start.top() ? 2.0 : qBound(0.0, (start.left() - end.left() - 3) / 2.0, 2.0);
+        };
+        for (int i = 0; i < m_mentions.size(); ++i) {
+            const LC_AIMention& m = m_mentions.at(i);
+            qreal left = i > 0 ? padBetween(m_mentions.at(i - 1), m) : 2.0;
+            const qreal right = i + 1 < m_mentions.size() ? padBetween(m, m_mentions.at(i + 1)) : 2.0;
+            QRect from = rectAt(m.start);
+            const QRect to = rectAt(m.start + m.length);
             // one rectangle per line the mention spans (a long layer name may wrap)
             for (int line = 0; from.top() < to.top() && from.height() > 0 && line < 32; ++line) {
-                p.drawRoundedRect(QRectF(from.left() - 2, from.top() + 1, viewport()->width() - from.left() - 2, from.height() - 2), 4, 4);
+                p.drawRoundedRect(QRectF(from.left() - left, from.top() + 1, viewport()->width() - from.left() + left - 4, from.height() - 2), 4, 4);
                 from = QRect(int(document()->documentMargin()), from.bottom() + 1, 0, from.height());
+                left = 2.0;
             }
-            p.drawRoundedRect(QRectF(from.left() - 2, from.top() + 1, to.left() - from.left() + 4, from.height() - 2), 4, 4);
+            p.drawRoundedRect(QRectF(from.left() - left, from.top() + 1, to.left() - from.left() + left + right, from.height() - 2), 4, 4);
         }
     }
     QPlainTextEdit::paintEvent(event);
@@ -519,6 +565,13 @@ void LC_AIComposerInput::insertFromMimeData(const QMimeData* source) {
             emit imageOffered(image);
             return;
         }
+    }
+    if (source->hasText() && gluesToMention(source->text())) { // as when typing: the pill after it stays a pill
+        QTextCursor pasted = textCursor();
+        pasted.insertText(source->text() + QLatin1Char(' '));
+        pasted.movePosition(QTextCursor::PreviousCharacter);
+        setTextCursor(pasted);
+        return;
     }
     QPlainTextEdit::insertFromMimeData(source);
 }
@@ -633,29 +686,45 @@ LC_AIComposerExtras::LC_AIComposerExtras(LC_AIComposerInput* input, QWidget* com
 
 void LC_AIComposerExtras::addFiles(const QStringList& paths) {
     QStringList problems;
+    QStringList refused; // files of a kind that cannot be attached: named together, in one line
+    int refusedAt = -1;
     for (const QString& path : paths) {
         if (m_attachments.size() >= LC_AIAttachments::MAX_ATTACHMENTS) {
             problems << tr("A message can have at most %1 files.").arg(LC_AIAttachments::MAX_ATTACHMENTS);
             break;
         }
         if (!LC_AIAttachments::isAttachable(path)) {
-            problems << tr("%1: only images (PNG, JPEG, WebP) and PDFs can be attached.").arg(QFileInfo(path).fileName());
+            refusedAt = refusedAt < 0 ? int(problems.size()) : refusedAt;
+            refused << QFileInfo(path).fileName();
             continue;
         }
         LC_AIAttachment attachment;
         QString error;
-        if (LC_AIAttachments::fromFile(path, attachment, error)) {
-            m_attachments << attachment;
-        }
-        else {
+        if (!LC_AIAttachments::fromFile(path, attachment, error)) {
             problems << error;
+            continue;
         }
+        // the same file twice would only be sent twice (a drop repeated by mistake)
+        const auto same = std::find_if(m_attachments.cbegin(), m_attachments.cend(), [&attachment](const LC_AIAttachment& a) {
+            return !a.fromMention && a.kind == attachment.kind && a.data == attachment.data;
+        });
+        if (same != m_attachments.cend()) {
+            problems << (same->name == attachment.name ? tr("%1 is already attached.").arg(attachment.name)
+                                                       : tr("%1 is already attached (as %2).").arg(attachment.name, same->name));
+            continue;
+        }
+        m_attachments << attachment;
+    }
+    if (!refused.isEmpty()) {
+        refused.removeDuplicates();
+        problems.insert(refusedAt, tr("%1: only images (PNG, JPEG, WebP, GIF, BMP) and PDFs can be attached.").arg(refused.join(", ")));
     }
     rebuildStrip();
     if (const QString note = blindModelNote(); !note.isEmpty() && !m_attachments.isEmpty()) {
         problems << note;
     }
     if (!problems.isEmpty()) {
+        problems.removeDuplicates(); // one line for a file dropped five times
         showNotice(problems.join('\n'));
     }
     emit changed();
@@ -716,7 +785,12 @@ void LC_AIComposerExtras::insertMention(const QString& mention) {
     const QString text = m_input->toPlainText();
     QTextCursor cursor(m_input->document());
     cursor.movePosition(QTextCursor::End);
-    if (!text.contains(mention)) {
+    // already there as a mention of its own (a text search would take "@entity #131" for "@entity #13")
+    bool present = false;
+    for (const LC_AIMention& m : m_input->mentions()) {
+        present = present || m.text().compare(mention, Qt::CaseInsensitive) == 0;
+    }
+    if (!present) {
         const bool separate = !text.isEmpty() && !text.back().isSpace();
         cursor.insertText((separate ? QStringLiteral(" ") : QString()) + mention + " ");
     }
@@ -805,7 +879,14 @@ void LC_AIComposerExtras::showNotice(const QString& text) {
 
 void LC_AIComposerExtras::openFileDialog() {
     static QString lastFolder;
-    const QStringList files = QFileDialog::getOpenFileNames(m_panel->window(), tr("Attach images or PDFs"), lastFolder,
+    QString folder = lastFolder;
+    if (folder.isEmpty()) { // the first time: the open drawing's folder (its references are often next to it), or home
+        RS_GraphicView* view = LC_AITools::view();
+        const RS_Graphic* graphic = view != nullptr ? view->getGraphic() : nullptr;
+        const QString drawing = graphic != nullptr ? graphic->getFilename() : QString();
+        folder = !drawing.isEmpty() && QFileInfo(drawing).absoluteDir().exists() ? QFileInfo(drawing).absolutePath() : QDir::homePath();
+    }
+    const QStringList files = QFileDialog::getOpenFileNames(m_panel->window(), tr("Attach images or PDFs"), folder,
                                                             LC_AIAttachments::fileDialogFilter());
     if (!files.isEmpty()) {
         lastFolder = QFileInfo(files.first()).absolutePath();
@@ -827,6 +908,10 @@ void LC_AIComposerExtras::startMention() {
 }
 
 void LC_AIComposerExtras::updatePopup() {
+    // Escape closed the popup for one "@": once that "@" is deleted, a new one typed in its place opens it again
+    if (m_dismissedAt >= 0 && m_input->document()->characterAt(m_dismissedAt) != QLatin1Char('@')) {
+        m_dismissedAt = -1;
+    }
     const QTextCursor cursor = m_input->textCursor();
     if (cursor.hasSelection()) {
         hidePopup();

@@ -125,16 +125,23 @@ namespace {
     }
 
 #ifdef LC_AI_PDF
-    /** Opens the PDF bytes with Qt Pdf (from a temporary file: loading from memory is asynchronous). */
+    /**
+     * Opens the PDF bytes with Qt Pdf (from a temporary file: loading from memory is asynchronous). When it cannot,
+     * `status` says why; it stays None when the PDF itself was not the problem (no temporary file).
+     */
     template <typename Use>
-    bool withPdf(const QByteArray& data, Use use) {
+    bool withPdf(const QByteArray& data, Use use, QPdfDocument::Error* status = nullptr) {
         QTemporaryFile file(QDir::temp().filePath("opencad-ai-XXXXXX.pdf"));
         if (!file.open() || file.write(data) != data.size()) {
             return false;
         }
         file.close(); // kept on disk until `file` goes; closed, so Qt Pdf can open it on every platform
         QPdfDocument doc;
-        if (doc.load(file.fileName()) != QPdfDocument::Error::None || doc.pageCount() <= 0) {
+        const QPdfDocument::Error loaded = doc.load(file.fileName());
+        if (loaded != QPdfDocument::Error::None || doc.pageCount() <= 0) {
+            if (status != nullptr) {
+                *status = loaded != QPdfDocument::Error::None ? loaded : QPdfDocument::Error::InvalidFileFormat; // no pages
+            }
             return false;
         }
         use(doc);
@@ -169,16 +176,33 @@ namespace {
             error = QObject::tr("%1 is %2; PDFs can be at most %3.").arg(out.name, sizeText(data.size()), sizeText(MAX_PDF_BYTES));
             return false;
         }
+        // A damaged PDF is refused here: sent, it fails the whole message (Gemini answers a bare "HTTP 400"), and a
+        // retry puts it back in the box to fail again.
+#ifdef LC_AI_PDF
+        QPdfDocument::Error status = QPdfDocument::Error::None;
+        const bool opened = withPdf(data, [&out](QPdfDocument& doc) {
+            out.pages = doc.pageCount();
+            out.preview = renderPage(doc, 0, PDF_PREVIEW_HEIGHT);
+        }, &status);
+        if (!opened && (status == QPdfDocument::Error::IncorrectPassword || status == QPdfDocument::Error::UnsupportedSecurityScheme)) {
+            error = QObject::tr("%1 is password-protected; the AI cannot read it.").arg(out.name);
+            return false;
+        }
+        if (!opened && status != QPdfDocument::Error::None) {
+            error = QObject::tr("%1 cannot be read (damaged PDF).").arg(out.name);
+            return false;
+        }
+#else
+        // without Qt Pdf, at least a cut-off file: a PDF ends with %%EOF (some writers add a few bytes after it)
+        if (!data.right(1024).contains("%%EOF")) {
+            error = QObject::tr("%1 cannot be read (damaged PDF).").arg(out.name);
+            return false;
+        }
+#endif
         out.kind = LC_AIAttachment::Kind::Pdf;
         out.id = newId();
         out.mimeType = "application/pdf";
         out.data = data;
-#ifdef LC_AI_PDF
-        withPdf(data, [&out](QPdfDocument& doc) {
-            out.pages = doc.pageCount();
-            out.preview = renderPage(doc, 0, PDF_PREVIEW_HEIGHT);
-        });
-#endif
         return true;
     }
 }
@@ -187,8 +211,13 @@ bool LC_AIAttachments::fromFile(const QString& path, LC_AIAttachment& out, QStri
     const QFileInfo info(path);
     out = LC_AIAttachment();
     out.name = info.fileName();
+    // the name only, as in the other notices: a full path wraps over several lines of the narrow strip
+    if (!info.exists()) {
+        error = QObject::tr("%1 was not found.").arg(out.name);
+        return false;
+    }
     if (!info.isFile()) {
-        error = QObject::tr("%1 is not a file.").arg(path);
+        error = info.isDir() ? QObject::tr("%1 is a folder, not a file.").arg(out.name) : QObject::tr("%1 is not a file.").arg(out.name);
         return false;
     }
     const QString suffix = info.suffix().toLower();
@@ -227,8 +256,25 @@ bool LC_AIAttachments::fromImage(const QImage& image, const QString& name, LC_AI
 }
 
 bool LC_AIAttachments::isAttachable(const QString& path) {
-    const QString suffix = QFileInfo(path).suffix().toLower();
-    return suffix == "pdf" || IMAGE_SUFFIXES.contains(suffix);
+    const QFileInfo info(path);
+    const QString suffix = info.suffix().toLower();
+    if (suffix == "pdf" || IMAGE_SUFFIXES.contains(suffix)) {
+        return true;
+    }
+    // a file without a known suffix is judged by its first bytes, as fromFile() reads it
+    if (!info.isFile()) {
+        return false;
+    }
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return false;
+    }
+    const QByteArray head = file.peek(64);
+    if (head.startsWith("%PDF")) {
+        return true;
+    }
+    const QString format = QString::fromLatin1(QImageReader::imageFormat(&file)).toLower();
+    return IMAGE_SUFFIXES.contains(format);
 }
 
 QStringList LC_AIAttachments::attachableFiles(const QMimeData* mime) {
@@ -245,7 +291,8 @@ QStringList LC_AIAttachments::attachableFiles(const QMimeData* mime) {
 }
 
 QString LC_AIAttachments::fileDialogFilter() {
-    return QObject::tr("Images and PDFs (*.png *.jpg *.jpeg *.webp *.gif *.bmp *.pdf);;Images (*.png *.jpg *.jpeg *.webp *.gif *.bmp);;PDF documents (*.pdf)");
+    // "All files": a PDF or picture saved without its suffix is recognised by its bytes
+    return QObject::tr("Images and PDFs (*.png *.jpg *.jpeg *.webp *.gif *.bmp *.pdf);;Images (*.png *.jpg *.jpeg *.webp *.gif *.bmp);;PDF documents (*.pdf);;All files (*)");
 }
 
 QString LC_AIAttachments::sizeText(const qint64 bytes) {

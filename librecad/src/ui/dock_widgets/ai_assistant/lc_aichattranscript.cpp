@@ -182,8 +182,43 @@ namespace {
     }
 
     /**
-     * The AI's Markdown as the chat shows it: math markup turned into readable text and headings scaled
-     * down to the narrow panel (Qt draws # as a poster). Code blocks and `code` spans are left alone.
+     * Qt's Markdown passes inline HTML through, so the "<new>" of a layer named "Doors & Windows <new>" was taken for
+     * an unknown tag and hid the rest of the paragraph. Only the few tags a chat answer uses for formatting, and
+     * <https://…> links, stay markup; any other "<" that could start a tag is escaped and shows as written.
+     */
+    QString escapeStrayTags(const QString& text) {
+        if (!text.contains('<')) {
+            return text;
+        }
+        static const QRegularExpression formatting(QStringLiteral(R"(</?(?:br|b|i|u|em|strong|s|del|sub|sup|kbd|code|a)(?:\s[^<>]*)?/?>)"),
+                                                   QRegularExpression::CaseInsensitiveOption);
+        static const QRegularExpression autolink(QStringLiteral(R"(<(?:[a-z][a-z0-9+.\-]{1,31}:[^\s<>]*|[^\s<>@]+@[^\s<>@]+)>)"),
+                                                 QRegularExpression::CaseInsensitiveOption);
+        QString out;
+        out.reserve(text.size() + 8);
+        for (int i = 0; i < text.size(); ++i) {
+            const QChar c = text.at(i);
+            if (c == '<' && i + 1 < text.size()) {
+                const QChar next = text.at(i + 1);
+                int backslashes = 0; // "\<" is escaped already
+                for (int j = i - 1; j >= 0 && text.at(j) == '\\'; --j) {
+                    ++backslashes;
+                }
+                const bool couldBeTag = next.isLetter() || next == '/' || next == '!' || next == '?';
+                if (couldBeTag && backslashes % 2 == 0
+                    && !formatting.match(text, i, QRegularExpression::NormalMatch, QRegularExpression::AnchorAtOffsetMatchOption).hasMatch()
+                    && !autolink.match(text, i, QRegularExpression::NormalMatch, QRegularExpression::AnchorAtOffsetMatchOption).hasMatch()) {
+                    out += '\\';
+                }
+            }
+            out += c;
+        }
+        return out;
+    }
+
+    /**
+     * The AI's Markdown as the chat shows it: math markup turned into readable text, headings scaled
+     * down to the narrow panel (Qt draws # as a poster) and stray "<" escaped. Code blocks and `code` spans are left alone.
      */
     QString displayMarkdown(const QString& markdown) {
         static const QRegularExpression heading(QStringLiteral(R"(^(\s{0,3})(#{1,6})(\s))"));
@@ -202,16 +237,16 @@ namespace {
                 const int level = m.captured(2).size();
                 line = m.captured(1) + QString(level <= 2 ? 3 : 4, '#') + line.mid(m.capturedEnd(2));
             }
-            // math, outside `code` spans
+            // math and stray tags, outside `code` spans
             QString out;
             int pos = 0;
             while (pos < line.size()) {
                 const int tick = line.indexOf('`', pos);
                 if (tick < 0) {
-                    out += readableMathLine(line.mid(pos));
+                    out += escapeStrayTags(readableMathLine(line.mid(pos)));
                     break;
                 }
-                out += readableMathLine(line.mid(pos, tick - pos));
+                out += escapeStrayTags(readableMathLine(line.mid(pos, tick - pos)));
                 int run = tick;
                 while (run < line.size() && line.at(run) == '`') {
                     ++run;

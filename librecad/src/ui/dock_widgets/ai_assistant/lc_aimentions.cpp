@@ -18,6 +18,7 @@
 #include <QSet>
 #include <QTimer>
 #include <QUuid>
+#include <algorithm>
 #include <cmath>
 
 #include "lc_aicomposerextras.h"
@@ -73,6 +74,12 @@ namespace {
         return QStringLiteral("%1 %2").arg(n).arg(n == 1 ? one : many);
     }
 
+    /** The drawing's unit for the model: in English, and "unitless" rather than "None". */
+    QString unitsOf(const RS_Graphic* graphic) {
+        const RS2::Unit unit = graphic->getUnit();
+        return unit == RS2::None ? QStringLiteral("unitless") : RS_Units::unitToString(unit, false);
+    }
+
     /** Names of layers or blocks, longest first, so "Wall outlines" is found before "Wall". */
     QStringList longestFirst(QStringList names) {
         std::sort(names.begin(), names.end(), [](const QString& a, const QString& b) { return a.size() > b.size(); });
@@ -105,6 +112,45 @@ namespace {
         return true;
     }
 
+    /** Whether the open drawing has an entity with this id (no drawing: it cannot be told, so yes). */
+    bool entityExists(const QString& idText) {
+        RS_Graphic* graphic = currentGraphic();
+        if (graphic == nullptr) {
+            return true;
+        }
+        bool ok = false;
+        const unsigned long long id = idText.toULongLong(&ok);
+        if (!ok) {
+            return false;
+        }
+        for (RS_Entity* e : *graphic) {
+            if (e != nullptr && !e->isDeleted() && e->getId() == id) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * How closely a popup row fits the typed words, lower first: its words no typed word starts, then its words a typed
+     * word only starts. "lay wal" puts "@layer Walls" before "@layer Wall outlines", and "13" puts #13 before #131.
+     */
+    QPair<int, int> matchDistance(const QStringList& terms, const QString& rowText) {
+        int unmatched = 0;
+        int partly = 0;
+        for (const QString& w : words(rowText)) {
+            bool exact = false;
+            bool prefix = false;
+            for (const QString& term : terms) {
+                exact = exact || w == term;
+                prefix = prefix || w.startsWith(term);
+            }
+            unmatched += prefix ? 0 : 1;
+            partly += prefix && !exact ? 1 : 0;
+        }
+        return {unmatched, partly};
+    }
+
     QString truncate(const QString& text) {
         return text.size() > MAX_CONTEXT_CHARS ? text.left(MAX_CONTEXT_CHARS) + QStringLiteral("\n... (cut)") : text;
     }
@@ -134,7 +180,7 @@ namespace {
         if (count == 0) {
             return QStringLiteral("Nothing is selected in the drawing.");
         }
-        return QStringLiteral("%1 selected (units: %2):\n").arg(plural(count, "entity", "entities"), RS_Units::unitToString(graphic->getUnit()))
+        return QStringLiteral("%1 selected (units: %2):\n").arg(plural(count, "entity", "entities"), unitsOf(graphic))
                + describeAll(shown, count, QStringLiteral("list_entities with selected_only reads them"));
     }
 
@@ -179,7 +225,7 @@ namespace {
         QString text = QStringLiteral("Layer \"%1\"%2: %3%4 (units: %5).")
                            .arg(layer->getName(), flags.isEmpty() ? QString() : " [" + flags.join(", ") + "]",
                                 plural(count, "entity", "entities"), types.isEmpty() ? QString() : " (" + types.join(", ") + ")",
-                                RS_Units::unitToString(graphic->getUnit()));
+                                unitsOf(graphic));
         if (count > 0) {
             text += "\n" + describeAll(shown, count, QStringLiteral("list_entities with layer \"%1\" reads them").arg(layer->getName()));
         }
@@ -234,7 +280,7 @@ namespace {
         if (found == nullptr) {
             return QStringLiteral("Entity #%1 is not in the drawing (it may have been deleted).").arg(idText);
         }
-        QString text = LC_AITools::describeEntity(found) + QStringLiteral(" (units: %1)").arg(RS_Units::unitToString(graphic->getUnit()));
+        QString text = LC_AITools::describeEntity(found) + QStringLiteral(" (units: %1)").arg(unitsOf(graphic));
         if (found->rtti() == RS2::EntityInsert) {
             const auto* insert = static_cast<RS_Insert*>(found);
             text += QStringLiteral("\nAn insert of block \"%1\" at %2, scale %3 x %4, rotation %5°.")
@@ -311,7 +357,8 @@ QList<LC_AIMention> LC_AIMentions::find(const QString& text) {
         if (word == "entity") {
             const QRegularExpressionMatch id = entityId.match(text, m.capturedEnd(), QRegularExpression::NormalMatch,
                                                               QRegularExpression::AnchorAtOffsetMatchOption);
-            if (id.hasMatch()) {
+            // an id that is not in the drawing stays plain text, as an unknown layer name does: the pill would promise context
+            if (id.hasMatch() && entityExists(id.captured(1))) {
                 mention.kind = Kind::Entity;
                 mention.argument = id.captured(1);
                 mention.length = int(id.capturedEnd() - mention.start);
@@ -448,6 +495,17 @@ QList<LC_AIMentions::Candidate> LC_AIMentions::candidates(const QString& query) 
             offerEntity(e);
         }
     }
+    // within each group the closest match first (Enter takes it); equally close rows keep their order
+    if (!browsing) {
+        for (auto begin = rows.begin(); begin != rows.end();) {
+            const QString group = begin->group;
+            const auto end = std::find_if(begin, rows.end(), [&group](const Candidate& c) { return c.group != group; });
+            std::stable_sort(begin, end, [&terms](const Candidate& a, const Candidate& b) {
+                return matchDistance(terms, a.text) < matchDistance(terms, b.text);
+            });
+            begin = end;
+        }
+    }
     return rows;
 }
 
@@ -502,7 +560,10 @@ LC_AIMentions::Expansion LC_AIMentions::expand(const QList<LC_AIMention>& mentio
                     break;
             }
         }
-        blocks << QStringLiteral("<mention name=\"%1\">\n%2\n</mention>").arg(name, truncate(body.trimmed()));
+        // a layer named 6" pipes or <new> must not end the attribute or the wrapper early
+        QString inside = truncate(body.trimmed());
+        inside.replace(QStringLiteral("</mention>"), QStringLiteral("&lt;/mention>"), Qt::CaseInsensitive);
+        blocks << QStringLiteral("<mention name=\"%1\">\n%2\n</mention>").arg(name.toHtmlEscaped(), inside);
     }
     if (!blocks.isEmpty()) {
         out.context = QStringLiteral("Context from the open drawing for the @-mentions above, read when this message was sent:\n\n")
