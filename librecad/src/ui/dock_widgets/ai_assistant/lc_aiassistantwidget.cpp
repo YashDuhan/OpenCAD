@@ -646,11 +646,26 @@ void LC_AIAssistantWidget::onToolStarted(const LC_AIToolCall& call) {
 
 void LC_AIAssistantWidget::onFinished() {
     m_approvals->clear(); // a stopped run leaves nothing to approve
+    bool restored = false;
     if (!m_messages.isEmpty() && m_messages.last().role == LC_AIChatMessage::Role::User) {
-        m_messages.removeLast(); // stopped before any reply: drop the unanswered question from the history
+        // stopped before any reply: the unanswered question leaves the history and, as when a request fails, goes back
+        // in the box with its files, to send again (the debugger's request is not the user's text)
+        const LC_AIChatMessage stopped = m_messages.takeLast();
+        if (!m_debugging && m_input->toPlainText().trimmed().isEmpty() && !m_extras->hasAttachments()) {
+            m_input->setPlainText(stopped.text);
+            m_extras->restore(stopped.attachments);
+            restored = true;
+        }
     }
     m_chats->save(m_messages);
     m_transcript->finishRun();
+    if (restored) {
+        // its bubble stays, so say why the AI will not see it (shown only, not part of the conversation)
+        LC_AIChatMessage note;
+        note.role = LC_AIChatMessage::Role::Assistant;
+        note.text = tr("*Stopped before an answer: the message is back in the box, to send again.*");
+        m_transcript->addAssistant(note);
+    }
     setBusy(false);
     LC_AIControl::instance().end();
     afterRun(m_inference->wasCancelled());

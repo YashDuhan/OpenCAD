@@ -920,6 +920,8 @@ void LC_AIInferenceManager::onFinished() {
         if (!m_turn.text.isEmpty()) {
             m_turn.toolCalls.clear(); // half-streamed calls are not run
             m_turn.raw = QJsonArray();
+            // the answer was cut off: marked, for the user and for the model when the chat goes on
+            m_turn.text += QStringLiteral("\n\n*(stopped)*"); // italic: Qt draws _text_ underlined, like a link
             m_history.append(m_turn);
             emit messageAdded(m_turn);
         }
