@@ -41,6 +41,7 @@ QList<LC_AITool> LC_AIBrowser::tools() {
 #include <QJsonDocument>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMainWindow>
 #include <QPixmap>
 #include <QPointer>
 #include <QScreen>
@@ -50,10 +51,13 @@ QList<LC_AITool> LC_AIBrowser::tools() {
 #include <QVBoxLayout>
 #include <QWebEngineDownloadRequest>
 #include <QWebEngineHistory>
+#include <QWebEngineLoadingInfo>
+#include <QWebEngineNewWindowRequest>
 #include <QWebEnginePage>
 #include <QWebEngineProfile>
 #include <QWebEngineView>
 #include <memory>
+#include <utility>
 
 #include "lc_aicredentials.h"
 #include "lc_aiicons.h"
@@ -62,10 +66,14 @@ QList<LC_AITool> LC_AIBrowser::tools() {
 
 namespace {
     constexpr int LOAD_TIMEOUT_MS = 25000;
+    constexpr int JS_TIMEOUT_MS = 10000;    // a page script that never answers (the page is stuck or was replaced)
     constexpr int SETTLE_MS = 900;          // after a click: time for a navigation to start
+    constexpr int CAPTURE_SETTLE_MS = 500;  // after showing the page at full size: time for Chromium to paint it
     constexpr int NAVIGATE_TEXT = 4000;     // page text returned with browser_navigate
     constexpr int READ_TEXT = 20000;        // browser_read, like Cypher
     constexpr int MAX_SCREENSHOT_EDGE = 1280;
+
+    using Done = std::function<void(const LC_AIToolResult&)>;
 
     bool webUrl(const QUrl& url) {
         return url.scheme() == "http" || url.scheme() == "https" || url.toString() == "about:blank";
@@ -74,14 +82,21 @@ namespace {
     /** Keeps the AI inside this window: http(s) only, and pages that open a new window open here instead. */
     class Page : public QWebEnginePage {
     public:
-        using QWebEnginePage::QWebEnginePage;
+        Page(QWebEngineProfile* profile, QObject* parent) : QWebEnginePage(profile, parent) {
+            // target=_blank links and window.open: the address opens in this window. Not by handing Chromium this page
+            // for the new window (createWindow returning this): that swapped the page's contents under a running
+            // browser_click, whose script then never answered. The popup itself is dropped (no openIn).
+            connect(this, &QWebEnginePage::newWindowRequested, this, [this](QWebEngineNewWindowRequest& request) {
+                const QUrl url = request.requestedUrl();
+                if (webUrl(url) && url.toString() != QLatin1String("about:blank")) {
+                    QTimer::singleShot(0, this, [this, url] { load(url); }); // after the click's script has answered
+                }
+            });
+        }
 
     protected:
         bool acceptNavigationRequest(const QUrl& url, NavigationType, bool) override {
             return webUrl(url); // no file:, mailto:, javascript:, custom app links
-        }
-        QWebEnginePage* createWindow(WebWindowType) override {
-            return this; // target=_blank and window.open load in the same floating window
         }
     };
 
@@ -89,9 +104,11 @@ namespace {
     constexpr int PAGE_HEIGHT = 800;
     constexpr double ASPECT = double(PAGE_WIDTH) / PAGE_HEIGHT;
     constexpr int GAP = 12;
+    constexpr int BANNER_ROOM = 56; // the AI's control banner sits 10 px under the top of the drawing area, about 36 px high
     const QSize DEFAULT_FLOAT(400, 250); // Cypher's floating browser: 400 x 250, at least 240 x 150
     const QSize MIN_FLOAT(240, 150);
     const QString FLOAT_KEY = QStringLiteral("browserFloatWindow"); // position over the OpenCAD window
+    const QString BANNER_NAME = QStringLiteral("aiControlBanner");  // LC_AIControl's "The AI is working" banner
 
     QPointer<QWidget> g_host; // the AI panel the preview floats over
 
@@ -163,7 +180,53 @@ namespace {
         void fitToHost() {
             setGeometry(fit(geometry()));
             applyZoom();
-            raise(); // stay above the AI sidebar, which raises itself when the window resizes
+            bringToFront();
+        }
+
+        /** Above the AI sidebar, which raises itself when the window resizes, but under the AI's control banner: its
+         *  Take over and Stop stay in reach wherever the preview is dragged. */
+        void bringToFront() {
+            raise();
+            if (m_host != nullptr) {
+                QWidget* banner = m_host->findChild<QWidget*>(BANNER_NAME, Qt::FindDirectChildrenOnly);
+                if (banner != nullptr && banner->isVisible()) {
+                    banner->raise();
+                }
+            }
+        }
+
+        /**
+         * The page as the AI should see it: at its layout size (PAGE_WIDTH x PAGE_HEIGHT) and zoom 1, not the small
+         * preview scaled to about a third, where text is unreadable. The view grows to that size for a moment, clipped
+         * by this frame and hidden under a still of the preview, and is grabbed once Chromium has painted it.
+         */
+        void capture(QWebEngineView* view, const std::function<void(const QPixmap&)>& done) {
+            QPointer<QWebEngineView> v(view);
+            if (m_capturing || view->parentWidget() != this) {
+                QTimer::singleShot(CAPTURE_SETTLE_MS, this, [v, done] { done(v ? v->grab() : QPixmap()); });
+                return;
+            }
+            m_capturing = true;
+            QPointer<QLabel> still = new QLabel(this);
+            still->setPixmap(view->grab());
+            still->setGeometry(view->geometry());
+            still->show();
+            m_layout->removeWidget(view);
+            view->setZoomFactor(1.0);
+            view->setGeometry(QRect(view->pos(), QSize(PAGE_WIDTH, PAGE_HEIGHT)));
+            view->lower();
+            raiseControls();
+            QTimer::singleShot(CAPTURE_SETTLE_MS, this, [this, v, still, done] {
+                const QPixmap shot = v ? v->grab() : QPixmap();
+                m_capturing = false;
+                if (v && v->parentWidget() == this) { // not moved to the full window meanwhile
+                    m_layout->addWidget(v);
+                    raiseControls();
+                    applyZoom();
+                }
+                delete still.data();
+                done(shot);
+            });
         }
 
     protected:
@@ -254,7 +317,7 @@ namespace {
 
         void applyZoom() {
             // the page keeps its laptop layout and is shown scaled down, like Cypher's preview
-            if (m_layout->count() > 0) {
+            if (!m_capturing && m_layout->count() > 0) {
                 if (auto* view = qobject_cast<QWebEngineView*>(m_layout->itemAt(0)->widget())) {
                     view->setZoomFactor(qBound(0.25, (width() - 2) / double(PAGE_WIDTH), 1.0));
                 }
@@ -299,7 +362,7 @@ namespace {
             if (f.contains("w")) {
                 frame = QRect(f.value("x").toInt(), f.value("y").toInt(), f.value("w").toInt(), f.value("h").toInt());
             }
-            else { // just left of the AI chat, over the drawing, so it never covers the conversation
+            else { // top right of the drawing area, next to the AI chat: never over the toolbars or the conversation
                 const QRect sized = fit(QRect(0, 0, DEFAULT_FLOAT.width(), DEFAULT_FLOAT.height()));
                 int x = area().width() - sized.width() - GAP;
                 int y = GAP + 60;
@@ -307,6 +370,18 @@ namespace {
                     const QPoint chat = m_anchor->mapTo(m_host, QPoint(0, 0));
                     x = chat.x() - sized.width() - GAP;
                     y = chat.y() + GAP;
+                }
+                auto* mainWindow = qobject_cast<QMainWindow*>(m_host.data());
+                if (mainWindow != nullptr && mainWindow->centralWidget() != nullptr) {
+                    // and below the AI's control banner, which is centred at the top of the drawing area while it works
+                    const QWidget* drawing = mainWindow->centralWidget();
+                    const QPoint topLeft = drawing->mapTo(mainWindow, QPoint(0, 0));
+                    int room = BANNER_ROOM;
+                    if (const QWidget* banner = mainWindow->findChild<QWidget*>(BANNER_NAME, Qt::FindDirectChildrenOnly)) {
+                        room = std::max(room, 10 + banner->sizeHint().height() + GAP);
+                    }
+                    x = topLeft.x() + drawing->width() - sized.width() - GAP;
+                    y = topLeft.y() + room;
                 }
                 frame = QRect(x, y, sized.width(), sized.height());
             }
@@ -328,6 +403,7 @@ namespace {
         QString m_drag;
         QPoint m_startPos;
         QRect m_startFrame;
+        bool m_capturing {false}; // capture() shows the page at zoom 1 for a moment: no rescaling meanwhile
     };
 
     /** The full window with back / forward / reload / address bar, for when the user wants a closer look. */
@@ -384,29 +460,58 @@ namespace {
         std::function<void()> m_onCollapse;
     };
 
+    /** Why a page did not load, in words for the AI: the HTTP status, the network error, a download, a stop. */
+    QString loadFailure(const QWebEngineLoadingInfo& info) {
+        if (info.isDownload()) {
+            return QStringLiteral("the address is a file download, and the AI browser does not download files");
+        }
+        if (info.status() == QWebEngineLoadingInfo::LoadStoppedStatus) {
+            return QStringLiteral("loading was stopped");
+        }
+        if (info.errorDomain() == QWebEngineLoadingInfo::HttpStatusCodeDomain) {
+            return QStringLiteral("the server answered HTTP %1").arg(info.errorCode());
+        }
+        const QString error = info.errorString().trimmed();
+        return error.isEmpty() ? QStringLiteral("the page could not be loaded (error %1)").arg(info.errorCode())
+                               : QStringLiteral("the page could not be loaded (%1)").arg(error);
+    }
+
     /** The page and its private session; shown in the small preview (default) or the full window. */
     class Browser : public QObject {
     public:
+        /** ok, and when not ok why (an HTTP status, a network error, a download, the time-out). */
+        using LoadDone = std::function<void(bool, const QString&)>;
+
         Browser() {
             // private session: nothing is kept between runs, and it is separate from the user's own browser
             m_profile = new QWebEngineProfile(this);
-            connect(m_profile, &QWebEngineProfile::downloadRequested, this,
-                    [](QWebEngineDownloadRequest* download) { download->cancel(); }); // lookups only: no downloads
+            connect(m_profile, &QWebEngineProfile::downloadRequested, this, [this](QWebEngineDownloadRequest* download) {
+                download->cancel(); // lookups only: no downloads
+                // a download is no page: the load waiting for it ends here, whether or not Chromium reports it too
+                m_note = QStringLiteral("the address is a file download (%1), and the AI browser does not download files")
+                             .arg(download->downloadFileName());
+                finishLoad(false, m_note);
+            });
             m_view = new QWebEngineView();
             m_view->setPage(new Page(m_profile, m_view));
             m_view->resize(PAGE_WIDTH, PAGE_HEIGHT);
-            connect(m_view, &QWebEngineView::loadStarted, this, [this] { m_loading = true; });
-            connect(m_view, &QWebEngineView::loadFinished, this, [this](const bool ok) {
-                m_loading = false;
-                const auto waiters = std::move(m_waiters);
-                m_waiters.clear();
-                for (const auto& w : waiters) {
-                    w(ok);
+            connect(m_view->page(), &QWebEnginePage::loadingChanged, this, [this](const QWebEngineLoadingInfo& info) {
+                if (info.status() == QWebEngineLoadingInfo::LoadStartedStatus) {
+                    m_loading = true;
+                    return;
                 }
+                const bool ok = info.status() == QWebEngineLoadingInfo::LoadSucceededStatus;
+                finishLoad(ok, ok ? QString() : loadFailure(info));
             });
         }
 
         QWebEngineView* view() const { return m_view; }
+
+        /** False until a page was opened: reading, listing, clicking or scrolling then says so instead of answering empty. */
+        bool hasPage() const {
+            const QUrl url = m_view->url();
+            return !url.isEmpty() && url.toString() != QLatin1String("about:blank");
+        }
 
         /** Shows where the AI is browsing: the full window if the user opened it, else the small preview. */
         void reveal() {
@@ -420,7 +525,7 @@ namespace {
             }
             f->fitToHost();
             f->show();
-            f->raise();
+            f->bringToFront();
         }
 
         void toggle() {
@@ -435,40 +540,101 @@ namespace {
             }
         }
 
-        void waitForLoad(const std::function<void(bool)>& done) {
+        void waitForLoad(const LoadDone& done) {
             auto once = std::make_shared<bool>(false);
-            const auto finish = [once, done](const bool ok) {
+            const auto finish = [once, done](const bool ok, const QString& why) {
                 if (!*once) {
                     *once = true;
-                    done(ok);
+                    done(ok, why);
                 }
             };
             m_waiters.push_back(finish);
-            QTimer::singleShot(LOAD_TIMEOUT_MS, this, [finish] { finish(false); });
+            QTimer::singleShot(LOAD_TIMEOUT_MS, this, [this, finish, once] {
+                if (!*once) {
+                    finish(false, QStringLiteral("it did not finish loading within %1 s (loading was stopped)").arg(LOAD_TIMEOUT_MS / 1000));
+                    m_view->stop(); // the page should not change under the AI after the tool has answered
+                }
+            });
         }
 
-        void load(const QUrl& url, const std::function<void(bool)>& done) {
+        void load(const QUrl& url, const LoadDone& done) {
             reveal();
             waitForLoad(done);
             m_view->load(url);
         }
 
-        void settle(const std::function<void()>& done) {
+        /** After a click or a back step: done(problem) once a navigation it started has finished; problem is empty
+         *  when it loaded, or nothing was loading. */
+        void settle(const std::function<void(const QString&)>& done) {
+            m_note.clear();
             QTimer::singleShot(SETTLE_MS, this, [this, done] {
                 if (m_loading) {
-                    waitForLoad([done](bool) { done(); });
+                    waitForLoad([done](const bool ok, const QString& why) { done(ok ? QString() : why); });
                 }
                 else {
-                    done();
+                    done(std::exchange(m_note, QString())); // e.g. the click started a download, which was refused
                 }
             });
         }
 
-        void js(const QString& script, const std::function<void(const QVariant&)>& done) {
-            m_view->page()->runJavaScript(script, done);
+        /**
+         * Runs a script in the page; its answer goes to then. When none comes within JS_TIMEOUT_MS (the page is stuck,
+         * or was replaced and Chromium dropped the call), the tool fails through fail instead of running forever.
+         */
+        void js(const QString& script, const Done& fail, const std::function<void(const QVariant&)>& then) {
+            auto once = std::make_shared<bool>(false);
+            m_view->page()->runJavaScript(script, [once, then](const QVariant& v) {
+                if (!*once) {
+                    *once = true;
+                    then(v);
+                }
+            });
+            QTimer::singleShot(JS_TIMEOUT_MS, this, [once, fail] {
+                if (!*once) {
+                    *once = true;
+                    fail(LC_AIToolResult::error(QStringLiteral("The page did not answer within %1 s (it may be busy or still "
+                                                               "loading); try again, or open it anew with browser_navigate.")
+                                                    .arg(JS_TIMEOUT_MS / 1000)));
+                }
+            });
+        }
+
+        /**
+         * One step back (or forward) in the history. Not QWebEngineView::back(): Chromium skips history entries of pages
+         * that moved on without a user's gesture, which every script click of browser_click is, so after a click
+         * back() did nothing. Going to the entry itself does not skip. False when there is no such page.
+         */
+        bool step(const int offset) {
+            QWebEngineHistory* history = m_view->history();
+            const int index = history->currentItemIndex() + offset;
+            if (index < 0 || index >= history->count()) {
+                return false;
+            }
+            history->goToItem(history->itemAt(index));
+            return true;
+        }
+
+        /** The visible part of the page as the AI should see it: at zoom 1 (see FloatPreview::capture). */
+        void screenshot(const std::function<void(const QPixmap&)>& done) {
+            if (m_full != nullptr && m_full->isVisible()) { // the full window already shows it at zoom 1
+                m_full->raise();
+                QTimer::singleShot(150, this, [this, done] { done(m_view->grab()); });
+                return;
+            }
+            reveal();
+            preview()->capture(m_view, done);
         }
 
     private:
+        void finishLoad(const bool ok, const QString& why) {
+            m_loading = false;
+            const auto waiters = std::move(m_waiters);
+            m_waiters.clear();
+            for (const auto& w : waiters) {
+                w(ok, why);
+            }
+        }
+
         FloatPreview* preview() {
             if (m_float == nullptr) {
                 // it floats over the whole OpenCAD window: drag it over the drawing, the toolbars or the chat
@@ -491,8 +657,8 @@ namespace {
                 m_full->addBarWidget(url, 1);
                 QToolButton* external = m_full->addButton("external-link", QObject::tr("Open this page in your own browser"));
                 QToolButton* small = m_full->addButton("minimize-2", QObject::tr("Back to the small preview"));
-                connect(back, &QToolButton::clicked, m_view, &QWebEngineView::back);
-                connect(forward, &QToolButton::clicked, m_view, &QWebEngineView::forward);
+                connect(back, &QToolButton::clicked, this, [this] { step(-1); }); // also past pages the AI clicked away from
+                connect(forward, &QToolButton::clicked, this, [this] { step(1); });
                 connect(reload, &QToolButton::clicked, m_view, &QWebEngineView::reload);
                 connect(external, &QToolButton::clicked, this, [this] {
                     // only on the user's click: the AI never opens the system browser
@@ -524,7 +690,7 @@ namespace {
             f->setPage(m_view);
             f->fitToHost();
             f->show();
-            f->raise();
+            f->bringToFront();
         }
 
         QWebEngineProfile* m_profile {nullptr};
@@ -532,7 +698,8 @@ namespace {
         QPointer<FloatPreview> m_float;
         QPointer<FullWindow> m_full;
         bool m_loading {false};
-        std::vector<std::function<void(bool)>> m_waiters;
+        QString m_note; // why the last load ended without a page, when nobody was waiting for it
+        std::vector<LoadDone> m_waiters;
     };
 
     Browser* g_browser = nullptr;
@@ -544,21 +711,28 @@ namespace {
         return g_browser;
     }
 
-    using Done = std::function<void(const LC_AIToolResult&)>;
-
     QString pageHeader(Browser* w) {
         return QStringLiteral("Title: %1\nURL: %2").arg(w->view()->title(), w->view()->url().toString());
+    }
+
+    LC_AIToolResult noPage() {
+        return LC_AIToolResult::error("No page is open; open one with browser_navigate or browser_search first.");
+    }
+
+    /** browser_navigate's error: what was asked for, why it failed, and what the browser shows now. */
+    QString couldNotOpen(Browser* w, const QUrl& url, const QString& why) {
+        QString text = QStringLiteral("Could not open %1: %2.").arg(url.toString(), why);
+        if (w->hasPage()) {
+            text += QStringLiteral("\nThe browser now shows:\n") + pageHeader(w);
+        }
+        return text;
     }
 
     const QString TEXT_JS = QStringLiteral("(document.body ? document.body.innerText : '')");
 
     /** Title, URL and the start of the page text (what browser_navigate, click and back return). */
-    void describePage(Browser* w, const bool ok, const Done& done, const QString& what) {
-        if (!ok) {
-            done(LC_AIToolResult::error(QStringLiteral("%1 did not finish loading.\n%2").arg(what, pageHeader(w))));
-            return;
-        }
-        w->js(TEXT_JS, [w, done, what](const QVariant& v) {
+    void describePage(Browser* w, const Done& done, const QString& what) {
+        w->js(TEXT_JS, done, [w, done, what](const QVariant& v) {
             QString text = v.toString().trimmed();
             const int total = int(text.size());
             if (text.size() > NAVIGATE_TEXT) {
@@ -622,19 +796,19 @@ QList<LC_AITool> LC_AIBrowser::tools() {
                      q.addQueryItem("q", query);
                      url.setQuery(q);
                      Browser* w = window();
-                     w->load(url, [w, done, query](const bool ok) {
+                     w->load(url, [w, done, query](const bool ok, const QString& why) {
                          if (!ok) {
-                             done(LC_AIToolResult::error("The search page did not load."));
+                             done(LC_AIToolResult::error(QStringLiteral("The search page did not load: %1.").arg(why)));
                              return;
                          }
                          const QString js = QStringLiteral(
                              "JSON.stringify(Array.from(document.querySelectorAll('.result')).slice(0, 10).map(r => {"
                              " const a = r.querySelector('.result__a'); const s = r.querySelector('.result__snippet');"
                              " return {title: a ? a.innerText.trim() : '', url: a ? a.href : '', snippet: s ? s.innerText.trim() : ''}; }))");
-                         w->js(js, [w, done, query](const QVariant& v) {
+                         w->js(js, done, [w, done, query](const QVariant& v) {
                              const QJsonArray results = QJsonDocument::fromJson(v.toString().toUtf8()).array();
                              if (results.isEmpty()) {
-                                 describePage(w, true, done, QStringLiteral("Searched for \"%1\" (no result list found; page text below).").arg(query));
+                                 describePage(w, done, QStringLiteral("Searched for \"%1\" (no result list found; page text below).").arg(query));
                                  return;
                              }
                              QStringList lines;
@@ -668,7 +842,13 @@ QList<LC_AITool> LC_AIBrowser::tools() {
                          return;
                      }
                      Browser* w = window();
-                     w->load(url, [w, done](const bool ok) { describePage(w, ok, done, QStringLiteral("Opened the page.")); });
+                     w->load(url, [w, done, url](const bool ok, const QString& why) {
+                         if (!ok) {
+                             done(LC_AIToolResult::error(couldNotOpen(w, url, why)));
+                             return;
+                         }
+                         describePage(w, done, QStringLiteral("Opened the page."));
+                     });
                  });
 
     list << tool("browser_read", "Read page",
@@ -676,9 +856,18 @@ QList<LC_AITool> LC_AIBrowser::tools() {
                  object({{"offset", QJsonObject{{"type", "integer"}, {"description", "Start at this character (default 0)"}}}}),
                  [](const QJsonObject& args, const Done& done) {
                      Browser* w = window();
+                     if (!w->hasPage()) {
+                         done(noPage());
+                         return;
+                     }
                      const int offset = qMax(0, args.value("offset").toInt());
-                     w->js(TEXT_JS, [w, done, offset](const QVariant& v) {
+                     w->js(TEXT_JS, done, [w, done, offset](const QVariant& v) {
                          const QString text = v.toString();
+                         if (offset > 0 && offset >= text.size()) {
+                             done(LC_AIToolResult::text(pageHeader(w) + QStringLiteral("\n\nNothing at offset %1: the page has only %2 characters.")
+                                                                           .arg(offset).arg(text.size())));
+                             return;
+                         }
                          QString part = text.mid(offset, READ_TEXT);
                          if (offset + READ_TEXT < text.size()) {
                              part += QStringLiteral("\n… (%1 characters in all; next offset %2)").arg(text.size()).arg(offset + READ_TEXT);
@@ -693,6 +882,10 @@ QList<LC_AITool> LC_AIBrowser::tools() {
                  object({}),
                  [](const QJsonObject&, const Done& done) {
                      Browser* w = window();
+                     if (!w->hasPage()) {
+                         done(noPage());
+                         return;
+                     }
                      const QString js = QStringLiteral(R"((() => {
   document.querySelectorAll('[data-ai-ref]').forEach(e => e.removeAttribute('data-ai-ref'));
   const out = []; let n = 0;
@@ -709,7 +902,7 @@ QList<LC_AITool> LC_AIBrowser::tools() {
     .map(h => h.tagName.toLowerCase() + ': ' + h.innerText.trim().replace(/\s+/g, ' ').slice(0, 120));
   return JSON.stringify({heads, els: out});
 })())");
-                     w->js(js, [w, done](const QVariant& v) {
+                     w->js(js, done, [w, done](const QVariant& v) {
                          const QJsonObject o = QJsonDocument::fromJson(v.toString().toUtf8()).object();
                          QStringList lines{pageHeader(w)};
                          const QJsonArray heads = o.value("heads").toArray();
@@ -720,6 +913,9 @@ QList<LC_AITool> LC_AIBrowser::tools() {
                              }
                          }
                          lines << "" << "Links and buttons:";
+                         if (o.value("els").toArray().isEmpty()) {
+                             lines << "  (none visible)";
+                         }
                          for (const QJsonValue& e : o.value("els").toArray()) {
                              const QJsonObject el = e.toObject();
                              lines << QStringLiteral("  [%1] %2: %3%4").arg(el.value("n").toInt()).arg(el.value("kind").toString(),
@@ -730,21 +926,41 @@ QList<LC_AITool> LC_AIBrowser::tools() {
                  });
 
     list << tool("browser_click", "Click",
-                 "Click a link or button by its number from browser_snapshot, then return the resulting page.",
+                 "Click a link or button by its number from browser_snapshot, then return the resulting page. Links that "
+                 "open a new window open in this same window.",
                  object({{"ref", QJsonObject{{"type", "integer"}, {"description", "The number from browser_snapshot"}}}}, {"ref"}),
                  [](const QJsonObject& args, const Done& done) {
                      Browser* w = window();
+                     if (!w->hasPage()) {
+                         done(noPage());
+                         return;
+                     }
                      const int ref = args.value("ref").toInt();
+                     // answers 'ok:' and the address of the link it clicked, if any
                      const QString js = QStringLiteral("(() => { const e = document.querySelector('[data-ai-ref=\"%1\"]');"
-                                                       " if (!e) return 'missing'; e.scrollIntoView({block: 'center'}); e.click(); return 'ok'; })()")
+                                                       " if (!e) return 'missing'; e.scrollIntoView({block: 'center'}); e.click();"
+                                                       " const a = e.closest('a[href]'); return 'ok:' + (a ? a.href : ''); })()")
                                             .arg(ref);
+                     const QUrl before = w->view()->url();
                      w->reveal();
-                     w->js(js, [w, done, ref](const QVariant& v) {
-                         if (v.toString() != "ok") {
+                     w->js(js, done, [w, done, ref, before](const QVariant& v) {
+                         const QString answer = v.toString();
+                         if (!answer.startsWith(QLatin1String("ok:"))) {
                              done(LC_AIToolResult::error(QStringLiteral("No element [%1]; take a new browser_snapshot.").arg(ref)));
                              return;
                          }
-                         w->settle([w, done, ref] { describePage(w, true, done, QStringLiteral("Clicked [%1].").arg(ref)); });
+                         const QUrl link(answer.mid(3));
+                         w->settle([w, done, ref, before, link](QString problem) {
+                             // a mailto:, file: or app link is refused without a sound: say so, or the AI thinks it worked
+                             if (problem.isEmpty() && link.isValid() && !link.scheme().isEmpty() && !webUrl(link)
+                                 && link.scheme() != QLatin1String("javascript") && w->view()->url() == before) {
+                                 problem = QStringLiteral("the link goes to a %1: address, which the AI browser does not open")
+                                               .arg(link.scheme());
+                             }
+                             describePage(w, done, problem.isEmpty() ? QStringLiteral("Clicked [%1].").arg(ref)
+                                                                     : QStringLiteral("Clicked [%1], but the page did not load: %2.")
+                                                                           .arg(ref).arg(problem));
+                         });
                      });
                  });
 
@@ -752,22 +968,63 @@ QList<LC_AITool> LC_AIBrowser::tools() {
                  object({{"dy", QJsonObject{{"type", "number"}, {"description", "Pixels to scroll"}}}}, {"dy"}),
                  [](const QJsonObject& args, const Done& done) {
                      Browser* w = window();
-                     w->js(QStringLiteral("window.scrollBy(0, %1); window.scrollY").arg(args.value("dy").toDouble()),
-                           [done](const QVariant& v) {
-                               done(LC_AIToolResult::text(QStringLiteral("Scrolled; now %1 px from the top.").arg(v.toInt())));
-                           });
+                     if (!w->hasPage()) {
+                         done(noPage());
+                         return;
+                     }
+                     const QJsonValue value = args.value("dy");
+                     bool number = value.isDouble();
+                     double dy = value.toDouble();
+                     if (value.isString()) { // some models send numbers as text
+                         dy = value.toString().trimmed().toDouble(&number);
+                     }
+                     if (!number || !std::isfinite(dy)) {
+                         done(LC_AIToolResult::error("dy must be a number of pixels, e.g. 600 to scroll down or -600 to scroll up."));
+                         return;
+                     }
+                     // instant: on a page with smooth scrolling the position would still be moving when it is read
+                     const QString js = QStringLiteral("(() => { const before = window.scrollY;"
+                                                       " window.scrollBy({top: %1, behavior: 'instant'});"
+                                                       " const end = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);"
+                                                       " return JSON.stringify({before, y: window.scrollY, end}); })()")
+                                            .arg(dy);
+                     w->js(js, done, [done, dy](const QVariant& v) {
+                         const QJsonObject o = QJsonDocument::fromJson(v.toString().toUtf8()).object();
+                         const int y = qRound(o.value("y").toDouble());
+                         const int end = qRound(o.value("end").toDouble());
+                         if (qRound(o.value("before").toDouble()) == y && dy != 0) {
+                             const QString why = dy < 0     ? QStringLiteral("already at the top")
+                                                 : end == 0 ? QStringLiteral("the page fits in the window, or it scrolls inside a panel")
+                                                 : y >= end ? QStringLiteral("already at the bottom")
+                                                            : QStringLiteral("the page scrolls inside a panel");
+                             done(LC_AIToolResult::text(QStringLiteral("Did not scroll: %1 (%2 px from the top; the page scrolls to %3 px).")
+                                                            .arg(why).arg(y).arg(end)));
+                             return;
+                         }
+                         done(LC_AIToolResult::text(QStringLiteral("Scrolled; now %1 px from the top (the page scrolls to %2 px).").arg(y).arg(end)));
+                     });
                  });
 
     list << tool("browser_back", "Back", "Go back to the previous page.", object({}),
                  [](const QJsonObject&, const Done& done) {
                      Browser* w = window();
-                     if (!w->view()->history()->canGoBack()) {
+                     if (!w->hasPage()) {
+                         done(noPage());
+                         return;
+                     }
+                     const int from = w->view()->history()->currentItemIndex();
+                     if (!w->step(-1)) {
                          done(LC_AIToolResult::error("There is no previous page."));
                          return;
                      }
                      // a back step is often restored from Chromium's page cache without a load: settle like a click
-                     w->view()->back();
-                     w->settle([w, done] { describePage(w, true, done, QStringLiteral("Went back.")); });
+                     w->settle([w, done, from](const QString&) {
+                         if (w->view()->history()->currentItemIndex() >= from) {
+                             done(LC_AIToolResult::error(QStringLiteral("Could not go back; the browser still shows:\n") + pageHeader(w)));
+                             return;
+                         }
+                         describePage(w, done, QStringLiteral("Went back."));
+                     });
                  });
 
     list << tool("browser_screenshot", "Page screenshot",
@@ -775,9 +1032,15 @@ QList<LC_AITool> LC_AIBrowser::tools() {
                  object({}),
                  [](const QJsonObject&, const Done& done) {
                      Browser* w = window();
-                     w->reveal();
-                     QTimer::singleShot(150, w, [w, done] {
-                         QPixmap pixmap = w->view()->grab();
+                     if (!w->hasPage()) {
+                         done(noPage());
+                         return;
+                     }
+                     w->screenshot([w, done](QPixmap pixmap) {
+                         if (pixmap.isNull()) {
+                             done(LC_AIToolResult::error("The screenshot failed: the browser window was closed."));
+                             return;
+                         }
                          if (pixmap.width() > MAX_SCREENSHOT_EDGE || pixmap.height() > MAX_SCREENSHOT_EDGE) {
                              pixmap = pixmap.scaled(MAX_SCREENSHOT_EDGE, MAX_SCREENSHOT_EDGE, Qt::KeepAspectRatio, Qt::SmoothTransformation);
                          }
@@ -785,7 +1048,8 @@ QList<LC_AITool> LC_AIBrowser::tools() {
                          QBuffer buffer(&png);
                          buffer.open(QIODevice::WriteOnly);
                          pixmap.save(&buffer, "PNG");
-                         LC_AIToolResult r = LC_AIToolResult::text(pageHeader(w));
+                         LC_AIToolResult r = LC_AIToolResult::text(
+                             pageHeader(w) + QStringLiteral("\nThe image shows the visible part of the page, %1 x %2 px.").arg(pixmap.width()).arg(pixmap.height()));
                          r.content.prepend(LC_AIContent::makeImage(png, "image/png"));
                          done(r);
                      });
