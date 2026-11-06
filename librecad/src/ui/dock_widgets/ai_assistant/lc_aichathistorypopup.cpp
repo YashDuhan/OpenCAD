@@ -234,6 +234,9 @@ public:
     void destroyEditor(QWidget* editor, const QModelIndex& index) const override {
         m_popup->m_editing.clear();
         QStyledItemDelegate::destroyEditor(editor, index);
+        // the list takes no focus, so the keys would go nowhere: back to the search box once the editor has closed
+        LC_AIChatHistoryPopup* popup = m_popup;
+        QTimer::singleShot(0, popup, [popup] { popup->m_search->setFocus(); });
     }
 
     void updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex&) const override {
@@ -246,9 +249,9 @@ private:
 };
 
 LC_AIChatHistoryPopup::LC_AIChatHistoryPopup(const LC_AITheme& theme, const QString& drawing, const QString& drawingName,
-                                             const QString& current, QWidget* parent)
+                                             const QString& current, const QSet<QString>& open, QWidget* parent)
     : QFrame(parent, Qt::Popup | Qt::FramelessWindowHint), m_theme(theme), m_drawing(drawing), m_drawingName(drawingName),
-      m_current(current) {
+      m_current(current), m_open(open) {
     setAttribute(Qt::WA_TranslucentBackground);
     setAttribute(Qt::WA_DeleteOnClose);
     setFixedSize(360, 420);
@@ -389,11 +392,18 @@ void LC_AIChatHistoryPopup::refresh() {
         if (name.isEmpty()) {
             name = drawing.isEmpty() ? tr("No drawing open") : tr("Unsaved drawing");
         }
+        // an unsaved drawing that is not open was closed without saving; its name ("unnamed document 1") may be
+        // the very name of the drawing open now
+        const bool gone = LC_AIChatStore::isUnsavedKey(drawing) && drawing != m_drawing && !m_open.contains(drawing);
+        if (gone) {
+            name = tr("%1 (closed, never saved)").arg(name);
+        }
         auto* header = new QListWidgetItem(m_list);
         header->setData(ROLE_KIND, Header);
         header->setData(Qt::DisplayRole, name);
         header->setData(ROLE_DETAIL, list.isEmpty() ? QString() : list.size() == 1 ? tr("1 chat") : tr("%1 chats").arg(list.size()));
         header->setToolTip(drawing.isEmpty()                         ? tr("Chats made while no drawing was open")
+                           : gone                                  ? tr("A drawing that was closed without being saved: only its chats are left")
                            : LC_AIChatStore::isUnsavedKey(drawing) ? tr("A drawing that has not been saved")
                                                                      : drawing);
         header->setFlags(Qt::NoItemFlags);
@@ -501,6 +511,16 @@ bool LC_AIChatHistoryPopup::eventFilter(QObject* watched, QEvent* event) {
             rename(m_list->currentRow());
             return true;
         }
+        // Delete as the bin: a first press asks, a second deletes; while there is text after the cursor, it edits the search
+        if (key->key() == Qt::Key_Delete && key->modifiers() == Qt::NoModifier && !m_search->hasSelectedText()
+            && m_search->cursorPosition() == m_search->text().size()) {
+            remove(m_list->currentRow());
+            return true;
+        }
+        if (key->key() == Qt::Key_Escape && !m_armed.isEmpty()) {
+            disarm(); // the question goes, the list stays
+            return true;
+        }
     }
     return QFrame::eventFilter(watched, event);
 }
@@ -519,4 +539,9 @@ void LC_AIChatHistoryPopup::popup(QWidget* anchor) {
     move(pos);
     show();
     m_search->setFocus();
+    // the list was filled before it had its size: from the top now, so the drawing's header stays above its chats
+    if (QListWidgetItem* highlight = m_list->currentItem()) {
+        m_list->scrollToTop();
+        m_list->scrollToItem(highlight);
+    }
 }

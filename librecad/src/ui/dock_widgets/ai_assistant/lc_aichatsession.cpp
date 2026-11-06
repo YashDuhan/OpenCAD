@@ -309,7 +309,15 @@ void LC_AIChatSession::openHistory() {
     QC_MDIWindow* active = activeDrawing();
     const QString drawing = active != nullptr ? keyOf(active) : m_drawing;
     const QString name = active != nullptr ? nameOf(active) : m_drawingName;
-    auto* popup = new LC_AIChatHistoryPopup(m_theme, drawing, name, m_chatId, m_panel);
+    QSet<QString> open; // the drawings open now: an unsaved one that is not is gone for good
+    if (m_mdi) {
+        for (QMdiSubWindow* sub : m_mdi->subWindowList()) {
+            if (QC_MDIWindow* w = rootOf(sub)) {
+                open.insert(keyOf(w));
+            }
+        }
+    }
+    auto* popup = new LC_AIChatHistoryPopup(m_theme, drawing, name, m_chatId, open, m_panel);
     // once the popup's click or key press has been handled: opening the chat's drawing runs the event loop, and the
     // popup (closed by the choice) is deleted in it, which must not happen while its own handler still runs
     connect(popup, &LC_AIChatHistoryPopup::resumeRequested, this, [this](const QString& id) {
