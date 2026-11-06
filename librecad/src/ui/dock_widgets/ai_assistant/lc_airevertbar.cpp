@@ -189,19 +189,30 @@ LC_AIRevertBar::LC_AIRevertBar(const int run, const LC_AITheme& theme, QWidget* 
             showReady();
         }
     });
-    showReady();
+    // a bar made again for a chat shown from the history shows how the run stands now
+    if (LC_AICheckpoints::instance().isRunReverted(run)) {
+        showReverted(QString());
+    }
+    else {
+        showReady();
+    }
 }
 
 void LC_AIRevertBar::addAfterRuns(LC_AIChatTranscript* transcript, const LC_AITheme& theme) {
     connect(&LC_AICheckpoints::instance(), &LC_AICheckpoints::runRecorded, transcript, [transcript, theme](const int run) {
-        const LC_AIRunChanges changes = LC_AICheckpoints::instance().changesOf(run);
-        RS_GraphicView* view = LC_AICheckpoints::instance().viewOf(run);
-        // nothing changed, or the drawing belongs to another window and its chat
-        if (changes.isEmpty() || view == nullptr || mainWindowOf(view) != mainWindowOf(transcript)) {
-            return;
-        }
-        transcript->addRunFooter(new LC_AIRevertBar(run, theme));
+        addForRun(transcript, run, theme);
     });
+}
+
+bool LC_AIRevertBar::addForRun(LC_AIChatTranscript* transcript, const int run, const LC_AITheme& theme) {
+    const LC_AIRunChanges changes = LC_AICheckpoints::instance().changesOf(run);
+    RS_GraphicView* view = LC_AICheckpoints::instance().viewOf(run);
+    // nothing changed, or the drawing belongs to another window and its chat
+    if (run == 0 || changes.isEmpty() || view == nullptr || mainWindowOf(view) != mainWindowOf(transcript)) {
+        return false;
+    }
+    transcript->addRunFooter(new LC_AIRevertBar(run, theme));
+    return true;
 }
 
 void LC_AIRevertBar::fitButton() {

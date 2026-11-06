@@ -30,6 +30,11 @@ public:
     LC_AIRevertBar(int run, const LC_AITheme& theme, QWidget* parent = nullptr);
     /** Puts a bar under every answer of this conversation that changes the drawing. */
     static void addAfterRuns(LC_AIChatTranscript* transcript, const LC_AITheme& theme);
+    /**
+     * Puts the bar of a run that has ended at the end of the conversation (a chat shown again from the history), when
+     * its checkpoint is still kept, it changed the drawing and the drawing is open. Returns whether it did.
+     */
+    static bool addForRun(LC_AIChatTranscript* transcript, int run, const LC_AITheme& theme);
     int run() const { return m_run; }
 
 private:

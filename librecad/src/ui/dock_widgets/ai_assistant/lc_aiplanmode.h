@@ -75,6 +75,8 @@ public:
     using Deliver = std::function<void(Answer answer, const QStringList& steps)>;
 
     LC_AIPlanCard(const QString& title, const QStringList& steps, const LC_AITheme& theme, QWidget* parent = nullptr);
+    /** A chat restored from the history: the card shows the answer it got, locked as when it was given. */
+    void showAnswer(Answer given, const QStringList& steps) { answer(given, steps); }
     /** propose_plan runs: the user's answer goes to `deliver` (at once when it was already given). */
     void activate(Deliver deliver);
     bool isActivated() const { return m_activated; }
@@ -178,8 +180,8 @@ public:
     void newRequest();
     /** The run ended: the tracker goes, a plan left unanswered locks. */
     void runEnded(bool stopped);
-    /** New chat. */
-    void reset();
+    /** New chat, or a chat shown again: a conversation that has plan tool calls keeps declaring the plan tools. */
+    void reset(const QList<LC_AIChatMessage>& chat = {});
 
     /** Tools that only look (at the drawing, the app or the web): they run without a plan. */
     static bool changesDrawing(const QString& toolName);

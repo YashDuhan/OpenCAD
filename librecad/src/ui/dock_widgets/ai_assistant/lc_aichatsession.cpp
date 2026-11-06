@@ -14,6 +14,7 @@
 #include <QJsonDocument>
 #include <QMdiArea>
 #include <QMdiSubWindow>
+#include <QRegularExpression>
 #include <QSet>
 #include <QTimer>
 #include <QToolButton>
@@ -22,7 +23,10 @@
 #include "lc_aichatstore.h"
 #include "lc_aichattranscript.h"
 #include "lc_aicheckpoints.h"
+#include "lc_aidebugger.h"
 #include "lc_aiicons.h"
+#include "lc_aiplanmode.h"
+#include "lc_airevertbar.h"
 #include "qc_applicationwindow.h"
 #include "qc_mdiwindow.h"
 
@@ -401,36 +405,169 @@ void LC_AIChatSession::openHistory() {
     popup->popup(m_button);
 }
 
+namespace {
+    /** Cards of type T added to the transcript by the answer just replayed, matched to its calls named `tool` in order. */
+    template <typename T>
+    void matchCards(LC_AIChatTranscript* transcript, const QList<T*>& before, const LC_AIChatMessage& answer, const QString& tool,
+                    QHash<QString, QPointer<T>>& cards) {
+        QList<T*> added = transcript->findChildren<T*>();
+        added.removeIf([&before](T* card) { return before.contains(card); });
+        for (const LC_AIToolCall& call : answer.toolCalls) {
+            // propose_plan without steps shows as a plain row (LC_AIPlanMode::cardFor)
+            const QJsonValue steps = call.arguments.value("steps");
+            const bool hasCard = call.name == tool
+                                 && (tool != QStringLiteral("propose_plan") || !steps.toArray().isEmpty() || !steps.toString().trimmed().isEmpty());
+            if (hasCard && !added.isEmpty()) {
+                cards.insert(call.id, added.takeFirst());
+            }
+        }
+    }
+
+    /** The steps of an edited plan, as the result of propose_plan lists them ("1. ..."). */
+    QStringList editedSteps(const QString& result) {
+        static const QRegularExpression line(QStringLiteral("^\\d+\\. (.*)$"));
+        QStringList steps;
+        for (const QString& l : result.split('\n')) {
+            if (const QRegularExpressionMatch match = line.match(l); match.hasMatch()) {
+                steps << match.captured(1);
+            }
+        }
+        return steps;
+    }
+}
+
 void LC_AIChatSession::replay(LC_AIChatTranscript* transcript, const QList<LC_AIChatMessage>& messages) {
+    const LC_AITheme theme = LC_AITheme::current();
+    QHash<QString, QPointer<LC_AIClarificationCard>> questions; // by call id
+    QHash<QString, QPointer<LC_AIPlanCard>> plans;
+    QHash<QString, LC_AIToolCall> calls;
+    QPointer<LC_AIPlanCard> plan; // the approved plan whose ticks update_plan set
+    QList<LC_AIPlanStep> planSteps;
+    LC_AIDebuggerSection* section = nullptr; // the debugger's pass being replayed
+    bool answered = false;                   // ... and whether it ended with its verdict
+    int run = 0;                             // the AI run of the answers so far, for its "Revert AI changes"
+    QSet<int> runsShown;
+    // how a run ended live: its calls closed, its revert bar under the answer, then the debugger's section closed
+    const auto endRun = [&] {
+        transcript->finishRun(); // calls that never got a result show as stopped; the last block of calls folds
+        if (run != 0 && !runsShown.contains(run)) {
+            runsShown.insert(run);
+            LC_AIRevertBar::addForRun(transcript, run, theme);
+        }
+        run = 0;
+        if (section != nullptr) {
+            transcript->closeSection();
+            answered ? section->setDone() : section->setStopped();
+            section = nullptr;
+        }
+    };
     bool first = true;
     for (const LC_AIChatMessage& m : messages) {
+        if (m.run != 0 && run != 0 && m.run != run) {
+            endRun(); // a run of its own without a question of its own (not expected, but its bar stays its own)
+        }
+        if (m.run != 0) {
+            run = m.run;
+        }
         switch (m.role) {
             case LC_AIChatMessage::Role::User:
                 if (!first) {
-                    transcript->finishRun(); // each question started a run: close the one before, as it was closed then
+                    endRun(); // each question started a run: close the one before, as it was closed then
                 }
-                transcript->addUser(m.text, m.attachments);
+                if (m.internal == QStringLiteral("debugger")) { // the debugger's request: its section, as live
+                    section = new LC_AIDebuggerSection(m.internalReason, theme);
+                    transcript->openSection(section, section->body());
+                    answered = false;
+                }
+                else if (m.text.isEmpty() && m.attachments.isEmpty()) {
+                    transcript->addUser(tr("(attached files the saved chat no longer has)"));
+                }
+                else {
+                    transcript->addUser(m.text, m.attachments);
+                }
                 break;
-            case LC_AIChatMessage::Role::Assistant:
+            case LC_AIChatMessage::Role::Assistant: {
+                bool asks = false;
+                bool proposes = false;
+                for (const LC_AIToolCall& call : m.toolCalls) {
+                    calls.insert(call.id, call);
+                    asks = asks || call.name == QStringLiteral("request_clarification");
+                    proposes = proposes || call.name == QStringLiteral("propose_plan");
+                }
+                const QList<LC_AIClarificationCard*> questionsBefore =
+                    asks ? transcript->findChildren<LC_AIClarificationCard*>() : QList<LC_AIClarificationCard*>();
+                const QList<LC_AIPlanCard*> plansBefore = proposes ? transcript->findChildren<LC_AIPlanCard*>() : QList<LC_AIPlanCard*>();
                 transcript->addAssistant(m);
+                if (asks) {
+                    matchCards(transcript, questionsBefore, m, QStringLiteral("request_clarification"), questions);
+                }
+                if (proposes) {
+                    matchCards(transcript, plansBefore, m, QStringLiteral("propose_plan"), plans);
+                }
+                answered = m.toolCalls.isEmpty();
                 break;
-            case LC_AIChatMessage::Role::ToolResult:
+            }
+            case LC_AIChatMessage::Role::ToolResult: {
+                const QString text = m.result.joinedText();
                 if (m.toolName == QStringLiteral("request_clarification") && !m.result.isError) {
-                    // the question card shows the answer it got (questions are answered in the order they were asked)
-                    const QString answer = QJsonDocument::fromJson(m.result.joinedText().toUtf8()).object().value("answer").toString();
-                    for (LC_AIClarificationCard* card : transcript->findChildren<LC_AIClarificationCard*>()) {
-                        if (!answer.isEmpty() && !card->isAnswered()) {
-                            card->showAnswer(answer);
-                            break;
+                    // the question card shows the answer it got
+                    const QString answer = QJsonDocument::fromJson(text.toUtf8()).object().value("answer").toString();
+                    if (LC_AIClarificationCard* card = questions.value(m.toolCallId); card != nullptr && !answer.isEmpty()) {
+                        card->showAnswer(answer);
+                    }
+                }
+                else if (m.toolName == QStringLiteral("propose_plan")) {
+                    // the plan card shows the answer it got and, below, the ticks of update_plan
+                    if (LC_AIPlanCard* card = plans.value(m.toolCallId)) {
+                        if (m.result.isError) {
+                            card->setStopped();
                         }
+                        else if (text.startsWith(QStringLiteral("The user rejected"))) {
+                            card->showAnswer(LC_AIPlanCard::Answer::Rejected, {});
+                        }
+                        else {
+                            const bool edited = text.startsWith(QStringLiteral("The user edited"));
+                            const QStringList steps = editedSteps(text);
+                            card->showAnswer(edited ? LC_AIPlanCard::Answer::Edited : LC_AIPlanCard::Answer::Approved, steps);
+                            plan = card;
+                            planSteps.clear();
+                            for (const QString& step : steps) {
+                                planSteps << LC_AIPlanStep{step, LC_AIPlanStep::Status::Pending, {}};
+                            }
+                        }
+                    }
+                }
+                else if (m.toolName == QStringLiteral("update_plan") && !m.result.isError && plan != nullptr) {
+                    static const QRegularExpression progress(QStringLiteral("^Step (\\d+) of \\d+ is (in progress|done|skipped|to do)\\."));
+                    if (const QRegularExpressionMatch match = progress.match(text); match.hasMatch()) {
+                        const int step = match.captured(1).toInt() - 1;
+                        const QString status = match.captured(2);
+                        while (planSteps.size() <= step) {
+                            planSteps << LC_AIPlanStep{};
+                        }
+                        planSteps[step].status = status == QStringLiteral("in progress") ? LC_AIPlanStep::Status::InProgress
+                                                 : status == QStringLiteral("done")      ? LC_AIPlanStep::Status::Done
+                                                 : status == QStringLiteral("skipped")   ? LC_AIPlanStep::Status::Skipped
+                                                                                         : LC_AIPlanStep::Status::Pending;
+                        const QJsonObject args = calls.value(m.toolCallId).arguments;
+                        if (args.contains("note")) {
+                            planSteps[step].note = args.value("note").toString().trimmed();
+                        }
+                        plan->setProgress(planSteps);
                     }
                 }
                 if (!m.stopped) { // a call stopped before it ran keeps its row "Stopped" (finishRun)
                     transcript->toolResult(m);
                 }
                 break;
+            }
         }
         first = false;
     }
-    transcript->finishRun(); // calls that never got a result show as stopped; the last block of calls folds
+    endRun();
+    for (const QPointer<LC_AIPlanCard>& card : std::as_const(plans)) {
+        if (card != nullptr && !card->isAnswered()) {
+            card->setStopped(); // a plan nobody answered
+        }
+    }
 }

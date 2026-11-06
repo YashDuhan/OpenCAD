@@ -54,7 +54,11 @@ public:
     /** Shows a saved chat, switching to its drawing (or opening its file) when it can. */
     void resume(const QString& chatId);
 
-    /** Fills an empty transcript with a saved conversation: questions, answers, tool calls folded with their results. */
+    /**
+     * Fills an empty transcript with a saved conversation, as it looked live: questions with their files, answers,
+     * tool calls folded with their results, answered question and plan cards, the debugger's sections, and the
+     * "Revert AI changes" bars of runs this session still keeps.
+     */
     static void replay(LC_AIChatTranscript* transcript, const QList<LC_AIChatMessage>& messages);
 
 signals:

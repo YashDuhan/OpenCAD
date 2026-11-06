@@ -938,7 +938,7 @@ void LC_AIPlanMode::runEnded(const bool) {
     publish();
 }
 
-void LC_AIPlanMode::reset() {
+void LC_AIPlanMode::reset(const QList<LC_AIChatMessage>& chat) {
     m_approved = false;
     m_rejected = false;
     m_running = false;
@@ -949,4 +949,9 @@ void LC_AIPlanMode::reset() {
     m_planCard = nullptr;
     m_cards.clear();
     m_tracker->hide();
+    for (const LC_AIChatMessage& m : chat) { // a model that repeats a call of its history must find the tool
+        for (const LC_AIToolCall& call : m.toolCalls) {
+            m_proposedInChat = m_proposedInChat || isPlanTool(call.name);
+        }
+    }
 }

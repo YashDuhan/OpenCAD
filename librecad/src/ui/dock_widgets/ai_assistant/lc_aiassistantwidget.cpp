@@ -659,7 +659,7 @@ void LC_AIAssistantWidget::showChat(const QList<LC_AIChatMessage>& messages) {
     m_sessionAllows.clear(); // "Allow for this session" answers belong to the chat they were given in
     m_transcript->clear();
     LC_AIChatSession::replay(m_transcript, messages);
-    m_plan->reset(); // a plan belongs to the chat it was made in
+    m_plan->reset(messages); // a plan belongs to the chat it was made in
     m_runStart = -1; // a run of another chat cannot be checked from here
 }
 

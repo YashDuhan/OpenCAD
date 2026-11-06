@@ -83,6 +83,11 @@ public:
     bool revertOwnChanges(int run, QString& message);
     /** A reverted run can come back while the drawing is still as the revert left it. */
     bool canRestore(int run) const;
+    /** The run was reverted (and not restored since); for a revert bar made again (LC_AIRevertBar::addForRun). */
+    bool isRunReverted(int run) const {
+        const auto it = m_runs.constFind(run);
+        return it != m_runs.cend() && it->reverted != Reverted::No;
+    }
     bool restore(int run, QString& message);
 
 signals:
