@@ -1,5 +1,5 @@
 {
- "when": "2026-11-06T03:37",
+ "when": "2026-11-06T08:30",
  "results": [
   {
    "id": "DrawLine",
@@ -1347,6 +1347,16 @@
    "detail": "+1 entities"
   },
   {
+   "id": "tool:check_drawing",
+   "status": "passed",
+   "detail": "rerun after the checker fixes"
+  },
+  {
+   "id": "tool:fix_drawing_issues",
+   "status": "passed",
+   "detail": "rerun after the checker fixes"
+  },
+  {
    "id": "tool:open_drawing",
    "status": "passed",
    "detail": "+13 entities"
@@ -1573,8 +1583,8 @@
   },
   {
    "id": "properties:pick",
-   "status": "passed",
-   "detail": "+1 entities, -1 entities"
+   "status": "failed",
+   "detail": "expected 1 new circle, got 0; expected 1 removed, got 0; expected /Started picking \"Geometry / Center\"[\\s\\S]*Running tool: Pick Point\\.[\\s\\S]*click_drawing: [\\s\\S]*list_entities: 2 matching entities[\\s\\S]*centre=\\((349\\.9|350)[\\d.]*, (60|60\\.1)[\\d.]*\\) radius=40/ in the results"
   },
   {
    "id": "context:empty_space",
@@ -1797,6 +1807,11 @@
    "detail": ""
   },
   {
+   "id": "panel:pen_palette_dockwidget > Delete Pen",
+   "status": "passed",
+   "detail": "dialog Remove pen"
+  },
+  {
    "id": "menu:File > New",
    "status": "passed",
    "detail": "-13 entities"
@@ -1823,8 +1838,8 @@
   },
   {
    "id": "menu:File > Save All...",
-   "status": "skipped",
-   "detail": "not run by the test: it would save all your own drawings or window"
+   "status": "passed",
+   "detail": ""
   },
   {
    "id": "menu:File > Import > Insert Image",
@@ -1863,13 +1878,13 @@
   },
   {
    "id": "menu:File > Close",
-   "status": "skipped",
-   "detail": "not run by the test: it would close your own drawings or window"
+   "status": "passed",
+   "detail": "-13 entities"
   },
   {
    "id": "menu:File > Close All",
-   "status": "skipped",
-   "detail": "not run by the test: it would close your own drawings or window"
+   "status": "passed",
+   "detail": "-13 entities"
   },
   {
    "id": "menu:Options > Application Preferences",
@@ -2728,8 +2743,8 @@
   },
   {
    "id": "menu:Tools > Modify > Revert direction",
-   "status": "skipped",
-   "detail": "not run by the test: it would revert your own drawings or window"
+   "status": "passed",
+   "detail": ""
   },
   {
    "id": "menu:Tools > Modify > Trim",
@@ -2877,9 +2892,14 @@
    "detail": ""
   },
   {
+   "id": "menu:Tools > Check Drawing",
+   "status": "passed",
+   "detail": ""
+  },
+  {
    "id": "menu:Workspace > Fullscreen",
-   "status": "skipped",
-   "detail": "not run by the test: it would resize your own drawings or window"
+   "status": "passed",
+   "detail": ""
   },
   {
    "id": "menu:Workspace > Statusbar",
@@ -3013,8 +3033,8 @@
   },
   {
    "id": "menu:Workspace > Toolbars > Workspaces",
-   "status": "skipped",
-   "detail": "not run by the test: it rearranges your window (workspaces are tested with list:workspaces)"
+   "status": "passed",
+   "detail": ""
   },
   {
    "id": "menu:Workspace > Toolbars > Active Layer",
@@ -3243,13 +3263,13 @@
   },
   {
    "id": "menu:Workspace > Re-dock Widgets",
-   "status": "skipped",
-   "detail": "not run by the test: it rearranges your panels or drawing windows"
+   "status": "passed",
+   "detail": ""
   },
   {
    "id": "menu:Workspace > Save Workspace",
-   "status": "skipped",
-   "detail": "not run by the test: it rearranges your window (workspaces are tested with list:workspaces)"
+   "status": "passed",
+   "detail": "dialog New Workspace"
   },
   {
    "id": "menu:Workspace > Custom Menu Creator",
@@ -3263,16 +3283,21 @@
   },
   {
    "id": "menu:Workspace > Drawings > Tab mode",
-   "status": "skipped",
-   "detail": "not run by the test: it rearranges your panels or drawing windows"
+   "status": "passed",
+   "detail": ""
   },
   {
    "id": "menu:Workspace > Drawings > Window mode",
-   "status": "skipped",
-   "detail": "not run by the test: it rearranges your panels or drawing windows"
+   "status": "passed",
+   "detail": ""
   },
   {
    "id": "menu:Agent Progress > Open Agent Progress...",
+   "status": "passed",
+   "detail": ""
+  },
+  {
+   "id": "menu:Agent Progress > Check Drawing",
    "status": "passed",
    "detail": ""
   },
@@ -3545,11 +3570,6 @@
    "id": "panel:pen_palette_dockwidget > Apply To Layer",
    "status": "passed",
    "detail": ""
-  },
-  {
-   "id": "panel:pen_palette_dockwidget > Delete Pen",
-   "status": "skipped",
-   "detail": "\"Delete Pen\" is greyed out on the test drawing; it needs a written recipe that sets up a drawing where it applies"
   },
   {
    "id": "panel:pen_palette_dockwidget > Settings",
@@ -4008,8 +4028,8 @@
   },
   {
    "id": "panel:dock_modify > Revert direction",
-   "status": "skipped",
-   "detail": "not run by the test: it would revert your own drawings or window"
+   "status": "passed",
+   "detail": ""
   },
   {
    "id": "panel:dock_modify > Trim",
