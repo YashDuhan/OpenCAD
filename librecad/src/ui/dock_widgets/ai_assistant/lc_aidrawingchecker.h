@@ -40,6 +40,7 @@ namespace LC_AIDrawingChecker {
         bool fixable {false};          // fix_drawing_issues does it by itself
         RS_Vector moveFrom {false};    // a gap (endpoint_gap, nearly_closed): the loose end that moves...
         RS_Vector moveTo {false};      // ...onto this point
+        RS_Vector alsoFrom {false};    // a corner (endpoint_gap): the second entity's end here moves onto moveTo too
     };
 
     struct Options {
@@ -59,6 +60,7 @@ namespace LC_AIDrawingChecker {
         double precision {0}; // points closer than this are the same point
         double size {0};      // diagonal of the main extents
         QString unit;
+        QString unitSign;  // "mm", for the chat card
         const RS_Graphic* graphic {nullptr}; // only to tell whether the open drawing is still the checked one
     };
 

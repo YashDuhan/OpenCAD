@@ -332,6 +332,64 @@ void LC_AIAssistantWidget::startTask(const QString& prompt, const bool send) {
     }
 }
 
+void LC_AIAssistantWidget::sendTask(const QString& prompt, const std::function<void(bool)>& done) {
+    const QString text = prompt.trimmed();
+    if (text.isEmpty()) {
+        if (done) {
+            done(false);
+        }
+        return;
+    }
+    if (m_busy) {
+        if (m_queuedDone) {
+            m_queuedDone(false); // one task waits at a time
+        }
+        m_queuedTask = text;
+        m_queuedDrawing = m_chats->drawing();
+        m_queuedDone = done;
+        return;
+    }
+    // as onSend, with the task in place of the message box's text and files
+    LC_AIChatMessage question;
+    question.role = LC_AIChatMessage::Role::User;
+    question.text = text;
+    m_messages.append(question);
+    m_runTools = LC_AIControl::withControl(m_tools + LC_MCPManager::instance().aiTools());
+    m_inference->setTools(m_runTools);
+    prepareRun();
+    m_transcript->addUser(text);
+    const bool sent = m_inference->send(m_messages);
+    if (sent) {
+        m_chats->save(m_messages);
+        setBusy(true);
+        m_transcript->setThinking(true);
+        LC_AIControl::instance().begin(qobject_cast<QMainWindow*>(window()));
+    }
+    if (done) {
+        done(sent);
+    }
+}
+
+void LC_AIAssistantWidget::sendQueuedTask() {
+    if (m_busy || m_queuedTask.isEmpty()) {
+        return; // still busy (the debugger's pass went on): the next end of a run sends it
+    }
+    const QString task = m_queuedTask;
+    const std::function<void(bool)> done = m_queuedDone;
+    const bool sameChat = m_queuedDrawing == m_chats->drawing();
+    m_queuedTask.clear();
+    m_queuedDrawing.clear();
+    m_queuedDone = nullptr;
+    // Stop means stop: the waiting task goes too. So does one whose chat is no longer shown (another drawing's).
+    if (m_inference->wasCancelled() || !sameChat) {
+        if (done) {
+            done(false);
+        }
+        return;
+    }
+    sendTask(task, done);
+}
+
 QList<LC_AITool> LC_AIAssistantWidget::availableTools() const {
     return m_tools + LC_MCPManager::instance().aiTools();
 }
@@ -709,6 +767,9 @@ void LC_AIAssistantWidget::setBusy(const bool busy) {
     m_modelSelect->setEnabled(!busy);
     m_chats->setRunning(busy);
     updateSendButton();
+    if (!busy && !m_queuedTask.isEmpty()) {
+        QTimer::singleShot(0, this, &LC_AIAssistantWidget::sendQueuedTask); // once the run has wound up (afterRun)
+    }
 }
 
 void LC_AIAssistantWidget::showChat(const QList<LC_AIChatMessage>& messages) {

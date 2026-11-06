@@ -21,6 +21,7 @@
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QSet>
+#include <QTimer>
 #include <QVBoxLayout>
 #include <algorithm>
 #include <cmath>
@@ -28,6 +29,7 @@
 #include <numeric>
 
 #include "lc_aiassistantwidget.h"
+#include "lc_aichatsession.h"
 #include "lc_aichattranscript.h"
 #include "lc_aiicons.h"
 #include "lc_aiprovidersdialog.h"
@@ -109,6 +111,9 @@ namespace {
     QString fmt(const double v) {
         if (!std::isfinite(v)) {
             return QStringLiteral("n/a");
+        }
+        if (v != 0 && std::abs(v) < 1e-6) {
+            return QString::number(v, 'g', 3); // 1e-09 (eight decimals would round it to 0)
         }
         QString s = QString::number(v, 'f', std::abs(v) < 0.01 && v != 0 ? 8 : 4);
         if (s.contains('.')) {
@@ -528,6 +533,17 @@ namespace {
         else if (scope == "layer") {
             c.wholeDrawing = false;
             RS_Layer* layer = o.layer.isEmpty() ? nullptr : graphic->getLayerList()->find(o.layer);
+            if (layer == nullptr && !o.layer.isEmpty()) {
+                // "walls" for "Walls" (DXF layer names do not differ by case), when only one layer matches
+                int matches = 0;
+                for (RS_Layer* l : *graphic->getLayerList()) {
+                    if (l->getName().compare(o.layer, Qt::CaseInsensitive) == 0) {
+                        layer = l;
+                        ++matches;
+                    }
+                }
+                layer = matches == 1 ? layer : nullptr;
+            }
             if (layer == nullptr) {
                 QStringList names;
                 for (RS_Layer* l : *graphic->getLayerList()) {
@@ -1047,8 +1063,8 @@ namespace {
 
     // --- endpoints that nearly meet
 
-    /** A point lies on some other entity (a T-junction): it is connected, though not to an endpoint. */
-    bool liesOnOther(Context& c, const RS_Vector& p, const RS_Entity* self) {
+    /** The entities whose boxes are near this point (within a grid cell around it), built on first use. */
+    QList<RS_Entity*> entitiesNear(Context& c, const RS_Vector& p) {
         if (c.gridCell <= 0) {
             c.gridCell = std::max(c.size / 64.0, c.gap * 4);
             for (RS_Entity* e : std::as_const(c.all)) {
@@ -1072,14 +1088,125 @@ namespace {
                 }
             }
         }
-        const QList<RS_Entity*> near = c.grid.value({qint64(std::floor(p.x / c.gridCell)), qint64(std::floor(p.y / c.gridCell))})
-                                       + c.gridBig;
-        for (RS_Entity* e : near) {
+        // the cell and its neighbours: anything within a gap of the point (a cell is at least 4 gaps wide)
+        const qint64 cx = qint64(std::floor(p.x / c.gridCell));
+        const qint64 cy = qint64(std::floor(p.y / c.gridCell));
+        QList<RS_Entity*> near = c.gridBig;
+        QSet<RS_Entity*> seen(c.gridBig.begin(), c.gridBig.end());
+        for (qint64 dx = -1; dx <= 1; ++dx) {
+            for (qint64 dy = -1; dy <= 1; ++dy) {
+                for (RS_Entity* e : c.grid.value({cx + dx, cy + dy})) {
+                    if (!seen.contains(e)) {
+                        seen.insert(e);
+                        near << e;
+                    }
+                }
+            }
+        }
+        return near;
+    }
+
+    /** A point lies on some other entity (a T-junction): it is connected, though not to an endpoint. */
+    bool liesOnOther(Context& c, const RS_Vector& p, const RS_Entity* self) {
+        for (RS_Entity* e : entitiesNear(c, p)) {
             if (e != self && e->rtti() != RS2::EntityText && e->rtti() != RS2::EntityMText && e->getDistanceToPoint(p) <= c.eps) {
                 return true;
             }
         }
         return false;
+    }
+
+    /** Where an end can move without changing the shape of its entity: along its line, or around its arc's circle. */
+    struct Path {
+        enum Kind { None, Straight, Round } kind {None};
+        RS_Vector a;   // Straight: a point of the line; Round: the centre
+        RS_Vector dir; // Straight: the unit direction
+        double radius {0};
+    };
+
+    Path pathOf(const RS_Entity* segment) {
+        Path p;
+        if (segment == nullptr) {
+            return p;
+        }
+        if (segment->rtti() == RS2::EntityLine) {
+            const RS_Vector d = segment->getEndpoint() - segment->getStartpoint();
+            if (d.magnitude() > 0) {
+                p.kind = Path::Straight;
+                p.a = segment->getStartpoint();
+                p.dir = d / d.magnitude();
+            }
+        }
+        else if (segment->rtti() == RS2::EntityArc || segment->rtti() == RS2::EntityCircle) {
+            p.kind = Path::Round;
+            p.a = segment->getCenter();
+            p.radius = segment->getRadius();
+        }
+        return p;
+    }
+
+    /** The path of one end of a line, an arc or a polyline (whose arc ends have none: moving them changes the bulge). */
+    Path pathAt(RS_Entity* e, const bool start) {
+        if (e->rtti() != RS2::EntityPolyline) {
+            return e->rtti() == RS2::EntityCircle ? Path{} : pathOf(e);
+        }
+        RS_Entity* first = nullptr;
+        RS_Entity* last = nullptr;
+        for (RS_Entity* s : *static_cast<RS_Polyline*>(e)) {
+            if (s != nullptr) {
+                first = first != nullptr ? first : s;
+                last = s;
+            }
+        }
+        RS_Entity* segment = start ? first : last;
+        return segment != nullptr && segment->rtti() == RS2::EntityLine ? pathOf(segment) : Path{};
+    }
+
+    /** An arc end: moving it anywhere but around its circle would change its radius or centre. */
+    bool roundEnd(RS_Entity* e, const bool start) {
+        return e->rtti() == RS2::EntityArc || (e->rtti() == RS2::EntityPolyline && pathAt(e, start).kind == Path::None);
+    }
+
+    /** Where two paths cross: none, one or two points (a line touching a circle within eps counts). */
+    QList<RS_Vector> crossings(const Path& p, const Path& q, const double eps) {
+        if (p.kind == Path::None || q.kind == Path::None) {
+            return {};
+        }
+        if (p.kind == Path::Round && q.kind == Path::Straight) {
+            return crossings(q, p, eps);
+        }
+        if (p.kind == Path::Straight && q.kind == Path::Straight) {
+            const double sine = p.dir.x * q.dir.y - p.dir.y * q.dir.x;
+            if (std::abs(sine) < 1e-9) {
+                return {}; // parallel
+            }
+            const RS_Vector w = q.a - p.a;
+            return {p.a + p.dir * ((w.x * q.dir.y - w.y * q.dir.x) / sine)};
+        }
+        if (p.kind == Path::Straight) { // a line and a circle
+            const RS_Vector foot = p.a + p.dir * (q.a - p.a).dotP(p.dir);
+            const double d = foot.distanceTo(q.a);
+            if (d > q.radius + eps) {
+                return {};
+            }
+            const double h = std::sqrt(std::max(0.0, q.radius * q.radius - d * d));
+            return {foot + p.dir * h, foot - p.dir * h};
+        }
+        // two circles
+        const double d = p.a.distanceTo(q.a);
+        if (d <= eps || d > p.radius + q.radius + eps || d < std::abs(p.radius - q.radius) - eps) {
+            return {};
+        }
+        const double x = (d * d + p.radius * p.radius - q.radius * q.radius) / (2 * d);
+        const double h = std::sqrt(std::max(0.0, p.radius * p.radius - x * x));
+        const RS_Vector u = (q.a - p.a) / d;
+        const RS_Vector m = p.a + u * x;
+        const RS_Vector n(-u.y, u.x);
+        return {m + n * h, m - n * h};
+    }
+
+    QString endName(const bool start) {
+        return start ? QStringLiteral("start") : QStringLiteral("end");
     }
 
     void checkGaps(Context& c) {
@@ -1138,10 +1265,21 @@ namespace {
             }
             return onOther.value(k);
         };
+        const auto rebuildable = [](RS_Entity* e) {
+            QList<Vertex> points;
+            return e->rtti() != RS2::EntityPolyline || vertices(static_cast<RS_Polyline*>(e), points);
+        };
         QSet<QPair<int, int>> reported;
+        QList<int> loose; // free ends with no other end close by: they may stop short of a line instead
         for (int i = 0; i < ends.size(); ++i) {
             const int j = nearest[i];
-            if (j < 0 || attached(i)) {
+            if (j < 0) {
+                if (!attached(i)) {
+                    loose << i;
+                }
+                continue;
+            }
+            if (attached(i)) {
                 continue;
             }
             const QPair<int, int> pair{std::min(i, j), std::max(i, j)};
@@ -1149,34 +1287,112 @@ namespace {
                 continue;
             }
             reported.insert(pair);
-            // the loose end moves onto the attached one; of two loose ends, the newer entity's
+            // the loose end moves onto the attached one; of two loose ends, a line's rather than an arc's (that would
+            // change its radius), else the newer entity's
+            const bool bothFree = !attached(j);
             int mover = i;
             int target = j;
-            if (!attached(j) && ends[j].e->getId() > ends[i].e->getId()) {
-                mover = j;
-                target = i;
+            if (bothFree) {
+                const bool iRound = roundEnd(ends[i].e, ends[i].start);
+                const bool jRound = roundEnd(ends[j].e, ends[j].start);
+                if (iRound != jRound ? iRound : ends[j].e->getId() > ends[i].e->getId()) {
+                    mover = j;
+                    target = i;
+                }
             }
             const End& m = ends[mover];
             const End& t = ends[target];
-            bool rebuildable = true;
-            if (m.e->rtti() == RS2::EntityPolyline) {
-                QList<Vertex> points;
-                rebuildable = vertices(static_cast<RS_Polyline*>(m.e), points);
+            // Both free: they meet where their lines or arcs cross, if that is close by, so each keeps its direction or
+            // its circle (two orthogonal lines stay orthogonal). Otherwise the loose end comes onto the other end.
+            RS_Vector meet(false);
+            if (bothFree) {
+                double best = c.gap;
+                for (const RS_Vector& p : crossings(pathAt(m.e, m.start), pathAt(t.e, t.start), c.eps)) {
+                    const double far = std::max(p.distanceTo(m.p), p.distanceTo(t.p));
+                    if (far <= best) {
+                        best = far;
+                        meet = p;
+                    }
+                }
             }
+            const bool corner = meet.valid && meet.distanceTo(t.p) > c.eps;
+            if (!meet.valid) {
+                meet = t.p;
+            }
+            // an arc end only moves around its circle: one that would have to leave it is left to the user
+            const Path mp = pathAt(m.e, m.start);
+            const bool keepsShape = !roundEnd(m.e, m.start)
+                                    || (mp.kind == Path::Round && std::abs(meet.distanceTo(mp.a) - mp.radius) <= c.eps);
             Issue issue;
             issue.rule = QStringLiteral("endpoint_gap");
             issue.ids = {m.e->getId(), t.e->getId()};
             issue.position = (m.p + t.p) * 0.5;
             issue.moveFrom = m.p;
-            issue.moveTo = t.p;
+            issue.moveTo = meet;
+            issue.alsoFrom = corner ? t.p : RS_Vector(false);
             issue.message = QStringLiteral("%1 %2 %3 is %4 from #%5 %6 %7 %8 but does not meet it")
-                                .arg(ref(m.e), m.start ? QStringLiteral("start") : QStringLiteral("end"), fmt(m.p), fmt(m.p.distanceTo(t.p)))
+                                .arg(ref(m.e), endName(m.start), fmt(m.p), fmt(m.p.distanceTo(t.p)))
                                 .arg(t.e->getId())
-                                .arg(LC_AITools::typeName(t.e), t.start ? QStringLiteral("start") : QStringLiteral("end"), fmt(t.p));
-            issue.fix = QStringLiteral("move #%1's %2 onto %3")
-                            .arg(m.e->getId())
-                            .arg(m.start ? QStringLiteral("start") : QStringLiteral("end"), fmt(t.p));
-            issue.fixable = rebuildable && editable(m.e);
+                                .arg(LC_AITools::typeName(t.e), endName(t.start), fmt(t.p));
+            if (corner) {
+                issue.fix = QStringLiteral("move #%1's %2 and #%3's %4 to where they meet, %5")
+                                .arg(m.e->getId()).arg(endName(m.start)).arg(t.e->getId()).arg(endName(t.start), fmt(meet));
+            }
+            else if (keepsShape) {
+                issue.fix = QStringLiteral("move #%1's %2 onto %3").arg(m.e->getId()).arg(endName(m.start), fmt(meet));
+            }
+            else {
+                issue.fix = QStringLiteral("join them by hand (moving the arc's %1 onto %2 would change its radius)")
+                                .arg(endName(m.start), fmt(meet));
+            }
+            issue.fixable = keepsShape && rebuildable(m.e) && editable(m.e) && (!corner || (rebuildable(t.e) && editable(t.e)));
+            c.add(issue);
+        }
+        // a free end that stops just short of (or runs just past) the middle of a line or arc: it moves along its own
+        // line or arc onto it
+        for (const int i : std::as_const(loose)) {
+            const End& m = ends[i];
+            const Path mp = pathAt(m.e, m.start);
+            if (mp.kind == Path::None) {
+                continue;
+            }
+            RS_Entity* best = nullptr;
+            RS_Vector meet(false);
+            double bestDistance = c.gap;
+            for (RS_Entity* e : entitiesNear(c, m.p)) {
+                const RS2::EntityType type = e->rtti();
+                if (e == m.e || c.skip.contains(e->getId())
+                    || (type != RS2::EntityLine && type != RS2::EntityArc && type != RS2::EntityCircle && type != RS2::EntityPolyline)
+                    || e->getDistanceToPoint(m.p) > c.gap) {
+                    continue;
+                }
+                const RS_Entity* segment = type == RS2::EntityPolyline
+                                               ? static_cast<RS_Polyline*>(e)->getNearestEntity(m.p, nullptr, RS2::ResolveNone)
+                                               : e;
+                for (const RS_Vector& p : crossings(mp, pathOf(segment), c.eps)) {
+                    const double d = p.distanceTo(m.p);
+                    if (d > c.eps && d <= bestDistance && segment->getDistanceToPoint(p) <= c.eps * 10) {
+                        bestDistance = d;
+                        best = e;
+                        meet = p;
+                    }
+                }
+            }
+            if (best == nullptr) {
+                continue;
+            }
+            Issue issue;
+            issue.rule = QStringLiteral("endpoint_gap");
+            issue.ids = {m.e->getId(), best->getId()};
+            issue.position = (m.p + meet) * 0.5;
+            issue.moveFrom = m.p;
+            issue.moveTo = meet;
+            issue.message = QStringLiteral("%1 %2 %3 is %4 from #%5 %6 but does not end on it")
+                                .arg(ref(m.e), endName(m.start), fmt(m.p), fmt(bestDistance))
+                                .arg(best->getId())
+                                .arg(LC_AITools::typeName(best));
+            issue.fix = QStringLiteral("move #%1's %2 onto #%3 at %4").arg(m.e->getId()).arg(endName(m.start)).arg(best->getId()).arg(fmt(meet));
+            issue.fixable = rebuildable(m.e) && editable(m.e);
             c.add(issue);
         }
     }
@@ -1220,15 +1436,48 @@ namespace {
 
     // --- pens
 
+    /**
+     * What setting e ByLayer would change in how it looks and prints, e.g. "colour green -> red" (empty: nothing, its
+     * own colour, line type and width are its layer's).
+     */
+    QStringList byLayerChanges(const RS_Entity* e) {
+        const RS_Layer* layer = e->getLayer(true);
+        if (layer == nullptr) {
+            return {};
+        }
+        const RS_Pen own = e->getPen(false);
+        const RS_Pen theirs = layer->getPen();
+        QStringList changes;
+        if (!own.getColor().isByLayer() && !own.getColor().isByBlock() && own.getColor().toQColor() != theirs.getColor().toQColor()) {
+            changes << QStringLiteral("colour %1 -> %2").arg(colourName(own.getColor().toQColor()), colourName(theirs.getColor().toQColor()));
+        }
+        if (own.getLineType() != RS2::LineByLayer && own.getLineType() != RS2::LineByBlock && own.getLineType() != theirs.getLineType()) {
+            changes << QStringLiteral("line type %1 -> %2").arg(own.getLineTypeName(), theirs.getLineTypeName());
+        }
+        const auto width = [](const RS2::LineWidth w) {
+            return w == RS2::WidthDefault ? QStringLiteral("Default") : QStringLiteral("%1 mm").arg(fmt(int(w) / 100.0));
+        };
+        if (own.getWidth() != RS2::WidthByLayer && own.getWidth() != RS2::WidthByBlock && own.getWidth() != theirs.getWidth()) {
+            changes << QStringLiteral("width %1 -> %2").arg(width(own.getWidth()), width(theirs.getWidth()));
+        }
+        return changes;
+    }
+
     void checkByLayer(Context& c) {
         for (RS_Entity* e : std::as_const(c.scoped)) {
             const QStringList what = explicitPen(e);
             if (what.isEmpty()) {
                 continue;
             }
+            // only a pen that looks like its layer's is a safe fix: anything else would change the printed drawing
+            // (green lines on a red layer turning red, a 0.5 mm outline losing its weight), so that is the user's call
+            const QStringList changes = byLayerChanges(e);
             issueAt(c, "bylayer", e, centreOf(e),
                     QStringLiteral("%1 on layer %2 has its own %3").arg(ref(e), layerOf(e), what.join(", ")),
-                    QStringLiteral("set it ByLayer (or put it on a layer that has that look)"), true);
+                    changes.isEmpty() ? QStringLiteral("set it ByLayer (it looks the same)")
+                                      : QStringLiteral("ask the user: ByLayer would change its look (%1); or put it on a layer that has "
+                                                       "that look").arg(changes.join(", ")),
+                    changes.isEmpty());
         }
     }
 
@@ -1464,9 +1713,11 @@ namespace {
                 issue.rule = QStringLiteral("layer0");
                 issue.ids = ids;
                 issue.position = min.valid ? (min + max) * 0.5 : RS_Vector(false);
-                issue.message = QStringLiteral("%1 entities (%2) are on layer 0 although the drawing has other layers (%3)")
+                issue.message = (ids.size() == 1 ? QStringLiteral("%1 entity (%2) is on layer 0 although the drawing has other layers (%3)")
+                                                 : QStringLiteral("%1 entities (%2) are on layer 0 although the drawing has other layers (%3)"))
                                     .arg(ids.size()).arg(idList(ids), others.join(", "));
-                issue.fix = QStringLiteral("move them to the layers they belong on; keep layer 0 for block contents");
+                issue.fix = ids.size() == 1 ? QStringLiteral("move it to the layer it belongs on; keep layer 0 for block contents")
+                                            : QStringLiteral("move them to the layers they belong on; keep layer 0 for block contents");
                 c.add(issue);
             }
         }
@@ -1723,6 +1974,7 @@ namespace {
         QStringList log;
         int changes {0};
         QHash<Id, RS_Entity*> byId;
+        QSet<RS_Entity*> added; // what the passes so far put in the drawing (and is still there)
 
         Context detect(const char* rule) {
             Context c;
@@ -1772,6 +2024,33 @@ namespace {
         }
     };
 
+    /**
+     * The changes of one pass. What an earlier pass of the same fix added and this one replaces or deletes is not
+     * deleted in the undo step but taken back out of it: it was not in the drawing before the fix, and one Undo
+     * must give back exactly that drawing (a line merged twice, a merged line then set ByLayer).
+     */
+    struct Edit {
+        LC_DocumentModificationBatch& ctx;
+        Fixer& f;
+        QList<RS_Entity*> discard; // taken out after the pass's own work, which still reads them
+
+        void remove(RS_Entity* e) {
+            if (f.added.remove(e)) {
+                discard << e;
+            }
+            else {
+                ctx.remove(e);
+            }
+        }
+
+        void replace(RS_Entity* e, RS_Entity* now) {
+            remove(e);
+            ctx.add(now);
+            f.added.insert(now);
+            f.replaced(e, now);
+        }
+    };
+
     RS_Entity* withPenByLayer(RS_Entity* e) {
         RS_Entity* clone = e->clone();
         RS_Pen pen = clone->getPen(false);
@@ -1789,6 +2068,38 @@ namespace {
             clone->update();
         }
         return clone;
+    }
+
+    /**
+     * A copy of e with its end at `from` moved to `to`: a line's end, a polyline's end vertex, an arc's end around its
+     * circle (nullptr when `to` is off the circle: that would change its radius).
+     */
+    RS_Entity* withEndMoved(RS_Entity* e, const RS_Vector& from, const RS_Vector& to, const double eps) {
+        const bool atStart = from.distanceTo(e->getStartpoint()) <= from.distanceTo(e->getEndpoint());
+        if (e->rtti() == RS2::EntityLine) {
+            auto* line = static_cast<RS_Line*>(e->clone());
+            atStart ? line->setStartpoint(to) : line->setEndpoint(to);
+            return line;
+        }
+        if (e->rtti() == RS2::EntityArc) {
+            auto* arc = static_cast<RS_Arc*>(e);
+            if (std::abs(to.distanceTo(arc->getCenter()) - arc->getRadius()) > eps) {
+                return nullptr;
+            }
+            arc = static_cast<RS_Arc*>(e->clone());
+            const double angle = arc->getCenter().angleTo(to);
+            atStart ? arc->setAngle1(angle) : arc->setAngle2(angle);
+            return arc;
+        }
+        if (e->rtti() == RS2::EntityPolyline) {
+            QList<Vertex> points;
+            if (!vertices(static_cast<RS_Polyline*>(e), points)) {
+                return nullptr;
+            }
+            (atStart ? points.first() : points.last()).point = to;
+            return rebuiltPolyline(static_cast<RS_Polyline*>(e), points, false);
+        }
+        return nullptr;
     }
 
     /** The line through both, oriented like keep, or nullptr when keep already covers other. */
@@ -1899,16 +2210,20 @@ namespace {
             // one undo cycle around all the passes (each is what RS_Document::undoableModify runs): one Undo puts the
             // drawing back as it was
             LC_UndoSection undo(document, viewport);
-            const auto pass = [&undo](const std::function<void(LC_DocumentModificationBatch&)>& work) {
-                undo.undoableExecute([&work](LC_DocumentModificationBatch& ctx) {
+            const auto pass = [&undo, &f](const std::function<void(Edit&)>& work) {
+                undo.undoableExecute([&undo, &f, &work](LC_DocumentModificationBatch& ctx) {
                     ctx.dontSetActiveLayerAndPen(); // replacements keep their own layer and pen
-                    work(ctx);
+                    Edit edit{ctx, f, {}};
+                    work(edit);
+                    for (RS_Entity* e : std::as_const(edit.discard)) {
+                        undo.undoableDiscard(e); // before the replacements go in: they take over its identity
+                    }
                     return true;
                 });
             };
             if (rules.contains("zero_length")) {
                 const Context c = f.detect("zero_length");
-                pass([&](LC_DocumentModificationBatch& ctx) {
+                pass([&](Edit& edit) {
                     for (const Issue& issue : c.issues) {
                         RS_Entity* e = f.byId.value(issue.ids.first());
                         if (e == nullptr || !f.wants(issue)) {
@@ -1933,13 +2248,12 @@ namespace {
                                 kept.removeLast();
                             }
                             RS_Polyline* rebuilt = rebuiltPolyline(polyline, kept, closed);
-                            ctx.replace(e, rebuilt);
-                            f.replaced(e, rebuilt);
+                            edit.replace(e, rebuilt);
                             f.note(QStringLiteral("removed %1 repeated vertex(es) from %2 (now #%3)")
                                        .arg(points.size() - kept.size()).arg(ref(e)).arg(rebuilt->getId()));
                         }
                         else {
-                            ctx.remove(e);
+                            edit.remove(e);
                             f.note(QStringLiteral("deleted zero-length %1").arg(ref(e)));
                         }
                     }
@@ -1947,11 +2261,11 @@ namespace {
             }
             if (rules.contains("duplicate")) {
                 const Context c = f.detect("duplicate");
-                pass([&](LC_DocumentModificationBatch& ctx) {
+                pass([&](Edit& edit) {
                     for (const Issue& issue : c.issues) {
                         RS_Entity* e = f.byId.value(issue.ids.first());
                         if (e != nullptr && f.wants(issue)) {
-                            ctx.remove(e);
+                            edit.remove(e);
                             f.note(QStringLiteral("deleted %1 (a copy of #%2)").arg(ref(e)).arg(issue.ids.value(1)));
                         }
                     }
@@ -1962,7 +2276,7 @@ namespace {
                 for (int round = 0; round < 25; ++round) {
                     const Context c = f.detect("overlap");
                     int applied = 0;
-                    pass([&](LC_DocumentModificationBatch& ctx) {
+                    pass([&](Edit& edit) {
                         QSet<Id> used;
                         for (const Issue& issue : c.issues) {
                             RS_Entity* keep = f.byId.value(issue.ids.value(0));
@@ -1974,20 +2288,19 @@ namespace {
                             used << keep->getId() << other->getId();
                             ++applied;
                             if (keep->rtti() == RS2::EntityCircle) {
-                                ctx.remove(other);
+                                edit.remove(other);
                                 f.note(QStringLiteral("deleted %1 (it lay on #%2 circle)").arg(ref(other)).arg(keep->getId()));
                                 continue;
                             }
                             RS_Entity* merged = keep->rtti() == RS2::EntityLine
                                                     ? mergedLine(keep, other, f.base.eps)
                                                     : mergedArc(static_cast<RS_Arc*>(keep), static_cast<RS_Arc*>(other), f.base.eps);
-                            ctx.remove(other);
+                            edit.remove(other);
                             if (merged == nullptr) {
                                 f.note(QStringLiteral("deleted %1 (it lay on #%2)").arg(ref(other)).arg(keep->getId()));
                                 continue;
                             }
-                            ctx.replace(keep, merged);
-                            f.replaced(keep, merged);
+                            edit.replace(keep, merged);
                             f.replaced(other, merged);
                             f.note(QStringLiteral("merged %1 and %2 into #%3 %4").arg(ref(keep), ref(other)).arg(merged->getId())
                                        .arg(LC_AITools::typeName(merged)));
@@ -2000,7 +2313,7 @@ namespace {
             }
             if (rules.contains("nearly_closed")) {
                 const Context c = f.detect("nearly_closed");
-                pass([&](LC_DocumentModificationBatch& ctx) {
+                pass([&](Edit& edit) {
                     for (const Issue& issue : c.issues) {
                         auto* polyline = static_cast<RS_Polyline*>(f.byId.value(issue.ids.first()));
                         QList<Vertex> points;
@@ -2010,8 +2323,7 @@ namespace {
                         const double gap = points.first().point.distanceTo(points.last().point);
                         points.removeLast(); // the closing segment ends at the start instead
                         RS_Polyline* closed = rebuiltPolyline(polyline, points, true);
-                        ctx.replace(polyline, closed);
-                        f.replaced(polyline, closed);
+                        edit.replace(polyline, closed);
                         f.note(gap <= f.base.eps ? QStringLiteral("marked %1 closed (now #%2)").arg(ref(polyline)).arg(closed->getId())
                                                  : QStringLiteral("closed %1, its ends were %2 apart (now #%3)")
                                                        .arg(ref(polyline), fmt(gap)).arg(closed->getId()));
@@ -2022,43 +2334,39 @@ namespace {
                 for (int round = 0; round < 5; ++round) {
                     const Context c = f.detect("endpoint_gap");
                     int applied = 0;
-                    pass([&](LC_DocumentModificationBatch& ctx) {
+                    pass([&](Edit& edit) {
                         QSet<Id> used;
                         for (const Issue& issue : c.issues) {
                             RS_Entity* e = f.byId.value(issue.ids.first());
-                            if (e == nullptr || !f.wants(issue) || used.contains(e->getId()) || !issue.moveFrom.valid || !issue.moveTo.valid) {
+                            // a corner: the other entity's end moves to the meeting point too
+                            RS_Entity* other = issue.alsoFrom.valid ? f.byId.value(issue.ids.value(1)) : nullptr;
+                            if (e == nullptr || !f.wants(issue) || used.contains(e->getId()) || !issue.moveFrom.valid || !issue.moveTo.valid
+                                || (issue.alsoFrom.valid && (other == nullptr || used.contains(other->getId())))) {
                                 continue;
                             }
                             const bool atStart = issue.moveFrom.distanceTo(e->getStartpoint()) <= issue.moveFrom.distanceTo(e->getEndpoint());
-                            RS_Entity* moved = nullptr;
-                            if (e->rtti() == RS2::EntityLine) {
-                                auto* line = static_cast<RS_Line*>(e->clone());
-                                atStart ? line->setStartpoint(issue.moveTo) : line->setEndpoint(issue.moveTo);
-                                moved = line;
-                            }
-                            else if (e->rtti() == RS2::EntityArc) {
-                                auto* arc = static_cast<RS_Arc*>(e->clone());
-                                atStart ? arc->moveStartpoint(issue.moveTo) : arc->moveEndpoint(issue.moveTo);
-                                moved = arc;
-                            }
-                            else if (e->rtti() == RS2::EntityPolyline) {
-                                QList<Vertex> points;
-                                if (!vertices(static_cast<RS_Polyline*>(e), points)) {
-                                    continue;
-                                }
-                                (atStart ? points.first() : points.last()).point = issue.moveTo;
-                                moved = rebuiltPolyline(static_cast<RS_Polyline*>(e), points, false);
-                            }
-                            if (moved == nullptr) {
+                            RS_Entity* moved = withEndMoved(e, issue.moveFrom, issue.moveTo, f.base.eps);
+                            RS_Entity* otherMoved = other != nullptr ? withEndMoved(other, issue.alsoFrom, issue.moveTo, f.base.eps) : nullptr;
+                            if (moved == nullptr || (other != nullptr && otherMoved == nullptr)) {
+                                delete moved;
+                                delete otherMoved;
                                 continue;
                             }
                             used << e->getId();
                             ++applied;
-                            ctx.replace(e, moved);
-                            f.replaced(e, moved);
-                            f.note(QStringLiteral("moved the %1 of %2 from %3 onto #%4 at %5 (now #%6)")
-                                       .arg(atStart ? QStringLiteral("start") : QStringLiteral("end"), ref(e), fmt(issue.moveFrom))
-                                       .arg(issue.ids.value(1)).arg(fmt(issue.moveTo)).arg(moved->getId()));
+                            edit.replace(e, moved);
+                            if (other == nullptr) {
+                                f.note(QStringLiteral("moved the %1 of %2 from %3 onto #%4 at %5 (now #%6)")
+                                           .arg(endName(atStart), ref(e), fmt(issue.moveFrom))
+                                           .arg(issue.ids.value(1)).arg(fmt(issue.moveTo)).arg(moved->getId()));
+                                continue;
+                            }
+                            const bool otherAtStart = issue.alsoFrom.distanceTo(other->getStartpoint()) <= issue.alsoFrom.distanceTo(other->getEndpoint());
+                            used << other->getId();
+                            edit.replace(other, otherMoved);
+                            f.note(QStringLiteral("moved the %1 of %2 and the %3 of %4 to where they meet, %5 (now #%6 and #%7)")
+                                       .arg(endName(atStart), ref(e), endName(otherAtStart), ref(other), fmt(issue.moveTo))
+                                       .arg(moved->getId()).arg(otherMoved->getId()));
                         }
                     });
                     if (applied == 0) {
@@ -2068,7 +2376,7 @@ namespace {
             }
             if (rules.contains("bylayer")) {
                 const Context c = f.detect("bylayer");
-                pass([&](LC_DocumentModificationBatch& ctx) {
+                pass([&](Edit& edit) {
                     for (const Issue& issue : c.issues) {
                         RS_Entity* e = f.byId.value(issue.ids.first());
                         if (e == nullptr || !f.wants(issue)) {
@@ -2076,8 +2384,7 @@ namespace {
                         }
                         const QStringList what = explicitPen(e);
                         RS_Entity* clone = withPenByLayer(e);
-                        ctx.replace(e, clone);
-                        f.replaced(e, clone);
+                        edit.replace(e, clone);
                         f.note(QStringLiteral("set %1 ByLayer (was %2; now #%3)").arg(ref(e), what.join(", ")).arg(clone->getId()));
                     }
                 });
@@ -2173,7 +2480,8 @@ namespace {
         t.description =
             "Apply the safe fixes for what check_drawing reports, as ONE undo step: delete zero-length entities and exact "
             "duplicates (same layer and pen), merge overlapping collinear lines and overlapping arcs, close nearly closed "
-            "polylines, snap endpoints that nearly meet, and set explicit colour/line type/width to ByLayer. Give ids (from "
+            "polylines, snap endpoints that nearly meet, and set an explicit colour/line type/width ByLayer where that does not "
+            "change its look. Give ids (from "
             "check_drawing) or rules to fix only some; nothing given fixes all of them. Entities on locked layers are left "
             "alone. Returns what changed and what is still left (those need a decision).";
         t.parameters = QJsonObject{
@@ -2245,20 +2553,29 @@ namespace {
      */
     QString fixPrompt(const Report& r) {
         QMap<QString, int> counts;
+        int fixable = 0;
         for (const Issue& issue : r.issues) {
             counts[issue.rule] += 1;
+            fixable += issue.fixable ? 1 : 0;
         }
+        // the rules by their titles, as the card shows them (the bubble is the user's message)
         QStringList found;
         for (const Rule& rule : RULES) {
             if (const int n = counts.value(QString::fromLatin1(rule.id)); n > 0) {
-                found << QStringLiteral("%1 %2").arg(n).arg(QString::fromLatin1(rule.id));
+                const QString title = QObject::tr(rule.title);
+                found << QStringLiteral("%1 (%2)").arg(title.left(1).toLower() + title.mid(1)).arg(n);
             }
         }
         const QString scope = r.scopeText == "the selection" ? QStringLiteral(" (scope \"selection\")") : QString();
+        const QString what = r.issues.size() == 1 ? QStringLiteral("issue") : QStringLiteral("%1 issues").arg(r.issues.size());
+        if (fixable == 0) {
+            return QStringLiteral("Help me fix the %1 the drawing check found in %2: %3. None can be fixed automatically: run "
+                                  "check_drawing%4 for the details, then ask me before each change.")
+                .arg(what, r.scopeText, found.join(", "), scope);
+        }
         return QStringLiteral("Fix the %1 the drawing check found in %2: %3. Use fix_drawing_issues%4 for the safe fixes, then "
                               "check_drawing%4 for what is left; ask me before anything that needs a decision.")
-            .arg(r.issues.size() == 1 ? QStringLiteral("issue") : QStringLiteral("%1 issues").arg(r.issues.size()),
-                 r.scopeText, found.join(", "), scope);
+            .arg(what, r.scopeText, found.join(", "), scope);
     }
 
     /** Selects the issue's entities and zooms to where it is, in the drawing that was checked. */
@@ -2354,16 +2671,21 @@ namespace {
                 errors += issue.severity == "error" ? 1 : 0;
             }
             const bool clean = report.error.isEmpty() && report.issues.isEmpty();
+            const bool empty = clean && report.checked == 0; // nothing was checked
             auto* header = new QHBoxLayout();
             header->setSpacing(7);
             auto* icon = new QLabel(this);
-            const QColor tone = !report.error.isEmpty() ? t.textMuted : clean ? t.accentGreen : errors > 0 ? QColor("#f87171") : QColor("#fbbf24");
+            const QColor tone = !report.error.isEmpty() || empty ? t.textMuted
+                                : clean                         ? t.accentGreen
+                                : errors > 0                    ? QColor("#f87171")
+                                                                : QColor("#fbbf24");
             icon->setPixmap(LC_AIIcons::lucide(clean ? "shield-check" : "shield-alert", 15, tone, dpr));
             auto* title = new QLabel(QObject::tr("Drawing check"), this);
             title->setObjectName("checkTitle");
             auto* count = new QLabel(this);
             count->setObjectName("checkCount");
             count->setText(!report.error.isEmpty() ? QString()
+                           : empty                 ? QObject::tr("no entities")
                            : clean                 ? QObject::tr("no issues")
                            : report.issues.size() == 1 ? QObject::tr("1 issue")
                                                        : QObject::tr("%1 issues").arg(report.issues.size()));
@@ -2381,14 +2703,18 @@ namespace {
                 sub->setText(report.error);
             }
             else {
-                const QString scope = report.scopeText.left(1).toUpper() + report.scopeText.mid(1);
-                QString text = report.checked == 1 ? QObject::tr("%1 · 1 entity").arg(scope)
-                                                   : QObject::tr("%1 · %2 entities").arg(scope).arg(report.checked);
-                text += QObject::tr(" · gaps under %1").arg(QString(fmt(report.tolerance) + " " + report.unit).trimmed());
-                if (fixable > 0) {
-                    text += QObject::tr(" · %1 fixable").arg(fixable);
+                // each part keeps its words together (no-break spaces), so a narrow chat wraps between the parts
+                const auto keep = [](QString part) { return part.replace(' ', QChar(0x00A0)); };
+                QStringList parts;
+                parts << report.scopeText.left(1).toUpper() + report.scopeText.mid(1);
+                parts << keep(report.checked == 1 ? QObject::tr("1 entity") : QObject::tr("%1 entities").arg(report.checked));
+                if (!empty) {
+                    parts << keep(QObject::tr("gaps under %1").arg(QString(fmt(report.tolerance) + " " + report.unitSign).trimmed()));
                 }
-                sub->setText(text);
+                if (fixable > 0) {
+                    parts << keep(QObject::tr("%1 fixable").arg(fixable));
+                }
+                sub->setText(parts.join(QStringLiteral(" · ")));
             }
             layout->addWidget(sub);
             layout->addSpacing(4);
@@ -2397,9 +2723,12 @@ namespace {
                 auto* row = new QHBoxLayout();
                 row->setSpacing(7);
                 auto* ok = new QLabel(this);
-                ok->setPixmap(LC_AIIcons::lucide("check", 13, t.accentGreen, dpr));
-                auto* text = new QLabel(QObject::tr("No problems found."), this);
+                ok->setPixmap(LC_AIIcons::lucide(empty ? "circle-slash" : "check", 13, empty ? t.textMuted : t.accentGreen, dpr));
+                auto* text = new QLabel(empty ? QObject::tr("Nothing to check: %1 has no entities.").arg(report.scopeText)
+                                              : QObject::tr("No problems found."), this);
                 text->setObjectName("ruleName");
+                text->setWordWrap(true); // in a narrow chat it wraps rather than widening the card
+                text->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
                 row->addWidget(ok);
                 row->addWidget(text, 1);
                 layout->addLayout(row);
@@ -2422,23 +2751,42 @@ namespace {
                 addGroup(rule, mine, t, dpr, layout);
             }
 
-            if (report.error.isEmpty()) {
+            { // the buttons: Check again on every card, also on "No drawing is open"
                 layout->addSpacing(6);
                 auto* buttons = new QHBoxLayout();
                 buttons->setSpacing(8);
-                if (!clean) {
-                    auto* fix = new QPushButton(QObject::tr("Fix all"), this);
+                if (!clean && report.error.isEmpty()) {
+                    // none fixable by itself: the AI can still help, asking about each one
+                    const QString label = fixable > 0 ? QObject::tr("Fix all") : QObject::tr("Ask the AI");
+                    auto* fix = new QPushButton(label, this);
                     fix->setObjectName("checkFix");
                     fix->setIcon(LC_AIIcons::lucideIcon("wrench", 13, t.bgRoot));
                     fix->setCursor(Qt::PointingHandCursor);
-                    fix->setToolTip(QObject::tr("Ask the AI to fix these issues (safe fixes first, as one undo step)"));
-                    QObject::connect(fix, &QPushButton::clicked, this, [this, fix] {
+                    fix->setToolTip(fixable > 0 ? QObject::tr("Ask the AI to fix these issues (safe fixes first, as one undo step)")
+                                                : QObject::tr("None of these can be fixed automatically: ask the AI to help, "
+                                                              "it asks you before each change"));
+                    QObject::connect(fix, &QPushButton::clicked, this, [this, fix, label] {
                         if (!m_chat) {
                             return;
                         }
+                        // an old card after its drawing was closed: there is nothing to fix now
+                        const RS_GraphicView* view = LC_AITools::view();
+                        if (view == nullptr || view->getGraphic() == nullptr) {
+                            fix->setText(QObject::tr("No drawing is open"));
+                            QTimer::singleShot(2500, fix, [fix, label] { fix->setText(label); });
+                            return;
+                        }
+                        // sent as a message of its own, so a draft in the message box stays; while the AI works it
+                        // waits for the run to end, and the button comes back if it is not sent after all
                         fix->setEnabled(false);
-                        fix->setText(QObject::tr("Asked the AI"));
-                        m_chat->startTask(fixPrompt(m_report), true);
+                        fix->setText(QObject::tr("Waiting for the AI..."));
+                        const QPointer<QPushButton> button(fix);
+                        m_chat->sendTask(fixPrompt(m_report), [button, label](const bool sent) {
+                            if (button) {
+                                button->setText(sent ? QObject::tr("Asked the AI") : label);
+                                button->setEnabled(!sent);
+                            }
+                        });
                     });
                     buttons->addWidget(fix);
                 }
@@ -2486,6 +2834,9 @@ namespace {
             name->setToolTip(rule);
             auto* count = new QLabel(QString::number(indexes.size()), row);
             count->setObjectName("ruleCount");
+            count->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+            count->ensurePolished(); // the style sheet's font, to measure with
+            count->setMinimumWidth(count->fontMetrics().horizontalAdvance(QStringLiteral("0000")));
             rowLayout->addWidget(chevron);
             rowLayout->addWidget(dot);
             rowLayout->addWidget(name, 1);
@@ -2537,6 +2888,58 @@ namespace {
         Report m_report;
         QPointer<LC_AIAssistantWidget> m_chat;
     };
+
+    /**
+     * The last check card of each drawing's chat. Switching drawings shows the other chat by replaying its messages
+     * only, so without this the card would be gone when you come back. It comes back with its chat, unless the
+     * conversation went on after it (Fix all, a question) or the drawing was closed meanwhile.
+     */
+    class KeptCards : public QObject {
+    public:
+        static KeptCards* of(LC_AIAssistantWidget* chat) {
+            auto* kept = static_cast<KeptCards*>(chat->findChild<QObject*>(NAME, Qt::FindDirectChildrenOnly));
+            return kept != nullptr ? kept : new KeptCards(chat);
+        }
+
+        void remember(const Report& report) {
+            if (m_session != nullptr) {
+                m_cards.insert(m_session->drawing(), {m_session->chatId(), m_chat->messageCount(), report});
+            }
+        }
+
+    private:
+        explicit KeptCards(LC_AIAssistantWidget* chat)
+            : QObject(chat), m_chat(chat), m_session(chat->findChild<LC_AIChatSession*>()) {
+            setObjectName(NAME);
+            if (m_session != nullptr) {
+                // after the chat panel's own handler, which has replayed the messages by then
+                QObject::connect(m_session, &LC_AIChatSession::showMessages, this,
+                                 [this](const QList<LC_AIChatMessage>& messages) { restore(int(messages.size())); });
+            }
+        }
+
+        void restore(const int messages) {
+            const auto it = m_cards.constFind(m_session->drawing());
+            const RS_GraphicView* view = LC_AITools::view();
+            if (it == m_cards.cend() || it->chatId != m_session->chatId() || it->messages != messages || view == nullptr
+                || view->getGraphic() != it->report.graphic) {
+                return;
+            }
+            if (auto* transcript = m_chat->findChild<LC_AIChatTranscript*>()) {
+                transcript->addCard(new CheckCard(it->report, m_chat, LC_AITheme::current(), transcript));
+            }
+        }
+
+        struct Kept {
+            QString chatId;
+            int messages {0}; // the chat's messages when the card was added: it came after them
+            Report report;
+        };
+        static constexpr const char* NAME = "aiKeptCheckCards";
+        LC_AIAssistantWidget* m_chat;
+        LC_AIChatSession* m_session;
+        QHash<QString, Kept> m_cards; // by the drawing's key (LC_AIChatSession::drawing)
+    };
 }
 
 // ---------------------------------------------------------------------------------------------- public
@@ -2568,6 +2971,7 @@ LC_AIDrawingChecker::Report LC_AIDrawingChecker::check(RS_Graphic* graphic, cons
     report.precision = c.eps;
     report.size = c.size;
     report.unit = graphic->getUnit() == RS2::None ? QString() : RS_Units::unitToString(graphic->getUnit());
+    report.unitSign = RS_Units::unitToSign(graphic->getUnit());
     for (const Rule& r : RULES) {
         if (c.wants(r.id)) {
             report.rules << QString::fromLatin1(r.id);
@@ -2581,8 +2985,8 @@ QString LC_AIDrawingChecker::format(const Report& report, const int limit) {
         return report.error;
     }
     QStringList out;
-    out << QStringLiteral("Checked %1: %2 entities (units: %3). Gaps under %4 should meet; points within %5 are the same point.")
-               .arg(report.scopeText).arg(report.checked)
+    out << QStringLiteral("Checked %1: %2 (units: %3). Gaps under %4 should meet; points within %5 are the same point.")
+               .arg(report.scopeText, report.checked == 1 ? QStringLiteral("1 entity") : QStringLiteral("%1 entities").arg(report.checked))
                .arg(report.unit.isEmpty() ? QStringLiteral("none set") : report.unit, fmt(report.tolerance), fmt(report.precision));
     int errors = 0;
     int warnings = 0;
@@ -2592,18 +2996,34 @@ QString LC_AIDrawingChecker::format(const Report& report, const int limit) {
         warnings += issue.severity == "warning" ? 1 : 0;
         fixable += issue.fixable ? 1 : 0;
     }
+    if (report.checked == 0 && report.issues.isEmpty()) {
+        out << QStringLiteral("Nothing to check: %1 has no entities.").arg(report.scopeText);
+        return out.join('\n');
+    }
     if (report.issues.isEmpty()) {
         out << QStringLiteral("No issues found (rules: %1).").arg(report.rules.join(", "));
         return out.join('\n');
     }
     out << QStringLiteral("Found %1 issue(s): %2 error(s), %3 warning(s), %4 note(s); %5 can be fixed with fix_drawing_issues.")
                .arg(report.issues.size()).arg(errors).arg(warnings).arg(int(report.issues.size()) - errors - warnings).arg(fixable);
-    // every rule gets a share of the lines, so one noisy rule does not hide the rest
+    // every rule gets a share of the lines, so one noisy rule does not hide the rest: one line each in turn until the
+    // limit is used up (a rule with fewer issues leaves its turns to the others)
     QMap<QString, QList<const Issue*>> byRule;
     for (const Issue& issue : report.issues) {
         byRule[issue.rule] << &issue;
     }
-    const int share = std::max(3, limit / std::max(1, int(byRule.size())));
+    QHash<QString, int> shares;
+    for (int left = std::max(0, limit), given = 1; left > 0 && given > 0;) {
+        given = 0;
+        for (const Rule& r : RULES) {
+            const QString id = QString::fromLatin1(r.id);
+            if (left > 0 && report.rules.contains(id) && shares.value(id) < byRule.value(id).size()) {
+                ++shares[id];
+                ++given;
+                --left;
+            }
+        }
+    }
     QStringList clean;
     for (const Rule& r : RULES) {
         const QString id = QString::fromLatin1(r.id);
@@ -2616,21 +3036,27 @@ QString LC_AIDrawingChecker::format(const Report& report, const int limit) {
             continue;
         }
         out << QString() << QStringLiteral("[%1] %2: %3").arg(id, QString::fromLatin1(r.title)).arg(issues.size());
+        const int share = shares.value(id);
         for (int i = 0; i < issues.size() && i < share; ++i) {
             const Issue* issue = issues[i];
             static const QRegularExpression hasPoint(QStringLiteral("\\(-?\\d"));
-            out << QStringLiteral("- %1: %2%3. Fix: %4%5.")
-                       .arg(issue->severity, issue->message,
-                            issue->position.valid && !hasPoint.match(issue->message).hasMatch() ? QStringLiteral(" (at %1)").arg(fmt(issue->position))
-                                                                                                 : QString(),
-                            issue->fix, issue->fixable ? QStringLiteral(" (fixable)") : QString());
+            QString what = issue->message;
+            if (issue->position.valid && !hasPoint.match(what).hasMatch()) {
+                what += QStringLiteral(" (at %1)").arg(fmt(issue->position));
+            }
+            if (!what.endsWith('?') && !what.endsWith('.')) {
+                what += '.'; // a message that asks a question keeps its question mark alone
+            }
+            out << QStringLiteral("- %1: %2 Fix: %3%4.")
+                       .arg(issue->severity, what, issue->fix, issue->fixable ? QStringLiteral(" (fixable)") : QString());
         }
         if (issues.size() > share) {
             QList<Id> rest;
             for (int i = share; i < issues.size(); ++i) {
                 rest << issues[i]->ids.value(0);
             }
-            out << QStringLiteral("- ... and %1 more of these: %2").arg(issues.size() - share).arg(idList(rest, 40));
+            out << (share == 0 ? QStringLiteral("- not listed (limit reached): %1").arg(idList(rest, 40))
+                               : QStringLiteral("- ... and %1 more of these: %2").arg(issues.size() - share).arg(idList(rest, 40)));
         }
     }
     if (!clean.isEmpty()) {
@@ -2667,6 +3093,9 @@ void LC_AIDrawingChecker::showInChat(QWidget* window) {
         report = check(view->getGraphic(), Options{});
     }
     transcript->addCard(new CheckCard(report, chat, LC_AITheme::current(), transcript));
+    if (report.graphic != nullptr) {
+        KeptCards::of(chat)->remember(report);
+    }
 }
 
 QAction* LC_AIDrawingChecker::action(QWidget* window) {

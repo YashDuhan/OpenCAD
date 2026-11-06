@@ -57,6 +57,12 @@ public:
     void addUndoable(RS_Undoable* u) const;
     bool undoableExecute(const RS_Document::FunUndoable& doUndoable, const RS_Document::FunSelection& doSelection) const;
     bool undoableExecute(const RS_Document::FunUndoable& doUndoable) const;
+    /**
+     * Deletes an entity that this undo cycle added and a later step of the same cycle replaces or deletes: it leaves
+     * the cycle and the drawing at once (deleting it in the cycle would make Undo bring it back). Any other entity is
+     * deleted as usual. Call it before adding what replaces it, so that keeps its DWG identity.
+     */
+    void undoableDiscard(RS_Entity* e) const;
 protected:
     void setupAndUndoableAdd(const QList<RS_Entity*>& entitiesToInsert, bool setActiveLayer, bool setActivePen) const;
     void undoableReplace(RS_Entity* entityToDelete, RS_Entity* entityToAdd) const;

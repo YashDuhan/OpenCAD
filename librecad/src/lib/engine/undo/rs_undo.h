@@ -64,6 +64,12 @@ protected:
     virtual void startUndoCycle();
     virtual void endUndoCycle();
     virtual void addUndoable(RS_Undoable* u);
+    /**
+     * Takes an undoable back out of the current undo cycle, for an entity the cycle added and a later step of the
+     * same cycle replaced (it was never there before the cycle, so undoing must not bring it back).
+     * @return false when it is not in the current cycle.
+     */
+    bool removeFromCurrentCycle(RS_Undoable* u);
 
     virtual void fireUndoStateChanged([[maybe_unused]] bool undoAvailable, [[maybe_unused]] bool redoAvailable) const {
     }
