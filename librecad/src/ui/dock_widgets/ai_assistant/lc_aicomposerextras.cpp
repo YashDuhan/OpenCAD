@@ -716,7 +716,12 @@ void LC_AIComposerExtras::insertMention(const QString& mention) {
     const QString text = m_input->toPlainText();
     QTextCursor cursor(m_input->document());
     cursor.movePosition(QTextCursor::End);
-    if (!text.contains(mention)) {
+    // already there as a mention of its own (a text search would take "@entity #131" for "@entity #13")
+    bool present = false;
+    for (const LC_AIMention& m : m_input->mentions()) {
+        present = present || m.text().compare(mention, Qt::CaseInsensitive) == 0;
+    }
+    if (!present) {
         const bool separate = !text.isEmpty() && !text.back().isSpace();
         cursor.insertText((separate ? QStringLiteral(" ") : QString()) + mention + " ");
     }
