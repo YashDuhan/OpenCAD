@@ -28,6 +28,8 @@ namespace {
     constexpr int SAVE_DELAY_MS = 1000;
     // the key a drawing window was filed under, so a new file name (Save, Save As) is noticed
     const char* KEY_PROPERTY = "aiChatDrawingKey";
+    // the chat the panel showed for a drawing window ("" after New Chat), shown again when the drawing comes back to the front
+    const char* CHAT_PROPERTY = "aiChatShown";
 
     /** Conversations only grow or lose their last, unanswered question: the length and last message tell them apart. */
     bool sameConversation(const QList<LC_AIChatMessage>& a, const QList<LC_AIChatMessage>& b) {
@@ -132,6 +134,9 @@ QString LC_AIChatSession::keyOf(QC_MDIWindow* window) {
             // saved for the first time: its chats move to the file; saved as another file: they are copied,
             // so the old file keeps its history and the shown chat goes on as the new file's copy
             const QHash<QString, QString> ids = store.moveDrawing(known, key, nameOf(window), !LC_AIChatStore::isUnsavedKey(known));
+            if (const QString shown = window->property(CHAT_PROPERTY).toString(); ids.contains(shown)) {
+                window->setProperty(CHAT_PROPERTY, ids.value(shown)); // the window goes on with the new file's copy
+            }
             if (m_drawing == known) {
                 m_chatId = ids.value(m_chatId, m_chatId);
                 m_drawing = key;
@@ -186,7 +191,20 @@ void LC_AIChatSession::follow(QC_MDIWindow* window) {
     m_window = window;
     m_drawing = keyOf(window);
     m_drawingName = nameOf(window);
-    show(LC_AIChatStore::instance().latest(m_drawing));
+    // the chat you had open for this drawing (a resumed older one, or the empty one of New Chat), else its latest
+    LC_AIChatStore& store = LC_AIChatStore::instance();
+    const QVariant shown = window->property(CHAT_PROPERTY);
+    QString chatId = shown.toString();
+    if (!shown.isValid() || (!chatId.isEmpty() && (!store.contains(chatId) || store.info(chatId).drawing != m_drawing))) {
+        chatId = store.latest(m_drawing); // never shown yet, or deleted (or filed elsewhere) meanwhile
+    }
+    show(chatId);
+}
+
+void LC_AIChatSession::remember() {
+    if (m_window) {
+        m_window->setProperty(CHAT_PROPERTY, m_chatId); // also when empty: a New Chat stays new
+    }
 }
 
 void LC_AIChatSession::show(const QString& chatId) {
@@ -195,6 +213,7 @@ void LC_AIChatSession::show(const QString& chatId) {
     m_dirty = false;
     m_chatId = store.contains(chatId) ? chatId : QString();
     m_messages = m_chatId.isEmpty() ? QList<LC_AIChatMessage>() : store.load(m_chatId);
+    remember();
     emit showMessages(m_messages);
 }
 
@@ -221,10 +240,12 @@ void LC_AIChatSession::flush() {
         if (!m_chatId.isEmpty()) {
             store.remove(m_chatId);
             m_chatId.clear();
+            remember();
         }
         return;
     }
     m_chatId = store.save(m_chatId, m_drawing, m_drawingName, m_messages);
+    remember();
 }
 
 void LC_AIChatSession::startNew() {
@@ -235,8 +256,25 @@ void LC_AIChatSession::startNew() {
         m_drawing = keyOf(active);
         m_drawingName = nameOf(active);
     }
+    else if (!hasDrawings()) { // no drawing open: the chat is filed under none, not under the last one closed
+        m_window = nullptr;
+        m_drawing.clear();
+        m_drawingName.clear();
+    }
     m_chatId.clear();
     m_messages.clear();
+    remember();
+}
+
+bool LC_AIChatSession::hasDrawings() const {
+    if (m_mdi) {
+        for (QMdiSubWindow* sub : m_mdi->subWindowList()) {
+            if (rootOf(sub) != nullptr) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 void LC_AIChatSession::setRunning(const bool running) {
