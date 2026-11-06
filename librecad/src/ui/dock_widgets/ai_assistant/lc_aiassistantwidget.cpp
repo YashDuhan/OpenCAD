@@ -579,6 +579,7 @@ void LC_AIAssistantWidget::onNewChat() {
     m_runStart = -1;
     m_input->clear();
     m_extras->clear();
+    LC_AIChangePreview::instance().close(); // its answer and Revert bar are gone: no review of it over the new chat
     focusInput();
 }
 
@@ -661,6 +662,7 @@ void LC_AIAssistantWidget::showChat(const QList<LC_AIChatMessage>& messages) {
     LC_AIChatSession::replay(m_transcript, messages);
     m_plan->reset(); // a plan belongs to the chat it was made in
     m_runStart = -1; // a run of another chat cannot be checked from here
+    LC_AIChangePreview::instance().close(); // the review belongs to an answer no longer shown
 }
 
 // ------------------------------------------------------------------------------------------------ plan mode and debugger
