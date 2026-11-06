@@ -292,17 +292,21 @@ namespace {
                 p.drawText(QRect(4, height() / 2 + 6, width() - 8, 14), Qt::AlignCenter,
                            p.fontMetrics().elidedText(m_a.name, Qt::ElideMiddle, width() - 8));
             }
-            // a label on pictures that are not plain images: "PDF", "@view"
-            const QString badge = !m_a.isImage() && !m_a.preview.isNull() ? QStringLiteral("PDF") : m_a.fromMention ? m_a.name : QString();
+            // a label on pictures that are not plain images: "PDF", "@view"; on a tile, "scaled" for a picture sent
+            // smaller than the file (the tooltip says from what size)
+            const QString badge = !m_a.isImage() && !m_a.preview.isNull()     ? QStringLiteral("PDF")
+                                  : m_a.fromMention                             ? m_a.name
+                                  : m_mode == Mode::Tile && !m_a.note.isEmpty() ? QObject::tr("scaled")
+                                                                                : QString();
             if (!badge.isEmpty()) {
                 p.setFont(pxFont(font(), 9.5, QFont::DemiBold));
-                const int bw = p.fontMetrics().horizontalAdvance(badge) + 8;
+                const int bw = qMin(p.fontMetrics().horizontalAdvance(badge) + 8, width() - 8);
                 const QRectF box(4, height() - 4 - 15, bw, 15);
                 p.setPen(Qt::NoPen);
                 p.setBrush(QColor(0, 0, 0, 150));
                 p.drawRoundedRect(box, 4, 4);
                 p.setPen(Qt::white);
-                p.drawText(box, Qt::AlignCenter, badge);
+                p.drawText(box, Qt::AlignCenter, p.fontMetrics().elidedText(badge, Qt::ElideRight, bw - 6));
             }
             p.restore();
             p.setPen(QPen(m_theme.borderDefault, 1));
