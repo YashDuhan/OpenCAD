@@ -72,8 +72,13 @@ namespace LC_AITools {
     void setViewForTests(RS_GraphicView* view);
 
     // shared with the other tool sets
-    /** The view of the drawing the tools act on, or nullptr when no drawing is open. */
+    /** The view of the drawing the tools act on, or nullptr when no drawing is open. During a run: the run's drawing
+     *  (LC_AIControl::runView), also while the user looks at another one. */
     RS_GraphicView* view();
+    /** The view of the drawing in front in the main window, where commands and toolbar buttons act. */
+    RS_GraphicView* frontView();
+    /** Brings the drawing of this view to the front of the main window. */
+    void bringToFront(RS_GraphicView* view);
     /** A PNG screenshot of the view, at most 1280 px on its longer edge. */
     LC_AIContent screenshot(RS_GraphicView* view);
     /** One line with the entity's id, type, layer and exact geometry, as list_entities prints it. */

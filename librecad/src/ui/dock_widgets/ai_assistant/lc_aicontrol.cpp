@@ -200,6 +200,7 @@ void LC_AIControl::begin(QMainWindow* window) {
     m_views.clear();
     m_note.clear();
     m_waiting.clear();
+    m_runView = LC_AITools::frontView(); // the drawing the question was asked about (set before the run is announced)
     qApp->installEventFilter(this);
     setState(State::Working);
 }
@@ -221,6 +222,21 @@ void LC_AIControl::end() {
     m_waiting.clear(); // a stopped run: its held calls are dropped (the run ignores late answers anyway)
     m_note.clear();
     setState(State::Idle);
+    m_runView.clear();
+}
+
+RS_GraphicView* LC_AIControl::runView() const {
+    return m_state != State::Idle ? m_runView.data() : nullptr;
+}
+
+void LC_AIControl::setRunView(RS_GraphicView* view) {
+    if (view == nullptr || view == m_runView) {
+        return;
+    }
+    m_runView = view;
+    if (m_state != State::Idle) {
+        emit runViewChanged(view);
+    }
 }
 
 void LC_AIControl::setState(const State state) {
@@ -299,6 +315,7 @@ void LC_AIControl::takeOver() {
     }
     m_atPause = drawingNow();
     m_secondsLeft = RESUME_AFTER_IDLE_S;
+    ++m_takeOvers;
     m_idle->start();
     setState(State::Paused);
 }
@@ -382,8 +399,10 @@ QList<LC_AITool> LC_AIControl::withControl(const QList<LC_AITool>& tools) {
         if (tool.executeAsync) {
             auto inner = tool.executeAsync;
             tool.executeAsync = [name, inner](const QJsonObject& args, std::function<void(const LC_AIToolResult&)> done) {
-                inner(args, [name, done](const LC_AIToolResult& result) {
+                const ToolStart start = LC_AIControl::instance().toolStarts(name);
+                inner(args, [name, done, start](const LC_AIToolResult& result) {
                     LC_AIToolResult out = result;
+                    LC_AIControl::instance().toolEnded(start);
                     LC_AIControl::instance().afterTool(name, out);
                     done(out);
                 });
@@ -392,7 +411,9 @@ QList<LC_AITool> LC_AIControl::withControl(const QList<LC_AITool>& tools) {
         else if (tool.execute) {
             auto inner = tool.execute;
             tool.execute = [name, inner](const QJsonObject& args) {
+                const ToolStart start = LC_AIControl::instance().toolStarts(name);
                 LC_AIToolResult result = inner(args);
+                LC_AIControl::instance().toolEnded(start);
                 LC_AIControl::instance().afterTool(name, result);
                 return result;
             };
@@ -400,6 +421,28 @@ QList<LC_AITool> LC_AIControl::withControl(const QList<LC_AITool>& tools) {
         wrapped << tool;
     }
     return wrapped;
+}
+
+LC_AIControl::ToolStart LC_AIControl::toolStarts(const QString& toolName) {
+    if (m_state != State::Idle) {
+        if (!m_runView) {
+            setRunView(LC_AITools::frontView()); // the run's drawing was closed: the tools go on with the one in front
+        }
+        else if (!onlyLooks(toolName)) {
+            // the user looked at another drawing meanwhile: commands and buttons act on the drawing in front,
+            // so the run's own comes back first (tools that only look read it where it is)
+            LC_AITools::bringToFront(m_runView);
+        }
+    }
+    return {LC_AITools::frontView(), m_takeOvers};
+}
+
+void LC_AIControl::toolEnded(const ToolStart& start) {
+    // another drawing came to the front while the AI had control: the AI opened it or switched to it
+    RS_GraphicView* front = LC_AITools::frontView();
+    if (m_state == State::Working && m_takeOvers == start.takeOvers && front != nullptr && front != start.front.data()) {
+        setRunView(front);
+    }
 }
 
 // ------------------------------------------------------------------------------------------------ the AI's view
