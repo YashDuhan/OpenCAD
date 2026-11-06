@@ -22,6 +22,7 @@
 #include <QScrollBar>
 #include <QShortcut>
 #include <QStyle>
+#include <QLayout>
 #include <QTimer>
 #include <utility>
 
@@ -161,6 +162,40 @@ private:
 
 // ------------------------------------------------------------------------------------------------ control
 
+namespace {
+    constexpr int DIALOG_BANNER_GAP = 8;
+
+    /**
+     * Room at the bottom of a dialog for its banner, so the banner never covers the dialog's own buttons: the dialog's
+     * layout gets a deeper bottom margin and the dialog grows by as much (and widens when the banner needs it).
+     * bannerHeight 0 gives the room back.
+     */
+    void reserveBannerSpace(QWidget* dialog, const int bannerHeight, const int bannerWidth) {
+        QLayout* layout = dialog->layout();
+        if (layout == nullptr) {
+            return;
+        }
+        const int wanted = bannerHeight > 0 ? bannerHeight + 2 * DIALOG_BANNER_GAP : 0;
+        const int had = dialog->property("aiBannerSpace").toInt();
+        const int width = bannerHeight > 0 ? qMax(dialog->width(), bannerWidth + 2 * DIALOG_BANNER_GAP) : dialog->width();
+        if (wanted == had && width == dialog->width()) {
+            return;
+        }
+        QMargins m = layout->contentsMargins();
+        m.setBottom(qMax(0, m.bottom() - had + wanted));
+        layout->setContentsMargins(m);
+        dialog->setProperty("aiBannerSpace", wanted);
+        const int height = dialog->height() - had + wanted;
+        if (dialog->minimumSize() == dialog->maximumSize()) {
+            dialog->setFixedSize(width, height); // a message box sizes itself once: give it the new size
+        }
+        else {
+            dialog->setMinimumSize(qMin(dialog->minimumWidth(), width), qMin(dialog->minimumHeight(), height));
+            dialog->resize(width, height);
+        }
+    }
+}
+
 LC_AIControl& LC_AIControl::instance() {
     static LC_AIControl* control = new LC_AIControl(); // lives as long as the application
     return *control;
@@ -211,6 +246,9 @@ void LC_AIControl::end() {
     }
     for (const QPointer<LC_AIControlBanner>& b : std::as_const(m_dialogBanners)) {
         if (b) {
+            if (QWidget* dialog = b->parentWidget()) {
+                reserveBannerSpace(dialog, 0, 0); // the dialog stays open: its room goes back
+            }
             b->deleteLater();
         }
     }
@@ -303,8 +341,10 @@ void LC_AIControl::placeDialogBanners() {
         }
         QWidget* dialog = b->parentWidget();
         b->adjustSize();
-        const int width = qMin(b->sizeHint().width(), dialog->width() - 16);
-        b->setGeometry(8, dialog->height() - b->sizeHint().height() - 8, width, b->sizeHint().height());
+        const QSize hint = b->sizeHint();
+        reserveBannerSpace(dialog, hint.height(), hint.width()); // below the dialog's buttons, not over them
+        const int width = qMin(hint.width(), dialog->width() - 2 * DIALOG_BANNER_GAP);
+        b->setGeometry(DIALOG_BANNER_GAP, dialog->height() - hint.height() - DIALOG_BANNER_GAP, width, hint.height());
         b->raise();
     }
 }

@@ -1,0 +1,3 @@
+[{"text":"Removing the layer.","tool_calls":[{"name":"use_panel","arguments":{"panel":"Layers","button":"Remove Layer"}}]},
+ {"text":"","tool_calls":[{"name":"request_clarification","arguments":{"question":"Should I keep going?","choices":["Yes","No"]}}]},
+ {"text":"Done."}]

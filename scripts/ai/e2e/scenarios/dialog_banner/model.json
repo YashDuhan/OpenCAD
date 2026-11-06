@@ -1,0 +1,3 @@
+[{"text":"Opening the About box.","tool_calls":[{"name":"use_menu","arguments":{"path":"Help > About"}}]},
+ {"text":"","tool_calls":[{"name":"request_clarification","arguments":{"question":"Keep the About box open?","choices":["Yes","No"]}}]},
+ {"text":"Done."}]
