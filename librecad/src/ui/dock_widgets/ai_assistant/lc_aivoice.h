@@ -64,6 +64,8 @@ namespace LC_AIVoice {
     bool ready(const Endpoint& endpoint, QString* why = nullptr);
     /** The provider id that supplies the key: Gemini falls back to "google", as in Cypher. */
     QString keyProviderOf(const Endpoint& endpoint);
+    /** "an OpenAI key", "a Groq key": the English article before a provider's name (translations have both texts). */
+    bool startsWithVowel(const QString& name);
 
     /**
      * Turns microphone samples (mono, at the device's rate) into 16 kHz 16-bit PCM while they arrive.

@@ -130,6 +130,10 @@ QString LC_AIVoice::keyProviderOf(const Endpoint& endpoint) {
     return endpoint.keyProvider;
 }
 
+bool LC_AIVoice::startsWithVowel(const QString& name) {
+    return !name.isEmpty() && QStringLiteral("AEIOU").contains(name.at(0).toUpper());
+}
+
 bool LC_AIVoice::ready(const Endpoint& endpoint, QString* why) {
     if (endpoint.model.trimmed().isEmpty()) {
         if (why != nullptr) {
@@ -141,7 +145,9 @@ bool LC_AIVoice::ready(const Endpoint& endpoint, QString* why) {
     if (!provider.isEmpty() && LC_AICredentials::instance().apiKey(provider).isEmpty()) {
         if (why != nullptr) {
             const LC_AIProvider* p = LC_AIProvider::find(provider);
-            *why = QObject::tr("Add a %1 key in Providers to transcribe speech.").arg(p != nullptr ? p->name : provider);
+            const QString name = p != nullptr ? p->name : provider;
+            *why = startsWithVowel(name) ? QObject::tr("Add an %1 key in Providers to transcribe speech.").arg(name)
+                                         : QObject::tr("Add a %1 key in Providers to transcribe speech.").arg(name);
         }
         return false;
     }

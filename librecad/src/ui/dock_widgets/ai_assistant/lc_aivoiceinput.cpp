@@ -255,21 +255,65 @@ namespace {
         return pixmap;
     }
 
-    /** What a preset needs, under its name: the model and where the key comes from. */
-    QString presetHint(const LC_AIVoice::Endpoint& e) {
+    /** Where a preset's key comes from, after its model under its name. */
+    QString keyHint(const LC_AIVoice::Endpoint& e) {
         const QString provider = LC_AIVoice::keyProviderOf(e);
-        QString key;
         if (provider.isEmpty()) {
-            key = QObject::tr("no key needed");
+            return QObject::tr("no key needed");
         }
-        else {
-            const LC_AIProvider* p = LC_AIProvider::find(provider);
-            const QString name = p != nullptr ? p->name : provider;
-            key = LC_AICredentials::instance().apiKey(provider).isEmpty() ? QObject::tr("needs a %1 key").arg(name)
-                                                                          : QObject::tr("your %1 key").arg(name);
+        const LC_AIProvider* p = LC_AIProvider::find(provider);
+        const QString name = p != nullptr ? p->name : provider;
+        if (!LC_AICredentials::instance().apiKey(provider).isEmpty()) {
+            return QObject::tr("your %1 key").arg(name);
         }
-        return e.model + QStringLiteral(" · ") + key;
+        return LC_AIVoice::startsWithVowel(name) ? QObject::tr("needs an %1 key").arg(name) : QObject::tr("needs a %1 key").arg(name);
     }
+
+    /**
+     * A preset's hint, "model · key", on one line when it fits the menu, else with the key on a line of its own: never
+     * cut off at the menu's edge. Its height follows the text it shows at a width, so the menu can size itself before
+     * it is shown.
+     */
+    class HintLabel : public QLabel {
+    public:
+        explicit HintLabel(QWidget* parent) : QLabel(parent) {
+            setWordWrap(true); // a key text longer than a line still shows whole
+        }
+
+        void setParts(const QString& model, const QString& key) {
+            m_model = model;
+            m_key = key;
+            setText(textFor(contentsRect().width()));
+        }
+
+        int heightForWidth(const int width) const override {
+            const QMargins m = contentsMargins();
+            const int inner = qMax(1, width - m.left() - m.right());
+            return fontMetrics().boundingRect(QRect(0, 0, inner, 100000), Qt::TextWordWrap, textFor(inner)).height() + m.top() + m.bottom();
+        }
+
+    protected:
+        void resizeEvent(QResizeEvent* event) override {
+            QLabel::resizeEvent(event);
+            const QString shown = textFor(contentsRect().width());
+            if (shown != text()) {
+                setText(shown);
+            }
+        }
+
+    private:
+        QString textFor(const int width) const {
+            const QString line = m_model + QStringLiteral(" · ") + m_key;
+            const QFontMetrics fm = fontMetrics();
+            if (width <= 1 || fm.horizontalAdvance(line) <= width) {
+                return line;
+            }
+            return fm.elidedText(m_model, Qt::ElideMiddle, width) + '\n' + m_key;
+        }
+
+        QString m_model;
+        QString m_key;
+    };
 
     /**
      * Cypher's VoiceDropdown, without the read-aloud part: the speech-to-text engines, the model and server
@@ -331,7 +375,7 @@ namespace {
                 text->setSpacing(1);
                 auto* name = new QLabel(preset.name, row.frame);
                 name->setObjectName("voiceName");
-                row.hint = new QLabel(row.frame);
+                row.hint = new HintLabel(row.frame);
                 row.hint->setObjectName("voiceHint");
                 text->addWidget(name);
                 text->addWidget(row.hint);
@@ -419,7 +463,7 @@ namespace {
             LC_AIVoice::Endpoint endpoint;
             ClickRow* frame {nullptr};
             QLabel* dot {nullptr};
-            QLabel* hint {nullptr};
+            HintLabel* hint {nullptr};
             QLabel* check {nullptr};
         };
 
@@ -481,7 +525,7 @@ namespace {
                 if (on) {
                     shown.model = s.endpoint.model;
                 }
-                row.hint->setText(presetHint(shown));
+                row.hint->setParts(shown.model, keyHint(shown));
                 row.check->setVisible(on);
                 row.frame->setProperty("on", on);
                 row.frame->style()->unpolish(row.frame);
@@ -489,11 +533,14 @@ namespace {
             }
             const QString provider = LC_AIVoice::keyProviderOf(s.endpoint);
             m_keyRow->setVisible(!provider.isEmpty() && LC_AICredentials::instance().apiKey(provider).isEmpty());
+            // from their start: a long server shows its scheme and host, not the tail of its path
             if (!m_model->hasFocus()) {
                 m_model->setText(s.endpoint.model);
+                m_model->setCursorPosition(0);
             }
             if (!m_server->hasFocus()) {
                 m_server->setText(s.endpoint.baseUrl);
+                m_server->setCursorPosition(0);
             }
             m_autoSendCheck->setPixmap(s.autoSend ? LC_AIIcons::lucide("check", 13, m_theme.textHeading, dpr) : QPixmap());
             if (isVisible()) {
@@ -503,6 +550,7 @@ namespace {
 
         void fitHeight() {
             // exactly as tall as its rows at this width (the help text wraps), like the approval mode menu
+            ensurePolished(); // the style sheet's font sizes, which the wrapped hints are measured in
             QLayout* l = layout();
             l->activate();
             setFixedHeight(l->hasHeightForWidth() ? l->totalHeightForWidth(MENU_WIDTH) : l->totalSizeHint().height());
