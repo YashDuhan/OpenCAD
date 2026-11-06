@@ -1723,6 +1723,7 @@ namespace {
         QStringList log;
         int changes {0};
         QHash<Id, RS_Entity*> byId;
+        QSet<RS_Entity*> added; // what the passes so far put in the drawing (and is still there)
 
         Context detect(const char* rule) {
             Context c;
@@ -1769,6 +1770,33 @@ namespace {
         void note(const QString& line) {
             ++changes;
             log << line;
+        }
+    };
+
+    /**
+     * The changes of one pass. What an earlier pass of the same fix added and this one replaces or deletes is not
+     * deleted in the undo step but taken back out of it: it was not in the drawing before the fix, and one Undo
+     * must give back exactly that drawing (a line merged twice, a merged line then set ByLayer).
+     */
+    struct Edit {
+        LC_DocumentModificationBatch& ctx;
+        Fixer& f;
+        QList<RS_Entity*> discard; // taken out after the pass's own work, which still reads them
+
+        void remove(RS_Entity* e) {
+            if (f.added.remove(e)) {
+                discard << e;
+            }
+            else {
+                ctx.remove(e);
+            }
+        }
+
+        void replace(RS_Entity* e, RS_Entity* now) {
+            remove(e);
+            ctx.add(now);
+            f.added.insert(now);
+            f.replaced(e, now);
         }
     };
 
@@ -1899,16 +1927,20 @@ namespace {
             // one undo cycle around all the passes (each is what RS_Document::undoableModify runs): one Undo puts the
             // drawing back as it was
             LC_UndoSection undo(document, viewport);
-            const auto pass = [&undo](const std::function<void(LC_DocumentModificationBatch&)>& work) {
-                undo.undoableExecute([&work](LC_DocumentModificationBatch& ctx) {
+            const auto pass = [&undo, &f](const std::function<void(Edit&)>& work) {
+                undo.undoableExecute([&undo, &f, &work](LC_DocumentModificationBatch& ctx) {
                     ctx.dontSetActiveLayerAndPen(); // replacements keep their own layer and pen
-                    work(ctx);
+                    Edit edit{ctx, f, {}};
+                    work(edit);
+                    for (RS_Entity* e : std::as_const(edit.discard)) {
+                        undo.undoableDiscard(e); // before the replacements go in: they take over its identity
+                    }
                     return true;
                 });
             };
             if (rules.contains("zero_length")) {
                 const Context c = f.detect("zero_length");
-                pass([&](LC_DocumentModificationBatch& ctx) {
+                pass([&](Edit& edit) {
                     for (const Issue& issue : c.issues) {
                         RS_Entity* e = f.byId.value(issue.ids.first());
                         if (e == nullptr || !f.wants(issue)) {
@@ -1933,13 +1965,12 @@ namespace {
                                 kept.removeLast();
                             }
                             RS_Polyline* rebuilt = rebuiltPolyline(polyline, kept, closed);
-                            ctx.replace(e, rebuilt);
-                            f.replaced(e, rebuilt);
+                            edit.replace(e, rebuilt);
                             f.note(QStringLiteral("removed %1 repeated vertex(es) from %2 (now #%3)")
                                        .arg(points.size() - kept.size()).arg(ref(e)).arg(rebuilt->getId()));
                         }
                         else {
-                            ctx.remove(e);
+                            edit.remove(e);
                             f.note(QStringLiteral("deleted zero-length %1").arg(ref(e)));
                         }
                     }
@@ -1947,11 +1978,11 @@ namespace {
             }
             if (rules.contains("duplicate")) {
                 const Context c = f.detect("duplicate");
-                pass([&](LC_DocumentModificationBatch& ctx) {
+                pass([&](Edit& edit) {
                     for (const Issue& issue : c.issues) {
                         RS_Entity* e = f.byId.value(issue.ids.first());
                         if (e != nullptr && f.wants(issue)) {
-                            ctx.remove(e);
+                            edit.remove(e);
                             f.note(QStringLiteral("deleted %1 (a copy of #%2)").arg(ref(e)).arg(issue.ids.value(1)));
                         }
                     }
@@ -1962,7 +1993,7 @@ namespace {
                 for (int round = 0; round < 25; ++round) {
                     const Context c = f.detect("overlap");
                     int applied = 0;
-                    pass([&](LC_DocumentModificationBatch& ctx) {
+                    pass([&](Edit& edit) {
                         QSet<Id> used;
                         for (const Issue& issue : c.issues) {
                             RS_Entity* keep = f.byId.value(issue.ids.value(0));
@@ -1974,20 +2005,19 @@ namespace {
                             used << keep->getId() << other->getId();
                             ++applied;
                             if (keep->rtti() == RS2::EntityCircle) {
-                                ctx.remove(other);
+                                edit.remove(other);
                                 f.note(QStringLiteral("deleted %1 (it lay on #%2 circle)").arg(ref(other)).arg(keep->getId()));
                                 continue;
                             }
                             RS_Entity* merged = keep->rtti() == RS2::EntityLine
                                                     ? mergedLine(keep, other, f.base.eps)
                                                     : mergedArc(static_cast<RS_Arc*>(keep), static_cast<RS_Arc*>(other), f.base.eps);
-                            ctx.remove(other);
+                            edit.remove(other);
                             if (merged == nullptr) {
                                 f.note(QStringLiteral("deleted %1 (it lay on #%2)").arg(ref(other)).arg(keep->getId()));
                                 continue;
                             }
-                            ctx.replace(keep, merged);
-                            f.replaced(keep, merged);
+                            edit.replace(keep, merged);
                             f.replaced(other, merged);
                             f.note(QStringLiteral("merged %1 and %2 into #%3 %4").arg(ref(keep), ref(other)).arg(merged->getId())
                                        .arg(LC_AITools::typeName(merged)));
@@ -2000,7 +2030,7 @@ namespace {
             }
             if (rules.contains("nearly_closed")) {
                 const Context c = f.detect("nearly_closed");
-                pass([&](LC_DocumentModificationBatch& ctx) {
+                pass([&](Edit& edit) {
                     for (const Issue& issue : c.issues) {
                         auto* polyline = static_cast<RS_Polyline*>(f.byId.value(issue.ids.first()));
                         QList<Vertex> points;
@@ -2010,8 +2040,7 @@ namespace {
                         const double gap = points.first().point.distanceTo(points.last().point);
                         points.removeLast(); // the closing segment ends at the start instead
                         RS_Polyline* closed = rebuiltPolyline(polyline, points, true);
-                        ctx.replace(polyline, closed);
-                        f.replaced(polyline, closed);
+                        edit.replace(polyline, closed);
                         f.note(gap <= f.base.eps ? QStringLiteral("marked %1 closed (now #%2)").arg(ref(polyline)).arg(closed->getId())
                                                  : QStringLiteral("closed %1, its ends were %2 apart (now #%3)")
                                                        .arg(ref(polyline), fmt(gap)).arg(closed->getId()));
@@ -2022,7 +2051,7 @@ namespace {
                 for (int round = 0; round < 5; ++round) {
                     const Context c = f.detect("endpoint_gap");
                     int applied = 0;
-                    pass([&](LC_DocumentModificationBatch& ctx) {
+                    pass([&](Edit& edit) {
                         QSet<Id> used;
                         for (const Issue& issue : c.issues) {
                             RS_Entity* e = f.byId.value(issue.ids.first());
@@ -2054,8 +2083,7 @@ namespace {
                             }
                             used << e->getId();
                             ++applied;
-                            ctx.replace(e, moved);
-                            f.replaced(e, moved);
+                            edit.replace(e, moved);
                             f.note(QStringLiteral("moved the %1 of %2 from %3 onto #%4 at %5 (now #%6)")
                                        .arg(atStart ? QStringLiteral("start") : QStringLiteral("end"), ref(e), fmt(issue.moveFrom))
                                        .arg(issue.ids.value(1)).arg(fmt(issue.moveTo)).arg(moved->getId()));
@@ -2068,7 +2096,7 @@ namespace {
             }
             if (rules.contains("bylayer")) {
                 const Context c = f.detect("bylayer");
-                pass([&](LC_DocumentModificationBatch& ctx) {
+                pass([&](Edit& edit) {
                     for (const Issue& issue : c.issues) {
                         RS_Entity* e = f.byId.value(issue.ids.first());
                         if (e == nullptr || !f.wants(issue)) {
@@ -2076,8 +2104,7 @@ namespace {
                         }
                         const QStringList what = explicitPen(e);
                         RS_Entity* clone = withPenByLayer(e);
-                        ctx.replace(e, clone);
-                        f.replaced(e, clone);
+                        edit.replace(e, clone);
                         f.note(QStringLiteral("set %1 ByLayer (was %2; now #%3)").arg(ref(e), what.join(", ")).arg(clone->getId()));
                     }
                 });

@@ -98,6 +98,25 @@ unsigned long long LC_UndoSection::copyLineage(const unsigned long long lineage,
     return made;
 }
 
+void LC_UndoSection::undoableDiscard(RS_Entity* e) const {
+    if (e == nullptr || e->isDeleted()) {
+        return;
+    }
+    // in the cycle and not deleted: the cycle added it, so it was not in the drawing before
+    if (!m_document->removeFromCurrentCycle(e)) {
+        undoableDelete(e);
+        return;
+    }
+    // what takes its place takes over its identity, as after undoableDelete()
+    if (e->sourceHandle() != 0) {
+        m_freedHandles.insert(e->sourceHandle());
+    }
+    if (hasTrackedLineage(e)) {
+        m_freedLineages.insert(e->lineage());
+    }
+    m_document->removeEntity(e); // unselects and frees it
+}
+
 void LC_UndoSection::addUndoable(RS_Undoable* u) const {
     m_document->addUndoable(u);
 }

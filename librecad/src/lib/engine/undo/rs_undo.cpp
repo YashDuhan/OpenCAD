@@ -149,6 +149,14 @@ void RS_Undo::addUndoable(RS_Undoable* u) {
     RS_DEBUG->print("RS_Undo::%s(): end", __func__);
 }
 
+bool RS_Undo::removeFromCurrentCycle(RS_Undoable* u) {
+    if (nullptr == m_currentCycle || nullptr == u || m_currentCycle->getUndoables().count(u) == 0) {
+        return false;
+    }
+    m_currentCycle->removeUndoable(u);
+    return true;
+}
+
 /**
  * Ends the current undo cycle.
  */
