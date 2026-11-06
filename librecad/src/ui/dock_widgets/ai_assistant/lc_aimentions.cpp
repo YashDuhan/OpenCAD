@@ -502,7 +502,10 @@ LC_AIMentions::Expansion LC_AIMentions::expand(const QList<LC_AIMention>& mentio
                     break;
             }
         }
-        blocks << QStringLiteral("<mention name=\"%1\">\n%2\n</mention>").arg(name, truncate(body.trimmed()));
+        // a layer named 6" pipes or <new> must not end the attribute or the wrapper early
+        QString inside = truncate(body.trimmed());
+        inside.replace(QStringLiteral("</mention>"), QStringLiteral("&lt;/mention>"), Qt::CaseInsensitive);
+        blocks << QStringLiteral("<mention name=\"%1\">\n%2\n</mention>").arg(name.toHtmlEscaped(), inside);
     }
     if (!blocks.isEmpty()) {
         out.context = QStringLiteral("Context from the open drawing for the @-mentions above, read when this message was sent:\n\n")
