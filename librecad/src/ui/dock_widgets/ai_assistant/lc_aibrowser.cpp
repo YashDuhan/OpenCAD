@@ -41,6 +41,7 @@ QList<LC_AITool> LC_AIBrowser::tools() {
 #include <QJsonDocument>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMainWindow>
 #include <QPixmap>
 #include <QPointer>
 #include <QScreen>
@@ -67,6 +68,7 @@ namespace {
     constexpr int LOAD_TIMEOUT_MS = 25000;
     constexpr int JS_TIMEOUT_MS = 10000;    // a page script that never answers (the page is stuck or was replaced)
     constexpr int SETTLE_MS = 900;          // after a click: time for a navigation to start
+    constexpr int CAPTURE_SETTLE_MS = 500;  // after showing the page at full size: time for Chromium to paint it
     constexpr int NAVIGATE_TEXT = 4000;     // page text returned with browser_navigate
     constexpr int READ_TEXT = 20000;        // browser_read, like Cypher
     constexpr int MAX_SCREENSHOT_EDGE = 1280;
@@ -102,9 +104,11 @@ namespace {
     constexpr int PAGE_HEIGHT = 800;
     constexpr double ASPECT = double(PAGE_WIDTH) / PAGE_HEIGHT;
     constexpr int GAP = 12;
+    constexpr int BANNER_ROOM = 56; // the AI's control banner sits 10 px under the top of the drawing area, about 36 px high
     const QSize DEFAULT_FLOAT(400, 250); // Cypher's floating browser: 400 x 250, at least 240 x 150
     const QSize MIN_FLOAT(240, 150);
     const QString FLOAT_KEY = QStringLiteral("browserFloatWindow"); // position over the OpenCAD window
+    const QString BANNER_NAME = QStringLiteral("aiControlBanner");  // LC_AIControl's "The AI is working" banner
 
     QPointer<QWidget> g_host; // the AI panel the preview floats over
 
@@ -176,7 +180,53 @@ namespace {
         void fitToHost() {
             setGeometry(fit(geometry()));
             applyZoom();
-            raise(); // stay above the AI sidebar, which raises itself when the window resizes
+            bringToFront();
+        }
+
+        /** Above the AI sidebar, which raises itself when the window resizes, but under the AI's control banner: its
+         *  Take over and Stop stay in reach wherever the preview is dragged. */
+        void bringToFront() {
+            raise();
+            if (m_host != nullptr) {
+                QWidget* banner = m_host->findChild<QWidget*>(BANNER_NAME, Qt::FindDirectChildrenOnly);
+                if (banner != nullptr && banner->isVisible()) {
+                    banner->raise();
+                }
+            }
+        }
+
+        /**
+         * The page as the AI should see it: at its layout size (PAGE_WIDTH x PAGE_HEIGHT) and zoom 1, not the small
+         * preview scaled to about a third, where text is unreadable. The view grows to that size for a moment, clipped
+         * by this frame and hidden under a still of the preview, and is grabbed once Chromium has painted it.
+         */
+        void capture(QWebEngineView* view, const std::function<void(const QPixmap&)>& done) {
+            QPointer<QWebEngineView> v(view);
+            if (m_capturing || view->parentWidget() != this) {
+                QTimer::singleShot(CAPTURE_SETTLE_MS, this, [v, done] { done(v ? v->grab() : QPixmap()); });
+                return;
+            }
+            m_capturing = true;
+            QPointer<QLabel> still = new QLabel(this);
+            still->setPixmap(view->grab());
+            still->setGeometry(view->geometry());
+            still->show();
+            m_layout->removeWidget(view);
+            view->setZoomFactor(1.0);
+            view->setGeometry(QRect(view->pos(), QSize(PAGE_WIDTH, PAGE_HEIGHT)));
+            view->lower();
+            raiseControls();
+            QTimer::singleShot(CAPTURE_SETTLE_MS, this, [this, v, still, done] {
+                const QPixmap shot = v ? v->grab() : QPixmap();
+                m_capturing = false;
+                if (v && v->parentWidget() == this) { // not moved to the full window meanwhile
+                    m_layout->addWidget(v);
+                    raiseControls();
+                    applyZoom();
+                }
+                delete still.data();
+                done(shot);
+            });
         }
 
     protected:
@@ -267,7 +317,7 @@ namespace {
 
         void applyZoom() {
             // the page keeps its laptop layout and is shown scaled down, like Cypher's preview
-            if (m_layout->count() > 0) {
+            if (!m_capturing && m_layout->count() > 0) {
                 if (auto* view = qobject_cast<QWebEngineView*>(m_layout->itemAt(0)->widget())) {
                     view->setZoomFactor(qBound(0.25, (width() - 2) / double(PAGE_WIDTH), 1.0));
                 }
@@ -312,7 +362,7 @@ namespace {
             if (f.contains("w")) {
                 frame = QRect(f.value("x").toInt(), f.value("y").toInt(), f.value("w").toInt(), f.value("h").toInt());
             }
-            else { // just left of the AI chat, over the drawing, so it never covers the conversation
+            else { // top right of the drawing area, next to the AI chat: never over the toolbars or the conversation
                 const QRect sized = fit(QRect(0, 0, DEFAULT_FLOAT.width(), DEFAULT_FLOAT.height()));
                 int x = area().width() - sized.width() - GAP;
                 int y = GAP + 60;
@@ -320,6 +370,18 @@ namespace {
                     const QPoint chat = m_anchor->mapTo(m_host, QPoint(0, 0));
                     x = chat.x() - sized.width() - GAP;
                     y = chat.y() + GAP;
+                }
+                auto* mainWindow = qobject_cast<QMainWindow*>(m_host.data());
+                if (mainWindow != nullptr && mainWindow->centralWidget() != nullptr) {
+                    // and below the AI's control banner, which is centred at the top of the drawing area while it works
+                    const QWidget* drawing = mainWindow->centralWidget();
+                    const QPoint topLeft = drawing->mapTo(mainWindow, QPoint(0, 0));
+                    int room = BANNER_ROOM;
+                    if (const QWidget* banner = mainWindow->findChild<QWidget*>(BANNER_NAME, Qt::FindDirectChildrenOnly)) {
+                        room = std::max(room, 10 + banner->sizeHint().height() + GAP);
+                    }
+                    x = topLeft.x() + drawing->width() - sized.width() - GAP;
+                    y = topLeft.y() + room;
                 }
                 frame = QRect(x, y, sized.width(), sized.height());
             }
@@ -341,6 +403,7 @@ namespace {
         QString m_drag;
         QPoint m_startPos;
         QRect m_startFrame;
+        bool m_capturing {false}; // capture() shows the page at zoom 1 for a moment: no rescaling meanwhile
     };
 
     /** The full window with back / forward / reload / address bar, for when the user wants a closer look. */
@@ -462,7 +525,7 @@ namespace {
             }
             f->fitToHost();
             f->show();
-            f->raise();
+            f->bringToFront();
         }
 
         void toggle() {
@@ -551,6 +614,17 @@ namespace {
             return true;
         }
 
+        /** The visible part of the page as the AI should see it: at zoom 1 (see FloatPreview::capture). */
+        void screenshot(const std::function<void(const QPixmap&)>& done) {
+            if (m_full != nullptr && m_full->isVisible()) { // the full window already shows it at zoom 1
+                m_full->raise();
+                QTimer::singleShot(150, this, [this, done] { done(m_view->grab()); });
+                return;
+            }
+            reveal();
+            preview()->capture(m_view, done);
+        }
+
     private:
         void finishLoad(const bool ok, const QString& why) {
             m_loading = false;
@@ -616,7 +690,7 @@ namespace {
             f->setPage(m_view);
             f->fitToHost();
             f->show();
-            f->raise();
+            f->bringToFront();
         }
 
         QWebEngineProfile* m_profile {nullptr};
@@ -962,9 +1036,11 @@ QList<LC_AITool> LC_AIBrowser::tools() {
                          done(noPage());
                          return;
                      }
-                     w->reveal();
-                     QTimer::singleShot(150, w, [w, done] {
-                         QPixmap pixmap = w->view()->grab();
+                     w->screenshot([w, done](QPixmap pixmap) {
+                         if (pixmap.isNull()) {
+                             done(LC_AIToolResult::error("The screenshot failed: the browser window was closed."));
+                             return;
+                         }
                          if (pixmap.width() > MAX_SCREENSHOT_EDGE || pixmap.height() > MAX_SCREENSHOT_EDGE) {
                              pixmap = pixmap.scaled(MAX_SCREENSHOT_EDGE, MAX_SCREENSHOT_EDGE, Qt::KeepAspectRatio, Qt::SmoothTransformation);
                          }
@@ -972,7 +1048,8 @@ QList<LC_AITool> LC_AIBrowser::tools() {
                          QBuffer buffer(&png);
                          buffer.open(QIODevice::WriteOnly);
                          pixmap.save(&buffer, "PNG");
-                         LC_AIToolResult r = LC_AIToolResult::text(pageHeader(w));
+                         LC_AIToolResult r = LC_AIToolResult::text(
+                             pageHeader(w) + QStringLiteral("\nThe image shows the visible part of the page, %1 x %2 px.").arg(pixmap.width()).arg(pixmap.height()));
                          r.content.prepend(LC_AIContent::makeImage(png, "image/png"));
                          done(r);
                      });
