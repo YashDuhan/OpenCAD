@@ -516,18 +516,30 @@ void LC_AIComposerInput::paintEvent(QPaintEvent* event) {
         p.setRenderHint(QPainter::Antialiasing);
         p.setPen(Qt::NoPen);
         p.setBrush(m_mentionBackground);
-        for (const LC_AIMention& m : std::as_const(m_mentions)) {
+        const auto rectAt = [this](const int position) {
             QTextCursor at(document());
-            at.setPosition(m.start);
-            QRect from = cursorRect(at);
-            at.setPosition(m.start + m.length);
-            const QRect to = cursorRect(at);
+            at.setPosition(position);
+            return cursorRect(at);
+        };
+        // 2 px around the text, less between two pills one space apart: padded fully they touch and read as one
+        const auto padBetween = [&rectAt](const LC_AIMention& a, const LC_AIMention& b) -> qreal {
+            const QRect end = rectAt(a.start + a.length);
+            const QRect start = rectAt(b.start);
+            return end.top() != start.top() ? 2.0 : qBound(0.0, (start.left() - end.left() - 3) / 2.0, 2.0);
+        };
+        for (int i = 0; i < m_mentions.size(); ++i) {
+            const LC_AIMention& m = m_mentions.at(i);
+            qreal left = i > 0 ? padBetween(m_mentions.at(i - 1), m) : 2.0;
+            const qreal right = i + 1 < m_mentions.size() ? padBetween(m, m_mentions.at(i + 1)) : 2.0;
+            QRect from = rectAt(m.start);
+            const QRect to = rectAt(m.start + m.length);
             // one rectangle per line the mention spans (a long layer name may wrap)
             for (int line = 0; from.top() < to.top() && from.height() > 0 && line < 32; ++line) {
-                p.drawRoundedRect(QRectF(from.left() - 2, from.top() + 1, viewport()->width() - from.left() - 2, from.height() - 2), 4, 4);
+                p.drawRoundedRect(QRectF(from.left() - left, from.top() + 1, viewport()->width() - from.left() + left - 4, from.height() - 2), 4, 4);
                 from = QRect(int(document()->documentMargin()), from.bottom() + 1, 0, from.height());
+                left = 2.0;
             }
-            p.drawRoundedRect(QRectF(from.left() - 2, from.top() + 1, to.left() - from.left() + 4, from.height() - 2), 4, 4);
+            p.drawRoundedRect(QRectF(from.left() - left, from.top() + 1, to.left() - from.left() + left + right, from.height() - 2), 4, 4);
         }
     }
     QPlainTextEdit::paintEvent(event);
