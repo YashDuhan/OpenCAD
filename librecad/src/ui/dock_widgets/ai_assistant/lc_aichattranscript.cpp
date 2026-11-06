@@ -8,6 +8,7 @@
  * ********************************************************************************
  */
 #include "lc_aichattranscript.h"
+#include "lc_aimarkdownview.h"
 
 #include <QDialog>
 #include <QHBoxLayout>
@@ -1232,16 +1233,11 @@ void LC_AIChatTranscript::stickToBottom() {
     }
 }
 
-QLabel* LC_AIChatTranscript::textBlock(const QString& markdown) {
-    auto* label = new QLabel(m_content);
-    label->setTextFormat(Qt::MarkdownText);
-    label->setText(displayMarkdown(markdown));
-    label->setWordWrap(true);
-    label->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::LinksAccessibleByMouse);
-    label->setOpenExternalLinks(true);
-    label->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
-    label->setContentsMargins(2, 0, 2, 4);
-    return label;
+LC_AIMarkdownView* LC_AIChatTranscript::textBlock(const QString& markdown) {
+    // text as labels, and every Markdown table as a compact table of its own that scrolls sideways
+    auto* block = new LC_AIMarkdownView(m_theme, [](const QString& text) { return displayMarkdown(text); }, m_content);
+    block->setMarkdown(markdown);
+    return block;
 }
 
 void LC_AIChatTranscript::addUser(const QString& text, const QList<LC_AIAttachment>& attachments) {
@@ -1322,7 +1318,7 @@ void LC_AIChatTranscript::renderStream() {
         const QString done = split > 0 ? tail.left(split) : QString();
         const bool balanced = done.count(QStringLiteral("```")) % 2 == 0 && done.count(QStringLiteral("~~~")) % 2 == 0;
         if (split > 0 && balanced) {
-            m_streaming->setText(displayMarkdown(done));
+            m_streaming->setMarkdown(done);
             m_streamFrozen += split + 2;
             tail = m_streamText.mid(m_streamFrozen);
             m_streaming = textBlock(QString());
@@ -1330,7 +1326,7 @@ void LC_AIChatTranscript::renderStream() {
             add(m_streaming);
         }
     }
-    m_streaming->setText(displayMarkdown(tail));
+    m_streaming->setMarkdown(tail);
 }
 
 void LC_AIChatTranscript::addAssistant(const LC_AIChatMessage& message) {
@@ -1338,13 +1334,13 @@ void LC_AIChatTranscript::addAssistant(const LC_AIChatMessage& message) {
         m_renderTimer->stop();
         // the final text replaces the streamed one
         if (message.text.startsWith(m_streamText.left(m_streamFrozen))) {
-            m_streaming->setText(displayMarkdown(message.text.mid(m_streamFrozen)));
+            m_streaming->setMarkdown(message.text.mid(m_streamFrozen));
         }
         else {
             while (m_streamLabels.size() > 1) {
                 m_streamLabels.takeLast()->deleteLater();
             }
-            m_streamLabels.first()->setText(displayMarkdown(message.text));
+            m_streamLabels.first()->setMarkdown(message.text);
         }
         m_streaming = nullptr;
         m_streamLabels.clear();

@@ -2056,6 +2056,8 @@ set (SHARED_SOURCES
      librecad/src/ui/dock_widgets/ai_assistant/lc_aiagentprogress.h
      librecad/src/ui/dock_widgets/ai_assistant/lc_aie2etest.cpp
      librecad/src/ui/dock_widgets/ai_assistant/lc_aichangepreview.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aimarkdownview.cpp
+     librecad/src/ui/dock_widgets/ai_assistant/lc_aimarkdownview.h
      librecad/src/ui/dock_widgets/ai_assistant/lc_aichangepreview.h
      librecad/src/ui/dock_widgets/ai_assistant/lc_aicontrol.cpp
      librecad/src/ui/dock_widgets/ai_assistant/lc_aicontrol.h

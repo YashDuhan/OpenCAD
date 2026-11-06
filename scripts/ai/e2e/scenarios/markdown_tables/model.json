@@ -1,0 +1,5 @@
+[
+ {
+  "text": "Here is the drawing register for prefix `UDEMO-BKCS-SS-EE-xxx`:\n\n| Sheet No. | Drawing Number | Title | Paper Size | Scale | Revision | Status |\n|---|---|---|:---:|:---:|:---:|---|\n| 01 | `UDEMO-BKCS-SS-EE-000` | Drawing Register | A3 | NTS | P01 | Issued |\n| 02 | `UDEMO-BKCS-SS-EE-001` | **Single Line Diagram (Active in OpenCAD)** | A3 | NTS | P02 | In progress |\n| 03 | `UDEMO-BKCS-SS-EE-101` | Rooftop Solar PV Module Layout | A1 | 1:100 | P01 | Issued |\n| 04 | `UDEMO-BKCS-SS-EE-401` | String Wiring Diagram | A3 | NTS | P01 | Issued |\n| 05 | `UDEMO-BKCS-SS-EE-501` | DC Cable Schedule | A3 | NTS | P01 | Draft |\n| 06 | `UDEMO-BKCS-SS-EE-502` | AC Cable Schedule | A3 | NTS | P01 | Draft |\n| 07 | `UDEMO-BKCS-SS-EE-601` | Bill of Materials (BOM) | A3 | NTS | P01 | Draft |\n\nTotals:\n\n| Status | Sheets |\n|---|---:|\n| Issued | 3 |\n| Draft | 3 |\n\nA code block with pipes stays code:\n\n```\na | b | c\n--|---|--\n```\n\nThat is all."
+ }
+]

@@ -173,6 +173,7 @@ private:
 };
 
 /** The conversation of the AI sidebar: your messages, the AI's text as it streams, and its tool calls. */
+class LC_AIMarkdownView;
 class LC_AIChatTranscript : public QScrollArea {
     Q_OBJECT
 public:
@@ -212,7 +213,7 @@ public:
 
 private:
     void add(QWidget* widget);
-    QLabel* textBlock(const QString& markdown);
+    LC_AIMarkdownView* textBlock(const QString& markdown);
     void stickToBottom();
     /** Shows the streamed text: at most every RENDER_MS, and only its unfinished tail is laid out again. */
     void renderStream();
@@ -233,8 +234,8 @@ private:
     QTimer* m_thinkingTimer {nullptr};
     int m_dots {0};
     QList<QLabel*> m_bubbles;          // your messages, at most 80% of the width
-    QLabel* m_streaming {nullptr};     // the unfinished tail of the AI text being streamed
-    QList<QLabel*> m_streamLabels;     // all the blocks of the streamed text, finished paragraphs first
+    LC_AIMarkdownView* m_streaming {nullptr};     // the unfinished tail of the AI text being streamed
+    QList<LC_AIMarkdownView*> m_streamLabels;     // all the blocks of the streamed text, finished paragraphs first
     QString m_streamText;
     int m_streamFrozen {0};            // characters of m_streamText already in finished blocks
     QTimer* m_renderTimer {nullptr};

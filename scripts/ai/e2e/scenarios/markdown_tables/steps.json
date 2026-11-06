@@ -1,0 +1,46 @@
+[
+ {
+  "do": "type",
+  "text": "list the drawing register"
+ },
+ {
+  "do": "send"
+ },
+ {
+  "do": "wait_idle",
+  "timeout": 30000
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "Single Line Diagram",
+  "label": "table cells shown"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "\\| Sheet No\\.",
+  "not": true,
+  "label": "no raw table Markdown left as text"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "a \\| b \\| c",
+  "label": "pipes in a code block stay code"
+ },
+ {
+  "do": "expect",
+  "in": "ai",
+  "regex": "That is all",
+  "label": "text after the tables"
+ },
+ {
+  "do": "shot",
+  "file": "${OUT}/tables.png",
+  "of": "ai"
+ },
+ {
+  "do": "quit"
+ }
+]
