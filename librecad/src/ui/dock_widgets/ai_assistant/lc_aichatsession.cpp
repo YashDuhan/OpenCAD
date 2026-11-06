@@ -310,7 +310,11 @@ void LC_AIChatSession::openHistory() {
     const QString drawing = active != nullptr ? keyOf(active) : m_drawing;
     const QString name = active != nullptr ? nameOf(active) : m_drawingName;
     auto* popup = new LC_AIChatHistoryPopup(m_theme, drawing, name, m_chatId, m_panel);
-    connect(popup, &LC_AIChatHistoryPopup::resumeRequested, this, &LC_AIChatSession::resume);
+    // once the popup's click or key press has been handled: opening the chat's drawing runs the event loop, and the
+    // popup (closed by the choice) is deleted in it, which must not happen while its own handler still runs
+    connect(popup, &LC_AIChatHistoryPopup::resumeRequested, this, [this](const QString& id) {
+        QTimer::singleShot(0, this, [this, id] { resume(id); });
+    });
     connect(popup, &LC_AIChatHistoryPopup::deleted, this, [this](const QString& id) {
         if (id == m_chatId && !m_running) { // the shown chat is gone: show the drawing's next one
             show(LC_AIChatStore::instance().latest(m_drawing));
