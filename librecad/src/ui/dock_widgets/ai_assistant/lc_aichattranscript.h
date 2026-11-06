@@ -45,6 +45,11 @@ public:
     /** Running or waiting for the user's approval: its block stays open. */
     bool isActive() const { return m_active; }
     bool failed() const { return m_failed; }
+    /** For the block's header: the user denied it, or Stop ended it before it finished (neither is a failure). */
+    bool denied() const { return m_denied; }
+    bool stopped() const { return m_stopped; }
+    /** The tool's name (browser_* calls are counted as web lookups in the block's header). */
+    const QString& toolName() const { return m_call.name; }
     const QList<QPixmap>& images() const { return m_pixmaps; }
     /** Shows or hides the screenshots under the row (the small thumbnail on the row toggles it). */
     void setPreviewOpen(bool open);
@@ -76,6 +81,8 @@ private:
     bool m_done {false};
     bool m_active {false};
     bool m_failed {false};
+    bool m_denied {false};
+    bool m_stopped {false};
 };
 
 /**

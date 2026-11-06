@@ -519,7 +519,8 @@ void LC_AIToolCallWidget::setResult(const LC_AIToolResult& result) {
     const QString shownTime = m_timer.isValid() ? time : QString(); // a call restored from the chat history was not timed
     static const QRegularExpression blocked(QStringLiteral("user denied this tool call|denied by the user's tool permissions"
                                                            "|^Plan mode:")); // plan mode holds changes back until approval
-    if (result.isError && blocked.match(result.joinedText()).hasMatch()) {
+    m_denied = result.isError && blocked.match(result.joinedText()).hasMatch();
+    if (m_denied) {
         setStatus("shield-alert", tr("Blocked"), STATUS_ERROR); // Cypher marks denied calls as Blocked
     }
     else if (result.isError) {
@@ -568,6 +569,7 @@ void LC_AIToolCallWidget::setStopped() {
     m_active = false;
     if (!m_done) {
         m_done = true;
+        m_stopped = true;
         setStatus(QString(), tr("Stopped"), m_theme.textFaint);
     }
 }
@@ -707,25 +709,61 @@ void LC_AIToolGroup::mouseReleaseEvent(QMouseEvent* event) {
 void LC_AIToolGroup::updateHeader() {
     int active = 0;
     int failed = 0;
+    int denied = 0;  // the user said no: not a failure of the tool
+    int stopped = 0; // Stop ended the run before the call finished
+    int web = 0;     // browser_* calls read as web lookups, not commands
     QList<QPixmap> images;
     for (LC_AIToolCallWidget* t : std::as_const(m_tools)) {
         active += t->isActive() ? 1 : 0;
-        failed += t->failed() ? 1 : 0;
+        denied += t->denied() ? 1 : 0;
+        stopped += t->stopped() ? 1 : 0;
+        failed += t->failed() && !t->denied() ? 1 : 0;
+        web += t->toolName().startsWith(QStringLiteral("browser_")) ? 1 : 0;
         images << t->images();
     }
     const int n = m_tools.size();
+    const int commands = n - web;
+    QStringList kinds;
+    if (commands > 0 || web == 0) {
+        kinds << (commands == 1 ? tr("a command") : tr("%1 commands").arg(commands));
+    }
+    if (web > 0) {
+        kinds << (web == 1 ? tr("a web lookup") : tr("%1 web lookups").arg(web));
+    }
+    const QString what = kinds.join(tr(" and "));
     const qreal dpr = devicePixelRatioF();
     QString title;
     if (active > 0) {
-        title = n == 1 ? tr("Running a command") : tr("Running %1 commands").arg(n);
+        title = tr("Running %1").arg(what);
         m_statusIcon->setPixmap(LC_AIIcons::lucide("loader", 13, STATUS_RUNNING, dpr));
         m_statusIcon->show();
     }
     else {
-        title = n == 1 ? tr("Ran a command") : tr("Ran %1 commands").arg(n);
+        // a block that only holds stopped or only denied calls says so instead of "Ran"
+        if (n > 0 && stopped == n) {
+            title = tr("Stopped %1").arg(what);
+        }
+        else if (n > 0 && denied == n) {
+            title = tr("Denied %1").arg(what);
+        }
+        else {
+            title = tr("Ran %1").arg(what);
+            if (failed > 0) {
+                title += tr(", %1 failed").arg(failed);
+            }
+            if (denied > 0) {
+                title += tr(", %1 denied").arg(denied);
+            }
+            if (stopped > 0) {
+                title += tr(", %1 stopped").arg(stopped);
+            }
+        }
         if (failed > 0) {
-            title += tr(", %1 failed").arg(failed);
             m_statusIcon->setPixmap(LC_AIIcons::lucide("circle-alert", 13, STATUS_ERROR, dpr));
+            m_statusIcon->show();
+        }
+        else if (denied > 0 || stopped > 0) { // the user's choice, so no red
+            m_statusIcon->setPixmap(LC_AIIcons::lucide(denied > 0 ? "shield-alert" : "square", 13, m_theme.textMuted, dpr));
             m_statusIcon->show();
         }
         else {
